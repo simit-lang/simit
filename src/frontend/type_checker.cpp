@@ -26,50 +26,71 @@ TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
   threeByThreeTensorType->indexSets = {threeDim, threeDim};
   
   // Add type signatures for intrinsic functions.
-  addScalarIntrinsic("mod", {ScalarType::Type::INT, ScalarType::Type::INT}, 
+  addScalarIntrinsic(ir::intrinsics::mod().getName(), 
+                     {ScalarType::Type::INT, ScalarType::Type::INT}, 
                      {ScalarType::Type::INT});
-  addScalarIntrinsic("sin", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::sin().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("cos", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::cos().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("tan", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::tan().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("asin", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::asin().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("acos", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::acos().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("atan2", {ScalarType::Type::FLOAT, 
-                     ScalarType::Type::FLOAT}, {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("sqrt", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::atan2().getName(), 
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("log", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::sqrt().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("exp", {ScalarType::Type::FLOAT}, 
+  addScalarIntrinsic(ir::intrinsics::log().getName(), 
+                     {ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("pow", {ScalarType::Type::FLOAT, 
-                     ScalarType::Type::FLOAT}, {ScalarType::Type::FLOAT});
-  addIntrinsic("norm", {Type::Ptr()}, 
+  addScalarIntrinsic(ir::intrinsics::exp().getName(), 
+                     {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(ir::intrinsics::pow().getName(), 
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addIntrinsic(ir::intrinsics::norm().getName(), 
+               {Type::Ptr()}, 
                {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic("dot", {Type::Ptr(), Type::Ptr()}, 
+  addIntrinsic(ir::intrinsics::dot().getName(), 
+               {Type::Ptr(), Type::Ptr()}, 
                {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic("det", {threeByThreeTensorType}, 
+  addIntrinsic(ir::intrinsics::det().getName(), 
+               {threeByThreeTensorType}, 
                {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic("inv", {threeByThreeTensorType}, {threeByThreeTensorType});
-  addIntrinsic("solve", {Type::Ptr(), Type::Ptr(), Type::Ptr()},
-               {makeTensorType(ScalarType::Type::FLOAT)}, {false, false, true});
-  addScalarIntrinsic("createComplex", {ScalarType::Type::FLOAT, 
-                     ScalarType::Type::FLOAT}, {ScalarType::Type::COMPLEX});
-  addScalarIntrinsic("complexNorm", {ScalarType::Type::COMPLEX}, 
-                     {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("complexGetReal", {ScalarType::Type::COMPLEX}, 
-                     {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("complexGetImag", {ScalarType::Type::COMPLEX}, 
-                     {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("complexConj", {ScalarType::Type::COMPLEX}, 
+  addIntrinsic(ir::intrinsics::inv().getName(), 
+               {threeByThreeTensorType}, 
+               {threeByThreeTensorType});
+  addScalarIntrinsic(ir::intrinsics::createComplex().getName(), 
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::COMPLEX});
-  addScalarIntrinsic("simitClock", {}, {ScalarType::Type::FLOAT});
-  addScalarIntrinsic("simitStoreTime", {ScalarType::Type::INT, 
-                     ScalarType::Type::FLOAT}, {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(ir::intrinsics::complexNorm().getName(), 
+                     {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(ir::intrinsics::complexGetReal().getName(), 
+                     {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(ir::intrinsics::complexGetImag().getName(), 
+                     {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(ir::intrinsics::complexConj().getName(), 
+                     {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::COMPLEX});
+  addScalarIntrinsic(ir::intrinsics::clock().getName(), 
+                     {}, {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(ir::intrinsics::storeTime().getName(), 
+                     {ScalarType::Type::INT, ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
 }
 
 void TypeChecker::check(Program::Ptr program) {
@@ -586,15 +607,13 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
   if (lhsType.defined && !lhsType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected left operand of multiplication operation to be a "
-           << "numeric tensor but got an operand of type " 
-           << toString(lhsType);
+           << "numeric tensor but got an operand of type " << toString(lhsType);
     reportError(errMsg.str(), expr->lhs);
   }
   if (rhsType.defined && !rhsType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected right operand of multiplication operation to be a "
-           << "numeric tensor but got an operand of type " 
-           << toString(rhsType);
+           << "numeric tensor but got an operand of type " << toString(rhsType);
     reportError(errMsg.str(), expr->rhs);
   }
 
@@ -753,6 +772,82 @@ void TypeChecker::visit(ElwiseDivExpr::Ptr expr) {
   typeCheckBinaryElwise(expr); 
 }
 
+void TypeChecker::visit(LeftDivExpr::Ptr expr) {
+  const ExprType lhsType = inferType(expr->lhs);
+  const ExprType rhsType = inferType(expr->rhs);
+  retTypeChecked = lhsType.defined && rhsType.defined;
+
+  // Check that operands of solve operation are numeric tensors.
+  if (lhsType.defined && !lhsType.isNumericTensor()) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of solve operation to be a numeric "
+           << "matrix but got an operand of type " << toString(lhsType);
+    reportError(errMsg.str(), expr->lhs);
+  }
+  if (rhsType.defined && !rhsType.isNumericTensor()) {
+    std::stringstream errMsg;
+    errMsg << "expected right operand of solve operation to be a "
+           << "numeric column vector but got an operand of type " 
+           << toString(rhsType);
+    reportError(errMsg.str(), expr->rhs);
+  }
+
+  if (!retTypeChecked) {
+    return;
+  }
+
+  const auto ltype = to<TensorType>(lhsType.type[0]);
+  const auto rtype = to<TensorType>(rhsType.type[0]);
+  const ScalarType::Type lhsComponent = getComponentType(ltype);
+  const ScalarType::Type rhsComponent = getComponentType(rtype);
+
+  // Check that operands of solve operation contain elements of the same type.
+  if (lhsComponent != rhsComponent) {
+    std::stringstream errMsg;
+    errMsg << "solve operation cannot be performed on a " 
+           << toString(lhsComponent) << " tensor and a " 
+           << toString(rhsComponent) << " tensor";
+    reportError(errMsg.str(), expr);
+  }
+  
+  const TensorDimensions ldimensions = getDimensions(ltype);
+  const TensorDimensions rdimensions = getDimensions(rtype);
+  const unsigned lhsOrder = ldimensions.size();
+  const unsigned rhsOrder = rdimensions.size();
+  const bool rhsTransposed = getTransposed(rtype);
+
+  // Check that left operand is a matrix.
+  if (lhsOrder != 2) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of solve operation to be a matrix "
+           << "but got an operand of type " << toString(lhsType);
+    reportError(errMsg.str(), expr->lhs);
+  }
+
+  // Check that right operand is a column vector.
+  if (rhsOrder != 1 || rhsTransposed) {
+    std::stringstream errMsg;
+    errMsg << "expected right operand of solve operation to be a column "
+           << "vector but got an operand of type " << toString(lhsType);
+    reportError(errMsg.str(), expr->lhs);
+  }
+  
+  if (!retTypeChecked) {
+    return;
+  }
+
+  // Check dimensions of operands.
+  if (!env.compareDomains(ldimensions[0], rdimensions[0])) {
+    std::stringstream errMsg;
+    errMsg << "solve operation cannot be performed on a matrix of type " 
+           << toString(ltype) << " and a vector of type " << toString(rtype);
+    reportError(errMsg.str(), expr);
+    return;
+  }
+  
+  retType = ExprType(makeTensorType(lhsComponent, {ldimensions[1]}));
+}
+
 void TypeChecker::visit(NegExpr::Ptr expr) {
   const ExprType opndType = inferType(expr->operand);
 
@@ -858,9 +953,12 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   // If callee type signature could not be determined, 
   // then there's nothing more to do.
   if (!env.hasFunction(funcName)) {
-    // Calls to intrinsics should always be type checked.
-    iassert(!util::contains(ir::intrinsics::byNames(), funcName)) 
-        << "could not type check intrinsic " << funcName;
+    if (util::contains(ir::intrinsics::byNames(), funcName)) {
+      std::stringstream errMsg;
+      errMsg << "cannot call intrinsic function'" << funcName << "'";
+      reportError(errMsg.str(), expr);
+    }
+ 
     return;
   }
 
@@ -927,8 +1025,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     return;
   }
 
-  bool checkIntrinsic = true;
-
   for (unsigned i = 0; i < expr->args.size(); ++i) {
     const Argument::Ptr funcArg = func->args[i];
     const Expr::Ptr arg = expr->args[i];
@@ -939,15 +1035,14 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
 
     // Check that argument is of type expected by callee.
-    if (funcName == "norm" || funcName == "dot" || funcName == "solve") {
-      const unsigned requiredOrder = (funcName == "solve" && (i == 0)) ? 2 : 1;
-      const auto tensorTypeString = (requiredOrder == 2) ? "matrix" : "vector";
-      
+    if (funcName == ir::intrinsics::norm().getName() || 
+        funcName == ir::intrinsics::dot().getName()) {
       // Check that argument is a numeric tensor of appropriate order.
       if (!argType.isNumericTensor() || 
-          getOrder(to<TensorType>(argType.type[0])) != requiredOrder) {
+          getOrder(to<TensorType>(argType.type[0])) != 1) {
         std::stringstream errMsg;
-        errMsg << "argument must be a numeric " << tensorTypeString;
+        errMsg << "expected a numeric vector as argument but got an "
+               << "argument of type " << toString(argType);
         reportError(errMsg.str(), arg);
       }
     } else if (!env.compareTypes(argType.type[0], funcArg->arg->type)) {
@@ -963,18 +1058,20 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
 
-  if (checkIntrinsic) {
-    if (funcName == "dot") {
-      // Check that first and second arguments are vectors of same length.
-      if (!env.compareTypes(argTypes[0].type[0], argTypes[1].type[0], true)) {
-        std::stringstream errMsg;
-        errMsg << "cannot call function 'dot' on arguments of type "
-               << toString(argTypes[0]) << " and type " 
-               << toString(argTypes[1]);
-        reportError(errMsg.str(), expr);
-      }
-    } else if (funcName == "solve") {
-      // TODO: Should check that dimensions of arguments match.
+  if (!retTypeChecked) {
+    return;
+  }
+
+  // Handle some of the more complex generic functions as special cases.
+  if (funcName == ir::intrinsics::dot().getName()) {
+    // Check that first and second arguments are vectors of same length 
+    // containing elements of same type.
+    if (!env.compareTypes(argTypes[0].type[0], argTypes[1].type[0], true)) {
+      std::stringstream errMsg;
+      errMsg << "cannot call function 'dot' on arguments of type "
+             << toString(argTypes[0]) << " and type " 
+             << toString(argTypes[1]);
+      reportError(errMsg.str(), expr);
     }
   }
 }
@@ -983,7 +1080,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->tensor);
 
   if (!lhsType.defined) {
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -993,7 +1090,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     errMsg << "cannot access elements from objects of type " 
            << toString(lhsType);
     reportError(errMsg.str(), expr->tensor);
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1008,7 +1105,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     errMsg << "tensor access expected " << dimensions.size() 
            << " indices but got " << numIndices;
     reportError(errMsg.str(), expr);
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1093,7 +1190,7 @@ void TypeChecker::visit(TupleReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->tuple);
 
   if (!lhsType.defined) {
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1117,7 +1214,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->setOrElem);
 
   if (!lhsType.defined) {
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1125,11 +1222,11 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   // simultaneously (e.g. output of function call returning two tensors).
   if (lhsType.isVoid()) {
     reportError("cannot access field of a void value", expr->setOrElem);
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   } else if (!lhsType.isSingleValue()) {
     reportError("cannot access fields of multiple values", expr->setOrElem);
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1145,7 +1242,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   // Check that program only reads fields from sets and elements.
   if (!elemType) {
     reportError("can only access fields of sets or elements", expr->setOrElem);
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1156,7 +1253,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
     std::stringstream errMsg;
     errMsg << "undefined field '" << fieldName << "'";
     reportError(errMsg.str(), expr->field);
-    retType = lhsType;
+    retType = ExprType(lhsType.access);
     return;
   }
 
@@ -1166,7 +1263,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   if (isa<SetType>(type)) {
     if (getDimensions(retTensorType).size() > 1) {
       reportError("can only access scalar or vector set fields", expr);
-      retType = lhsType;
+      retType = ExprType(lhsType.access);
       return;
     }
 
@@ -2211,8 +2308,7 @@ void TypeChecker::addScalarIntrinsic(const std::string& name,
 
 void TypeChecker::addIntrinsic(const std::string& name,
     const std::vector<Type::Ptr> &args,
-    const std::vector<Type::Ptr> &results,
-    const std::vector<bool> &isInOut) {
+    const std::vector<Type::Ptr> &results) {
   const auto decl = std::make_shared<FuncDecl>();
   decl->name = std::make_shared<Identifier>();
 
@@ -2220,9 +2316,7 @@ void TypeChecker::addIntrinsic(const std::string& name,
   decl->exported = false;
   
   for (unsigned i = 0; i < args.size(); ++i) {
-    const auto arg = (!isInOut.empty() && isInOut[i]) ? 
-                     std::make_shared<InOutArgument>() :
-                     std::make_shared<Argument>();
+    const auto arg = std::make_shared<Argument>();
     arg->arg = std::make_shared<IdentDecl>();
     
     arg->arg->type = args[i];

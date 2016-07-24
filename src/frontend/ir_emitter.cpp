@@ -527,14 +527,14 @@ void IREmitter::visit(LeftDivExpr::Ptr expr) {
 
   // The type of x in $Ax = b$ is the same as the second dimension of A.
   auto xtype = ir::TensorType::make(Atype->getComponentType(),
-                                    {Atype->getDimensions()[1]},
-                                    true);
+                                    {Atype->getDimensions()[1]}, true);
 
-  const ir::Var x = ctx->getBuilder()->temporary(ir::Type(xtype), "x");
+  const ir::Var x = ctx->getBuilder()->temporary(ir::Type(xtype));
   const ir::Stmt callStmt = ir::CallStmt::make({}, solve, {A, b, x});
 
   ctx->addStatement(ir::VarDecl::make(x));
-  ctx->addStatement(callStmt);
+  calls.push_back(callStmt);
+  
   retExpr = ir::VarExpr::make(x);
 }
 
@@ -610,10 +610,10 @@ void IREmitter::visit(CallExpr::Ptr expr) {
   // appeared, the call is replaced with a read of the temporary variable.
   const auto type = (results.size() == 1) ? results[0].getType() : ir::Type();
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
-  retExpr = ir::VarExpr::make(tmp);
-
   const ir::Stmt callStmt = ir::CallStmt::make({tmp}, func, arguments);
+  
   calls.push_back(callStmt);
+  retExpr = ir::VarExpr::make(tmp);
 }
 
 void IREmitter::visit(TensorReadExpr::Ptr expr) {
@@ -926,7 +926,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     const ir::Var var = ir::to<ir::VarExpr>(expr)->var;
     if (ir::isa<ir::CallStmt>(calls.back())) {
       const auto callStmt = ir::to<ir::CallStmt>(calls.back());
-      if (var == callStmt->results[0]) {
+      if ((callStmt->results.size() == 1) && (var == callStmt->results[0])) {
         topLevelStmt = callStmt;
         calls.pop_back();
       }

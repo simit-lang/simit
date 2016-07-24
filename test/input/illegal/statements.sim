@@ -88,14 +88,6 @@ proc main
 end
 
 %%% bad-call-9
-proc main
-  var M : matrix[3,3](float);
-  var y : vector[3](float);
-  const x : vector[3](float) = 0.0;
-  solve(M, y, x);
-end
-
-%%% bad-call-10
 func g(inout a : tensor[1](int)) -> (f : int)
   a(0) = 2;
 end
@@ -106,7 +98,7 @@ proc main
   g(x);
 end
 
-%%% bad-call-11
+%%% bad-call-10
 element E
 end
 

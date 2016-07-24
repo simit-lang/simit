@@ -66,6 +66,7 @@ private:
   virtual void visit(DivExpr::Ptr);
   virtual void visit(ElwiseMulExpr::Ptr);
   virtual void visit(ElwiseDivExpr::Ptr);
+  virtual void visit(LeftDivExpr::Ptr);
   virtual void visit(NegExpr::Ptr);
   virtual void visit(ExpExpr::Ptr);
   virtual void visit(TransposeExpr::Ptr);
@@ -349,8 +350,7 @@ private:
                           const std::vector<ScalarType::Type>&,
                           const std::vector<ScalarType::Type>&);
   void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
-                    const std::vector<Type::Ptr>&,
-                    const std::vector<bool>& = {});
+                    const std::vector<Type::Ptr>&);
 
   static std::string toString(ExprType);
   static std::string toString(Type::Ptr, bool = true);

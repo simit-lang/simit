@@ -26,7 +26,6 @@ void HIRPrinter::visit(RangeIndexSet::Ptr set) {
 
 void HIRPrinter::visit(SetIndexSet::Ptr set) {
   oss << set->setName;
-  //oss << "(" << set << ")";
 }
 
 void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
@@ -35,24 +34,10 @@ void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
 
 void HIRPrinter::visit(ElementType::Ptr type) {
   oss << type->ident;
-#if 0
-  if (type->source) {
-    oss << "{";
-    type->source->accept(this);
-    oss << "}";
-  }
-#endif
 }
 
 void HIRPrinter::visit(Endpoint::Ptr end) {
   end->set->accept(this);
-#if 0
-  if (end->element) {
-    oss << "{";
-    end->element->accept(this);
-    oss << "}";
-  }
-#endif
 }
 
 void HIRPrinter::visit(SetType::Ptr type) {
@@ -71,7 +56,6 @@ void HIRPrinter::visit(SetType::Ptr type) {
     }
     oss << ")";
   }
-  //oss << "<" << type << ">";
 }
 
 void HIRPrinter::visit(TupleLength::Ptr length) {

@@ -34,9 +34,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::ConstChecker(errors).check(program);
   hir::InferElementSources().infer(program);
   hir::SpecializeGenericFunctions().specialize(program);
-  //std::cout << *program << std::endl;
   hir::TypeChecker(errors).check(program);
-  //std::cout << *program << std::endl;
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {
