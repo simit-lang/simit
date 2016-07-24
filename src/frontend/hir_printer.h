@@ -86,7 +86,8 @@ private:
   void printComplex(double_complex val) {
     oss << "<" << val.real << "," << val.imag << ">";
   }
-  
+ 
+  void printIdentDecl(IdentDecl::Ptr);
   void printVarOrConstDecl(VarDecl::Ptr, const bool = false);
   void printMapOrApply(MapExpr::Ptr, const bool = false);
   void printUnaryExpr(UnaryExpr::Ptr, const std::string, const bool = false);

@@ -17,9 +17,11 @@ public:
   ContextSensitiveRewriter(std::vector<ParseError> *);
 
 private:
+  using HIRRewriter::visit;
+
   virtual void visit(SetIndexSet::Ptr);
   virtual void visit(IdentDecl::Ptr);
-  virtual void visit(FieldDecl::Ptr op) { HIRRewriter::visit(op); }
+  virtual void visit(FieldDecl::Ptr op) { node = op; }
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);

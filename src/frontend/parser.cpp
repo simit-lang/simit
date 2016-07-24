@@ -100,8 +100,10 @@ std::vector<hir::FieldDecl::Ptr> Parser::parseFieldDeclList() {
 // field_decl: tensor_decl ';'
 hir::FieldDecl::Ptr Parser::parseFieldDecl() {
   auto fieldDecl = std::make_shared<hir::FieldDecl>();
-  
-  fieldDecl->field = parseTensorDecl();
+
+  const auto tensorDecl = parseTensorDecl();
+  fieldDecl->name = tensorDecl->name;
+  fieldDecl->type = tensorDecl->type;
   
   const Token endToken = consume(Token::Type::SEMICOL);
   fieldDecl->setEndLoc(endToken);
@@ -125,8 +127,10 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
   
   const Token externToken = consume(Token::Type::EXTERN);
   externDecl->setBeginLoc(externToken);
-  
-  externDecl->var = parseIdentDecl();
+ 
+  const auto identDecl = parseIdentDecl();
+  externDecl->name = identDecl->name;
+  externDecl->type = identDecl->type;
   
   const Token endToken = consume(Token::Type::SEMICOL);
   externDecl->setEndLoc(endToken);
@@ -274,7 +278,10 @@ hir::Argument::Ptr Parser::parseArgumentDecl() {
     argDecl->setBeginLoc(inoutToken);
   }
 
-  argDecl->arg = parseIdentDecl();
+  const auto identDecl = parseIdentDecl();
+  argDecl->name = identDecl->name;
+  argDecl->type = identDecl->type;
+  
   return argDecl;
 }
 

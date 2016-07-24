@@ -58,7 +58,7 @@ void HIRVisitor::visit(IdentDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(FieldDecl::Ptr decl) {
-  decl->field->accept(this);
+  visit(to<IdentDecl>(decl));
 }
 
 void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
@@ -69,7 +69,7 @@ void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(Argument::Ptr arg) {
-  arg->arg->accept(this);
+  visit(to<IdentDecl>(arg));
 }
 
 void HIRVisitor::visit(InOutArgument::Ptr arg) {
@@ -77,7 +77,7 @@ void HIRVisitor::visit(InOutArgument::Ptr arg) {
 }
 
 void HIRVisitor::visit(ExternDecl::Ptr decl) {
-  decl->var->accept(this);
+  visit(to<IdentDecl>(decl));
 }
 
 void HIRVisitor::visit(FuncDecl::Ptr decl) {
@@ -156,7 +156,7 @@ void HIRVisitor::visit(AssignStmt::Ptr stmt) {
   for (auto lhs : stmt->lhs) {
     lhs->accept(this);
   }
-  visit(to<ExprStmt>(stmt));
+  stmt->expr->accept(this);
 }
 
 void HIRVisitor::visit(ExprParam::Ptr param) {

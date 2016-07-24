@@ -147,7 +147,9 @@ void IREmitter::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void IREmitter::visit(ExternDecl::Ptr decl) {
-  const ir::Var externVar = emitVar(decl->var);
+  const ir::Type type = emitType(decl->type);
+  const auto externVar = ir::Var(decl->name->ident, type);
+  
   ctx->addExtern(externVar);
   ctx->addSymbol(externVar);
 }
@@ -161,7 +163,7 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
 
   std::vector<ir::Var> arguments;
   for (auto arg : decl->args) {
-    const ir::Var argVar = emitVar(arg->arg);
+    const ir::Var argVar = emitVar(arg);
     const auto access = arg->isInOut() ? internal::Symbol::ReadWrite : 
                         internal::Symbol::Read;
     ctx->addSymbol(argVar.getName(), argVar, access);

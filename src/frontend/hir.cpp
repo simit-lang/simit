@@ -166,12 +166,6 @@ HIRNode::Ptr TupleType::cloneImpl() {
   return node;
 }
 
-ScalarType::Ptr make(ScalarType::Type type) {
-  auto ret = std::make_shared<ScalarType>();
-  ret->type = type;
-  return ret;
-}
-
 void ScalarType::copy(HIRNode::Ptr node) {
   const auto scalarType = to<ScalarType>(node);
   TensorType::copy(scalarType);
@@ -212,13 +206,6 @@ HIRNode::Ptr Identifier::cloneImpl() {
   return node;
 }
 
-IdentDecl::Ptr make(Identifier::Ptr name, Type::Ptr type) {
-  const auto ret = std::make_shared<IdentDecl>();
-  ret->name = name;
-  ret->type = type;
-  return ret;
-}
-
 void IdentDecl::copy(HIRNode::Ptr node) {
   const auto identDecl = to<IdentDecl>(node);
   HIRNode::copy(identDecl);
@@ -230,12 +217,6 @@ HIRNode::Ptr IdentDecl::cloneImpl() {
   const auto node = std::make_shared<IdentDecl>();
   node->copy(shared_from_this());
   return node;
-}
-
-void FieldDecl::copy(HIRNode::Ptr node) {
-  const auto fieldDecl = to<FieldDecl>(node);
-  HIRNode::copy(fieldDecl);
-  field = fieldDecl->field->clone<IdentDecl>();
 }
 
 HIRNode::Ptr FieldDecl::cloneImpl() {
@@ -259,18 +240,6 @@ HIRNode::Ptr ElementTypeDecl::cloneImpl() {
   return node;
 }
 
-Argument::Ptr make(IdentDecl::Ptr arg) {
-  const auto ret = std::make_shared<Argument>();
-  ret->arg = arg;
-  return ret;
-}
-
-void Argument::copy(HIRNode::Ptr node) {
-  const auto argument = to<Argument>(node);
-  HIRNode::copy(argument);
-  arg = argument->arg->clone<IdentDecl>();
-}
-
 HIRNode::Ptr Argument::cloneImpl() {
   const auto node = std::make_shared<Argument>();
   node->copy(shared_from_this());
@@ -281,12 +250,6 @@ HIRNode::Ptr InOutArgument::cloneImpl() {
   const auto node = std::make_shared<InOutArgument>();
   node->copy(shared_from_this());
   return node;
-}
-
-void ExternDecl::copy(HIRNode::Ptr node) {
-  const auto externDecl = to<ExternDecl>(node);
-  HIRNode::copy(externDecl);
-  var = externDecl->var->clone<IdentDecl>();
 }
 
 HIRNode::Ptr ExternDecl::cloneImpl() {

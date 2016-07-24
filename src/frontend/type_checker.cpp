@@ -202,15 +202,11 @@ void TypeChecker::visit(IdentDecl::Ptr decl) {
   retTypeChecked = typeCheck(decl->type);
 }
 
-void TypeChecker::visit(FieldDecl::Ptr decl) {
-  retTypeChecked = typeCheck(decl->field);
-}
-
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
   Environment::ElementMap elemFields;
   for (auto field : decl->fields) {
-    const std::string fieldName = field->field->name->ident;
-    const Type::Ptr fieldType = field->field->type;
+    const std::string fieldName = field->name->ident;
+    const Type::Ptr fieldType = field->type;
 
     const bool typeChecked = typeCheck(field);
 
@@ -229,15 +225,11 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
   env.addElementType(decl->name->ident, elemFields);
 }
 
-void TypeChecker::visit(Argument::Ptr arg) {
-  retTypeChecked = typeCheck(arg->arg);
-}
-
 void TypeChecker::visit(ExternDecl::Ptr decl) {
-  retTypeChecked = typeCheck(decl->var);
+  retTypeChecked = typeCheck(decl->type);
 
-  const auto externName = decl->var->name->ident;
-  const auto externType = retTypeChecked ? decl->var->type : Type::Ptr();
+  const auto externName = decl->name->ident;
+  const auto externType = retTypeChecked ? decl->type : Type::Ptr();
 
   // Check that variable has not been previously declared.
   if (env.hasSymbol(externName, Environment::Scope::CurrentOnly)) {
@@ -285,8 +277,8 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     const bool typeChecked = typeCheck(arg);
     retTypeChecked = typeChecked && retTypeChecked;
 
-    const std::string name = arg->arg->name->ident;
-    const Type::Ptr type = typeChecked ? arg->arg->type : Type::Ptr();
+    const std::string name = arg->name->ident;
+    const Type::Ptr type = typeChecked ? arg->type : Type::Ptr();
     const Access access = arg->isInOut() ? Access::READ_WRITE : Access::READ;
     
     if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
@@ -977,7 +969,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     for (unsigned i = 0; i < numArgs; ++i) {
       const ExprType argType = argTypes[i];
       if (argType.defined && argType.isSingleValue()) {
-        checker.unify(funcSignature->args[i]->arg->type, argType.type[0]);
+        checker.unify(funcSignature->args[i]->type, argType.type[0]);
       }
     }
 
@@ -1045,9 +1037,9 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
                << "argument of type " << toString(argType);
         reportError(errMsg.str(), arg);
       }
-    } else if (!env.compareTypes(argType.type[0], funcArg->arg->type)) {
+    } else if (!env.compareTypes(argType.type[0], funcArg->type)) {
       std::stringstream errMsg;
-      errMsg << "expected argument of type " << toString(funcArg->arg->type) 
+      errMsg << "expected argument of type " << toString(funcArg->type) 
              << " but got an argument of type " << toString(argType);
       reportError(errMsg.str(), arg);
     }
@@ -1592,7 +1584,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     for (unsigned i = 0; i < numArgs; ++i) {
       const ExprType paramType = actualsType[i];
       if (paramType.defined && paramType.isSingleValue()) {
-        checker.unify(funcSignature->args[i]->arg->type, paramType.type[0]);
+        checker.unify(funcSignature->args[i]->type, paramType.type[0]);
       }
     }
 
@@ -1649,12 +1641,12 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
 
     // Check that argument is of type expected by callee.
-    if (!env.compareTypes(paramType.type[0], funcArg->arg->type)) {
+    if (!env.compareTypes(paramType.type[0], funcArg->type)) {
       std::stringstream errMsg;
       errMsg << opString << " operation passes argument of type "
              << toString(paramType.type[0]) << " to assembly function '"
              << funcName << "' but function expects argument of type "
-             << toString(funcArg->arg->type);
+             << toString(funcArg->type);
       if (i < expr->partialActuals.size()) {
         reportError(errMsg.str(), expr->partialActuals[i]);
       } else {
@@ -2317,9 +2309,8 @@ void TypeChecker::addIntrinsic(const std::string& name,
   
   for (unsigned i = 0; i < args.size(); ++i) {
     const auto arg = std::make_shared<Argument>();
-    arg->arg = std::make_shared<IdentDecl>();
     
-    arg->arg->type = args[i];
+    arg->type = args[i];
     decl->args.push_back(arg);
   }
 

@@ -38,9 +38,7 @@ private:
   virtual void visit(TupleType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
-  virtual void visit(FieldDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
-  virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
@@ -179,6 +177,8 @@ private:
   typedef std::vector<IndexDomain>                       TensorDimensions;
   
   struct ReplaceTypeParams : public HIRRewriter {
+    using HIRRewriter::visit;
+
     ReplaceTypeParams(ReplacementMap &specializedSets) : 
         specializedSets(specializedSets) {}
     

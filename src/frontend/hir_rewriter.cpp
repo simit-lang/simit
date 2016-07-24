@@ -60,26 +60,11 @@ void HIRRewriter::visit(IdentDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(FieldDecl::Ptr decl) {
-  decl->field = rewrite<IdentDecl>(decl->field);
-  node = decl;
-}
-
 void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
   for (auto &field : decl->fields) {
     field = rewrite<FieldDecl>(field);
   }
-  node = decl;
-}
-
-void HIRRewriter::visit(Argument::Ptr arg) {
-  arg->arg = rewrite<IdentDecl>(arg->arg);
-  node = arg;
-}
-
-void HIRRewriter::visit(ExternDecl::Ptr decl) {
-  decl->var = rewrite<IdentDecl>(decl->var);
   node = decl;
 }
 
@@ -276,10 +261,6 @@ void HIRRewriter::visit(FieldReadExpr::Ptr expr) {
 void HIRRewriter::visit(ParenExpr::Ptr expr) {
   expr->expr = rewrite<Expr>(expr->expr);
   node = expr;
-}
-
-void HIRRewriter::visit(RangeConst::Ptr expr) {
-  HIRRewriter::visit(to<VarExpr>(expr));
 }
 
 void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {

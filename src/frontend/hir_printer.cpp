@@ -129,13 +129,11 @@ void HIRPrinter::visit(Identifier::Ptr ident) {
 }
 
 void HIRPrinter::visit(IdentDecl::Ptr decl) {
-  decl->name->accept(this);
-  oss << " : ";
-  decl->type->accept(this);
+  printIdentDecl(decl);
 }
 
 void HIRPrinter::visit(FieldDecl::Ptr decl) {
-  decl->field->accept(this);
+  printIdentDecl(decl);
   oss << ";";
 }
 
@@ -159,12 +157,12 @@ void HIRPrinter::visit(Argument::Ptr arg) {
   if (arg->isInOut()) {
     oss << "inout ";
   }
-  arg->arg->accept(this);
+  printIdentDecl(arg);
 }
 
 void HIRPrinter::visit(ExternDecl::Ptr decl) {
   oss << "extern ";
-  decl->var->accept(this);
+  printIdentDecl(decl);
   oss << ";";
 }
 
@@ -657,6 +655,12 @@ void HIRPrinter::visit(Test::Ptr test) {
   oss << ") == ";
   test->expected->accept(this);
   oss << ";";
+}
+
+void HIRPrinter::printIdentDecl(IdentDecl::Ptr decl) {
+  decl->name->accept(this);
+  oss << " : ";
+  decl->type->accept(this);
 }
 
 void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {

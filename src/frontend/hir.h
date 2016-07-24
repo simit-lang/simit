@@ -311,21 +311,17 @@ struct IdentDecl : public HIRNode {
   virtual unsigned getColEnd() { return type->getColEnd(); }
 };
 
-struct FieldDecl : public HIRNode {
-  IdentDecl::Ptr field;
-  
+struct FieldDecl : public IdentDecl {
   typedef std::shared_ptr<FieldDecl> Ptr;
   
-  virtual void copy(HIRNode::Ptr);
-
   virtual HIRNode::Ptr cloneImpl();
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(self<FieldDecl>());
   }
 
-  virtual unsigned getLineBegin() { return field->getLineBegin(); }
-  virtual unsigned getColBegin() { return field->getColBegin(); }
+  virtual unsigned getLineEnd() { return HIRNode::getLineEnd(); }
+  virtual unsigned getColEnd() { return HIRNode::getColEnd(); }
 };
 
 struct ElementTypeDecl : public HIRNode {
@@ -343,24 +339,15 @@ struct ElementTypeDecl : public HIRNode {
   }
 };
 
-struct Argument : public HIRNode {
-  IdentDecl::Ptr arg;
-  
+struct Argument : public IdentDecl {
   typedef std::shared_ptr<Argument> Ptr;
  
-  virtual void copy(HIRNode::Ptr);
-
   virtual HIRNode::Ptr cloneImpl();
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(self<Argument>());
   }
   
-  virtual unsigned getLineBegin() { return arg->getLineBegin(); }
-  virtual unsigned getColBegin() { return arg->getColBegin(); }
-  virtual unsigned getLineEnd() { return arg->getLineEnd(); }
-  virtual unsigned getColEnd() { return arg->getColEnd(); }
-
   virtual bool isInOut() { return false; }
 };
 
@@ -379,18 +366,19 @@ struct InOutArgument : public Argument {
   virtual bool isInOut() { return true; }
 };
 
-struct ExternDecl : public HIRNode {
-  IdentDecl::Ptr var;
-  
+struct ExternDecl : public IdentDecl {
   typedef std::shared_ptr<ExternDecl> Ptr;
   
-  virtual void copy(HIRNode::Ptr);
-
   virtual HIRNode::Ptr cloneImpl();
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(self<ExternDecl>());
   }
+  
+  virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
+  virtual unsigned getColBegin() { return HIRNode::getColBegin(); }
+  virtual unsigned getLineEnd() { return HIRNode::getLineEnd(); }
+  virtual unsigned getColEnd() { return HIRNode::getColEnd(); }
 };
 
 struct GenericParam : public HIRNode {
