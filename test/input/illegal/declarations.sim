@@ -81,6 +81,10 @@ func f(e : E)
   var f = e;
 end
 
+%%% bad-decl-3
+func foo<1:N>()
+end
+
 %%% undeclared-var
 proc main
   z * z - 2;
