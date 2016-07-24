@@ -53,6 +53,10 @@ proc main
   var v : int;
 end
 
+%%% redeclaration-5
+func foo<N,N>()
+end
+
 %%% bad-decl-1
 % NOTE: At some point we will want to implement constant folding and 
 %       propagation in the compiler front end, which would handle this case.
