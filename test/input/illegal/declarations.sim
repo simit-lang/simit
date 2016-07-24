@@ -57,6 +57,16 @@ end
 func foo<N,N>()
 end
 
+%%% redeclaration-6
+func foo(a : int, inout a : float)
+end
+
+%%% redeclaration-7
+element E
+  v : int;
+  v : int;
+end
+
 %%% bad-decl-1
 % NOTE: At some point we will want to implement constant folding and 
 %       propagation in the compiler front end, which would handle this case.

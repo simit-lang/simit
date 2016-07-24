@@ -211,7 +211,7 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
     const bool typeChecked = typeCheck(field);
 
     if (elemFields.find(fieldName) != elemFields.end()) {
-      reportMultipleDefs("element field", fieldName, decl);
+      reportMultipleDefs("element field", fieldName, field);
     }
 
     elemFields[fieldName] = typeChecked ? fieldType : Type::Ptr();
