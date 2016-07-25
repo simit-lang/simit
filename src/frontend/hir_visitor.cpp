@@ -20,12 +20,6 @@ void HIRVisitor::visit(GenericIndexSet::Ptr set) {
   visit(to<SetIndexSet>(set));
 }
 
-void HIRVisitor::visit(ElementType::Ptr type) {
-  if (type->source) {
-    type->source->accept(this);
-  }
-}
-
 void HIRVisitor::visit(Endpoint::Ptr end) {
   end->set->accept(this);
   if (end->element) {

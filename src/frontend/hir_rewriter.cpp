@@ -17,13 +17,6 @@ void HIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
   node = stmtBlock;
 }
 
-void HIRRewriter::visit(ElementType::Ptr type) {
-  if (type->source) {
-    type->source = rewrite<SetIndexSet>(type->source);
-  }
-  node = type;
-}
-
 void HIRRewriter::visit(Endpoint::Ptr end) {
   end->set = rewrite<SetIndexSet>(end->set);
   if (end->element) {

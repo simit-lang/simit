@@ -16,7 +16,7 @@ public:
   virtual void visit(RangeIndexSet::Ptr op) { node = op; }
   virtual void visit(SetIndexSet::Ptr op) { node = op; }
   virtual void visit(DynamicIndexSet::Ptr op) { node = op; }
-  virtual void visit(ElementType::Ptr);
+  virtual void visit(ElementType::Ptr op) { node = op; }
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleLength::Ptr op) { node = op; }

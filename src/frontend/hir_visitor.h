@@ -89,7 +89,7 @@ public:
   virtual void visit(std::shared_ptr<SetIndexSet> op) {}
   virtual void visit(std::shared_ptr<GenericIndexSet>);
   virtual void visit(std::shared_ptr<DynamicIndexSet> op) {}
-  virtual void visit(std::shared_ptr<ElementType>);
+  virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint>);
   virtual void visit(std::shared_ptr<SetType>);
   virtual void visit(std::shared_ptr<TupleLength> op) {}
