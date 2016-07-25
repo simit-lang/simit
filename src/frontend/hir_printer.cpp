@@ -21,7 +21,7 @@ void HIRPrinter::visit(StmtBlock::Ptr stmtBlock) {
 }
 
 void HIRPrinter::visit(RangeIndexSet::Ptr set) {
-  oss << "0.." << set->range;
+  oss << "0:" << set->range;
 }
 
 void HIRPrinter::visit(SetIndexSet::Ptr set) {
@@ -51,7 +51,7 @@ void HIRPrinter::visit(SetType::Ptr type) {
     bool printDelimiter = false;
     for (auto endpoint : type->endpoints) {
       if (printDelimiter) {
-        oss << ", ";
+        oss << ",";
       }
       
       endpoint->accept(this);
@@ -69,7 +69,7 @@ void HIRPrinter::visit(TupleLength::Ptr length) {
 void HIRPrinter::visit(TupleType::Ptr type) {
   oss << "(";
   type->element->accept(this);
-  oss << " * ";
+  oss << "*";
   type->length->accept(this);
   oss << ")";
 }
@@ -105,7 +105,7 @@ void HIRPrinter::visit(NDTensorType::Ptr type) {
     bool printDelimiter = false;
     for (auto indexSet : type->indexSets) {
       if (printDelimiter) {
-        oss << ", ";
+        oss << ",";
       }
       
       indexSet->accept(this);

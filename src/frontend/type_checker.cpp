@@ -1138,16 +1138,17 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
         reportError(errMsg.str(), index);
       }
     } else if (isa<SetIndexSet>(indexSet)) {
+      const std::string domain = to<SetIndexSet>(indexSet)->setName;
+
       if (!isa<ElementType>(indexType.type[0])) {
         std::stringstream errMsg;
-        errMsg << "expected an element as index but got an index of type "
-               << toString(indexType);
+        errMsg << "expected an element of set '" << domain << "' as index "
+               << "but got an index of type " << toString(indexType);
         reportError(errMsg.str(), index);
         continue;
       }
 
       const auto elemType = to<ElementType>(indexType.type[0]);
-      const std::string domain = to<SetIndexSet>(indexSet)->setName;
 
       if (!env.compareIndexSets(indexSet, elemType->source)) {
         std::stringstream errMsg;
