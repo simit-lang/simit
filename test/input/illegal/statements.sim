@@ -25,6 +25,15 @@ func bar()
   foo(M);
 end
 
+%%% bad-generic-4
+func foo<N>(M : matrix[N,N](float), K : matrix[N,N](float))
+end
+
+func bar()
+  M = [1.0 2.0; 3.0 4.0];
+  foo(M);
+end
+
 %%% bad-call-1
 func foo(i : int)
 end

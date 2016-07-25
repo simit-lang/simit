@@ -379,7 +379,7 @@ private:
   void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
                     const std::vector<Type::Ptr>&);
 
-  static std::string getFunctionTypeSignatureString(FuncDecl::Ptr);
+  static std::string getConcretizedTypeSignatureString(FuncDecl::Ptr);
 
   static std::string toString(ExprType);
   static std::string toString(Type::Ptr, bool = true);

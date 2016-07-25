@@ -940,7 +940,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
   
-  const std::string &funcName = expr->func->ident;
+  std::string funcName = expr->func->ident;
 
   // If callee type signature could not be determined, 
   // then there's nothing more to do.
@@ -955,6 +955,10 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   }
 
   FuncDecl::Ptr func = env.getFunction(funcName);
+
+  if (!func->originalName.empty()) {
+    funcName = func->originalName;
+  }
 
   if (!func->genericParams.empty()) {
     // Type parameter resolution needs to be done with information that is 
@@ -977,10 +981,8 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       const auto it = checker.specializedSets.find(genericParam->name);
       if (it == checker.specializedSets.end()) {
         std::stringstream errMsg;
-        errMsg << "unable to resolve type parameter '" 
-               << genericParam->name << "' for call to function '"
-               << (func->originalName.empty() ? funcName : func->originalName) 
-               << "'";
+        errMsg << "unable to resolve type parameter '" << genericParam->name 
+               << "' for call to function '" << funcName << "'";
         reportError(errMsg.str(), expr);
         return;
       }
@@ -992,18 +994,23 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    const std::string typeSig = getFunctionTypeSignatureString(func);
+    
+    if (!func->originalName.empty()) {
+      const std::string typeSig = getConcretizedTypeSignatureString(func);
 
-    if (env.hasFunctionReplacement(typeSig)) {
-      func = env.getFunctionReplacement(typeSig);
-      expr->func->ident = func->name->ident;
-    } else {
-      env.addFunctionReplacement(typeSig, func);
-      func->genericParams.clear();
+      if (env.hasFunctionReplacement(typeSig)) {
+        func = env.getFunctionReplacement(typeSig);
+        expr->func->ident = func->name->ident;
+      } else {
+        env.addFunctionReplacement(typeSig, func);
+        func->genericParams.clear();
 
-      // Generic functions that are called in the body need to be concretized.
-      if (errors->empty() && !func->originalName.empty()) {
-        typeCheck(func);
+        // Callee might itself call another generic function with arguments of 
+        // generic types, in which case the generic function called by the 
+        // callee would also have to be concretized.
+        if (errors->empty()) {
+          typeCheck(func);
+        }
       }
     }
   }
@@ -1476,7 +1483,6 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
 
 void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   const std::string opString = isApply ? "apply" : "map";
-  const std::string &funcName = expr->func->ident;
 
   std::vector<ExprType> actualsType(expr->partialActuals.size());
   for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
@@ -1510,7 +1516,9 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
 
   FuncDecl::Ptr func;
   SetType::Ptr targetSetType;
-
+  
+  std::string funcName = expr->func->ident;
+  
   // Check that assembly function has been declared.
   if (!env.hasFunction(funcName)) {
     reportUndeclared("function", funcName, expr->func);
@@ -1520,6 +1528,10 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     if (isApply && !func->results.empty()) {
       reportError("cannot apply a non-void function", expr->func);
     }
+  }
+
+  if (!func->originalName.empty()) {
+    funcName = func->originalName;
   }
 
   // Check that target has been declared and is a (non-generic) set.
@@ -1602,8 +1614,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
         std::stringstream errMsg;
         errMsg << "unable to resolve type parameter '" << genericParam->name 
                << "' for " << opString << " operation with function '" 
-               << (func->originalName.empty() ? funcName : func->originalName) 
-               << "'";
+               << funcName << "'";
         reportError(errMsg.str(), expr);
         return;
       }
@@ -1615,18 +1626,23 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    const std::string typeSig = getFunctionTypeSignatureString(func);
 
-    if (env.hasFunctionReplacement(typeSig)) {
-      func = env.getFunctionReplacement(typeSig);
-      expr->func->ident = func->name->ident;
-    } else {
-      env.addFunctionReplacement(typeSig, func);
-      func->genericParams.clear();
+    if (!func->originalName.empty()) {
+      const std::string typeSig = getConcretizedTypeSignatureString(func);
 
-      // Generic functions that are called in the body need to be concretized.
-      if (errors->empty() && !func->originalName.empty()) {
-        typeCheck(func);
+      if (env.hasFunctionReplacement(typeSig)) {
+        func = env.getFunctionReplacement(typeSig);
+        expr->func->ident = func->name->ident;
+      } else {
+        env.addFunctionReplacement(typeSig, func);
+        func->genericParams.clear();
+
+        // Callee might itself call another generic function with arguments of 
+        // generic types, in which case the generic function called by the 
+        // callee would also have to be concretized.
+        if (errors->empty()) {
+          typeCheck(func);
+        }
       }
     }
   }
@@ -2050,14 +2066,15 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
   }
 }
 
-std::string TypeChecker::getFunctionTypeSignatureString(FuncDecl::Ptr decl) {
+std::string TypeChecker::getConcretizedTypeSignatureString(FuncDecl::Ptr decl) {
   class FuncTypeSignaturePrinter : public HIRPrinter {
     public:
       FuncTypeSignaturePrinter(std::ostream &oss) : HIRPrinter(oss) {}
 
     private:
       virtual void visit(SetIndexSet::Ptr set) {
-        oss << set->setName << "(" << set->setDef << ")";
+        iassert((bool)set->setDef);
+        oss << set->setDef;
       }
 
       virtual void visit(FuncDecl::Ptr decl) {
@@ -2072,6 +2089,7 @@ std::string TypeChecker::getFunctionTypeSignatureString(FuncDecl::Ptr decl) {
             break;
         }
         
+        iassert(!decl->originalName.empty());
         oss << "func " << decl->originalName << "(";
         
         for (auto arg : decl->args) {
