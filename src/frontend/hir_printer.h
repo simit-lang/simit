@@ -78,7 +78,7 @@ public:
   virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
-private:
+protected:
   void indent() { ++indentLevel; }
   void dedent() { --indentLevel; }
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }

@@ -22,6 +22,11 @@ export func main()
   end
 end
 
+%%% bad-add-4
+func foo<N,M>(A : matrix[N,N](float), B : matrix[M,M](float))
+  A + B;
+end
+
 %%% bad-mul-1
 proc main
   t = [1 2];

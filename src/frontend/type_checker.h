@@ -8,11 +8,12 @@
 #include <set>
 #include <unordered_map>
 
-#include "hir.h"
-#include "hir_visitor.h"
-#include "hir_rewriter.h"
 #include "domain.h"
 #include "error.h"
+#include "hir.h"
+#include "hir_printer.h"
+#include "hir_rewriter.h"
+#include "hir_visitor.h"
 #include "ir.h"
 #include "util/scopedmap.h"
 
@@ -172,21 +173,21 @@ private:
       bool       defined;
   };
 
-  typedef std::unordered_map<std::string, IndexSet::Ptr> ReplacementMap;
+  typedef std::unordered_map<std::string, IndexSet::Ptr> SetReplacementMap;
   typedef std::vector<IndexSet::Ptr>                     IndexDomain;
   typedef std::vector<IndexDomain>                       TensorDimensions;
   
   struct ReplaceTypeParams : public HIRRewriter {
     using HIRRewriter::visit;
 
-    ReplaceTypeParams(ReplacementMap &specializedSets) : 
+    ReplaceTypeParams(SetReplacementMap &specializedSets) : 
         specializedSets(specializedSets) {}
     
     virtual void visit(GenericIndexSet::Ptr);
     virtual void visit(IndexSetDomain::Ptr);
     virtual void visit(RangeConst::Ptr);
 
-    ReplacementMap &specializedSets;
+    SetReplacementMap &specializedSets;
   };
 
   class Environment {
@@ -225,6 +226,19 @@ private:
       FuncDecl::Ptr getFunction(const std::string& name) const {
         iassert(hasFunction(name));
         return funcDecls.at(name);
+      }
+
+      void addFunctionReplacement(const std::string& sig, FuncDecl::Ptr decl) {
+        funcReplace[sig] = decl;
+      }
+
+      bool hasFunctionReplacement(const std::string& sig) const {
+        return funcReplace.find(sig) != funcReplace.end();
+      }
+
+      FuncDecl::Ptr getFunctionReplacement(const std::string& sig) const {
+        iassert(hasFunctionReplacement(sig));
+        return funcReplace.at(sig);
       }
 
       void addElementType(const std::string& name, const ElementMap &map) {
@@ -298,6 +312,7 @@ private:
       
     private:
       FuncMap          funcDecls;
+      FuncMap          funcReplace;
       ElementDeclMap   elementDecls;
       SymbolTable      symbolTable;
       SetDefinitionMap setDefs;
@@ -331,8 +346,8 @@ private:
 
     void unify(Type::Ptr, Type::Ptr);
 
-    ReplacementMap  specializedSets;
-    Environment    &env;
+    SetReplacementMap  specializedSets;
+    Environment       &env;
   };
 
 private:
@@ -363,6 +378,8 @@ private:
                           const std::vector<ScalarType::Type>&);
   void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
                     const std::vector<Type::Ptr>&);
+
+  static std::string getFunctionTypeSignatureString(FuncDecl::Ptr);
 
   static std::string toString(ExprType);
   static std::string toString(Type::Ptr, bool = true);

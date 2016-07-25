@@ -940,7 +940,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
   
-  const std::string funcName = expr->func->ident;
+  const std::string &funcName = expr->func->ident;
 
   // If callee type signature could not be determined, 
   // then there's nothing more to do.
@@ -992,11 +992,19 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    func->genericParams.clear();
+    const std::string typeSig = getFunctionTypeSignatureString(func);
 
-    // Generic functions that are called in the body need to be concretized.
-    if (errors->empty() && !func->originalName.empty()) {
-      typeCheck(func);
+    if (env.hasFunctionReplacement(typeSig)) {
+      func = env.getFunctionReplacement(typeSig);
+      expr->func->ident = func->name->ident;
+    } else {
+      env.addFunctionReplacement(typeSig, func);
+      func->genericParams.clear();
+
+      // Generic functions that are called in the body need to be concretized.
+      if (errors->empty() && !func->originalName.empty()) {
+        typeCheck(func);
+      }
     }
   }
 
@@ -1468,7 +1476,7 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
 
 void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   const std::string opString = isApply ? "apply" : "map";
-  const std::string funcName = expr->func->ident;
+  const std::string &funcName = expr->func->ident;
 
   std::vector<ExprType> actualsType(expr->partialActuals.size());
   for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
@@ -1607,11 +1615,19 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    func->genericParams.clear();
+    const std::string typeSig = getFunctionTypeSignatureString(func);
 
-    // Generic functions that are called in the body need to be concretized.
-    if (errors->empty() && !func->originalName.empty()) {
-      typeCheck(func);
+    if (env.hasFunctionReplacement(typeSig)) {
+      func = env.getFunctionReplacement(typeSig);
+      expr->func->ident = func->name->ident;
+    } else {
+      env.addFunctionReplacement(typeSig, func);
+      func->genericParams.clear();
+
+      // Generic functions that are called in the body need to be concretized.
+      if (errors->empty() && !func->originalName.empty()) {
+        typeCheck(func);
+      }
     }
   }
   
@@ -2032,6 +2048,53 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
     const auto argTupleType = to<TupleType>(argType);
     unify(paramTupleType->element, argTupleType->element);
   }
+}
+
+std::string TypeChecker::getFunctionTypeSignatureString(FuncDecl::Ptr decl) {
+  class FuncTypeSignaturePrinter : public HIRPrinter {
+    public:
+      FuncTypeSignaturePrinter(std::ostream &oss) : HIRPrinter(oss) {}
+
+    private:
+      virtual void visit(SetIndexSet::Ptr set) {
+        oss << set->setName << "(" << set->setDef << ")";
+      }
+
+      virtual void visit(FuncDecl::Ptr decl) {
+        switch (decl->type) {
+          case FuncDecl::Type::EXPORTED:
+            oss << "export ";
+            break;
+          case FuncDecl::Type::EXTERNAL:
+            oss << "extern ";
+            break;
+          default:
+            break;
+        }
+        
+        oss << "func " << decl->originalName << "(";
+        
+        for (auto arg : decl->args) {
+          arg->accept(this);
+          oss << ",";
+        }
+        
+        oss << ") -> (";
+          
+        for (auto result : decl->results) {
+          result->accept(this);
+          oss << ",";
+        }
+        
+        oss << ")";
+      }
+  };
+
+  std::stringstream oss;
+  FuncTypeSignaturePrinter printer(oss);
+  decl->accept(&printer);
+
+  return oss.str();
 }
 
 void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
