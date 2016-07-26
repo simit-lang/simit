@@ -16,7 +16,6 @@ namespace hir {
 TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
     retTypeChecked(true),
     skipCheckDeclared(false),
-    skipReportError(0),
     errors(errors) {
   const auto threeDim = std::make_shared<RangeIndexSet>();
   threeDim->range = 3;
@@ -122,9 +121,14 @@ void TypeChecker::visit(SetIndexSet::Ptr set) {
     return;
   }
 
+  const Type::Ptr type = env.getSymbolType(set->setName);
+
   // Check that index set pointed to by identifier is indeed of set type.
-  if (!isa<SetType>(env.getSymbolType(set->setName))) {
-    reportError("expected a set", set);
+  if (!set->setDef && !isa<SetType>(type)) {
+    std::stringstream errMsg;
+    errMsg << "expected a set but '" << set->setName 
+           << "' is of type " << toString(type);
+    reportError(errMsg.str(), set);
   }
 }
 
@@ -257,7 +261,6 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
   }
 
   env.scope();
-  skipReportError += specialized;
 
   for (const auto genericParam : decl->genericParams) {
     const std::string name = genericParam->name;
@@ -308,7 +311,6 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     typeCheck(decl->body);
   }
 
-  skipReportError -= specialized;
   env.unscope();
 
   if (!retTypeChecked) {
@@ -1164,10 +1166,12 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       }
 
       const auto elemType = to<ElementType>(indexType.type[0]);
+      const auto elemSource = elemType->source;
 
-      if (!env.compareIndexSets(indexSet, elemType->source)) {
+      if (elemSource && !env.compareIndexSets(indexSet, elemSource)) {
         std::stringstream errMsg;
-        errMsg << "expected an element of set '" << domain << "' as index";
+        errMsg << "expected an element of set '" << domain << "' as index but "
+               << "got an element of set '" << elemSource->setName << "'";
         reportError(errMsg.str(), index);
       }
     } else {
@@ -2479,10 +2483,8 @@ std::string TypeChecker::toString(ScalarType::Type type) {
 void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
   const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                               loc->getLineEnd(), loc->getColEnd(), msg);
-  if (skipReportError == 0) {
-    errors->push_back(err);
-    retTypeChecked = false;
-  }
+  errors->push_back(err);
+  retTypeChecked = false;
 }
 
 void TypeChecker::reportUndeclared(const std::string &type, 

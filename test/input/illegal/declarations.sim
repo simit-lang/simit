@@ -18,6 +18,12 @@ proc main
   var t : tensor[2,2](int)';
 end
 
+%%% bad-tensor-type-3
+func foo()
+  var K : int;
+  var v : vector[K](int);
+end
+
 %%% bad-tuple-type-1
 func foo(a : (F * 2))
 end

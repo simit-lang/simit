@@ -393,10 +393,9 @@ private:
   ExprType retType;
   bool     retTypeChecked; 
   
-  bool     skipCheckDeclared;
-  unsigned skipReportError;
+  bool        skipCheckDeclared;
+  Environment env;
   
-  Environment              env;
   std::vector<ParseError> *errors;
 };
 

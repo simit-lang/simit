@@ -130,7 +130,7 @@ struct RangeIndexSet : public IndexSet {
 
 struct SetIndexSet : public IndexSet {
   std::string              setName;
-  std::shared_ptr<SetType> setDef;
+  std::shared_ptr<SetType> setDef; // Reference to original definition of set.
   
   typedef std::shared_ptr<SetIndexSet> Ptr;
   
@@ -171,7 +171,7 @@ struct DynamicIndexSet : public IndexSet {
 
 struct ElementType : public Type {
   std::string      ident;
-  SetIndexSet::Ptr source;
+  SetIndexSet::Ptr source; // Reference to inferred source index set.
   
   typedef std::shared_ptr<ElementType> Ptr;
  
