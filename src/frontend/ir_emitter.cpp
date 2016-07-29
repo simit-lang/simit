@@ -23,7 +23,7 @@ void IREmitter::visit(RangeIndexSet::Ptr set) {
 }
 
 void IREmitter::visit(SetIndexSet::Ptr set) {
-  const ir::Expr setExpr = ctx->getSymbol(set->setName).getExpr();
+  const ir::Expr setExpr = setExprs[set->setDef];
   
   iassert(setExpr.type().isSet());
   retIndexSet = ir::IndexSet(setExpr);
@@ -39,7 +39,7 @@ void IREmitter::visit(ElementType::Ptr set) {
 }
 
 void IREmitter::visit(Endpoint::Ptr end) {
-  retExpr = ctx->getSymbol(end->setName).getExpr();
+  retExpr = setExprs[end->set->setDef];
 }
 
 void IREmitter::visit(SetType::Ptr type) {
@@ -147,27 +147,33 @@ void IREmitter::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void IREmitter::visit(ExternDecl::Ptr decl) {
-  const ir::Var externVar = emitVar(decl->var);
+  const ir::Type type = emitType(decl->type);
+  const auto externVar = ir::Var(decl->name->ident, type);
+  
   ctx->addExtern(externVar);
-  ctx->addSymbol(externVar);
+  addSymbol(externVar, decl);
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
+  if (decl->genericParams.size() > 0) {
+    return;
+  }
+
   ctx->scope();
 
   std::vector<ir::Var> arguments;
   for (auto arg : decl->args) {
-    const ir::Var argVar = emitVar(arg->arg);
+    const ir::Var argVar = emitVar(arg);
     const auto access = arg->isInOut() ? internal::Symbol::ReadWrite : 
                         internal::Symbol::Read;
-    ctx->addSymbol(argVar.getName(), argVar, access);
+    addSymbol(argVar.getName(), argVar, access, arg);
     arguments.push_back(argVar);
   }
   
   std::vector<ir::Var> results;
   for (auto res : decl->results) {
     const ir::Var result = emitVar(res);
-    ctx->addSymbol(result);
+    addSymbol(result, res);
     results.push_back(result);
   }
 
@@ -179,19 +185,20 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
 
   ctx->unscope();
 
-  if (decl->exported) {
+  if (decl->type == FuncDecl::Type::EXPORTED) {
     for (auto &extPair : ctx->getExterns()) {
       const ir::Var ext = ctx->getExtern(extPair.first);
       arguments.push_back(ext);
     }
   }
-  
-  auto funcKind = decl->external ? ir::Func::Kind::External :
-    ir::Func::Kind::Internal;
-  
-  iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body,
-    funcKind));
+
+  const auto funcName = decl->name->ident;
+  const auto funcKind = (decl->type == FuncDecl::Type::EXTERNAL) ? 
+                        ir::Func::Kind::External : ir::Func::Kind::Internal;
+  const auto func = ir::Func(funcName, arguments, results, body, funcKind);
+
+  iassert(!ctx->containsFunction(funcName));
+  ctx->addFunction(func);
 }
 
 void IREmitter::visit(VarDecl::Ptr decl) {
@@ -286,7 +293,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
 
   // If we need to write to loop variables, then that should be added as a
   // separate loop structure (that can't be vectorized easily)
-  ctx->addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
+  addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
  
   const ir::Stmt body = emitStmt(stmt->body);
   ctx->unscope();
@@ -346,7 +353,7 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const ir::Func func = ctx->getFunction(expr->func->ident);
   const std::vector<ir::Var> results = func.getResults();
 
-  const ir::Expr target = ctx->getSymbol(expr->target->ident).getExpr();
+  const ir::Expr target = ctx->getSymbol(expr->target->setName).getExpr();
  
   std::vector<ir::Expr> partialActuals;
   for (auto actual : expr->partialActuals) {
@@ -367,7 +374,6 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   }
   
   std::vector<ir::Expr> endpoints;
-  iassert(target.type().isSet());
   for (const ir::Expr *endpoint : target.type().toSet()->endpointSets) {
     endpoints.push_back(*endpoint);
   }
@@ -481,7 +487,7 @@ void IREmitter::visit(MulExpr::Ptr expr) {
   } else if (ltype->order() == 1 && rtype->order() == 1) {
     // Vector-Vector Multiplication (inner and outer product)
     iassert(lhs.type() == rhs.type());
-    if (expr->lhs->type.at(0).toTensor()->isColumnVector) {
+    if (ltype->isColumnVector) {
       retExpr = builder->outerProduct(lhs, rhs);
     } else {
       retExpr = builder->innerProduct(lhs, rhs);
@@ -523,14 +529,14 @@ void IREmitter::visit(LeftDivExpr::Ptr expr) {
 
   // The type of x in $Ax = b$ is the same as the second dimension of A.
   auto xtype = ir::TensorType::make(Atype->getComponentType(),
-                                    {Atype->getDimensions()[1]},
-                                    true);
+                                    {Atype->getDimensions()[1]}, true);
 
-  const ir::Var x = ctx->getBuilder()->temporary(ir::Type(xtype), "x");
+  const ir::Var x = ctx->getBuilder()->temporary(ir::Type(xtype));
   const ir::Stmt callStmt = ir::CallStmt::make({}, solve, {A, b, x});
 
   ctx->addStatement(ir::VarDecl::make(x));
-  ctx->addStatement(callStmt);
+  calls.push_back(callStmt);
+  
   retExpr = ir::VarExpr::make(x);
 }
 
@@ -575,7 +581,7 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
       retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
       auto retExprNode = const_cast<ir::ExprNode *>(to<ir::ExprNode>(retExpr));
       
-      const bool isColumnVector = expr->type.at(0).toTensor()->isColumnVector;
+      const bool isColumnVector = !type->isColumnVector;
       retExprNode->type = ir::TensorType::make(type->getComponentType(), 
                                                type->getDimensions(), 
                                                isColumnVector);
@@ -606,15 +612,15 @@ void IREmitter::visit(CallExpr::Ptr expr) {
   // appeared, the call is replaced with a read of the temporary variable.
   const auto type = (results.size() == 1) ? results[0].getType() : ir::Type();
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
-  retExpr = ir::VarExpr::make(tmp);
-
   const ir::Stmt callStmt = ir::CallStmt::make({tmp}, func, arguments);
+  
   calls.push_back(callStmt);
+  retExpr = ir::VarExpr::make(tmp);
 }
 
 void IREmitter::visit(TensorReadExpr::Ptr expr) {
   const ir::Expr tensor = emitExpr(expr->tensor);
-  iassert(tensor.type().isTensor());
+  const auto tensorType = tensor.type().toTensor();
 
   std::vector<ir::Expr> indices;
   bool containsSlices = false;
@@ -650,8 +656,20 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
     }
 
     // Now construct an index expression.
-    retExpr = ir::IndexExpr::make(freeVars,
-                                  ir::IndexedTensor::make(tensor, allivars));
+    const auto retTensor = ir::IndexedTensor::make(tensor, allivars);
+    retExpr = ir::IndexExpr::make(freeVars, retTensor);
+    
+    // Convert to column vector if applicable.
+    const auto retTensorType = retExpr.type().toTensor();
+    if (retTensorType->order() == 1) {
+      const bool isColumnVector = (tensorType->order() < 2) ? 
+          tensorType->getBlockType().toTensor()->isColumnVector :
+          expr->indices[expr->indices.size() - 2]->isSlice();
+      auto retExprNode = const_cast<ir::ExprNode *>(to<ir::ExprNode>(retExpr));
+      retExprNode->type = ir::TensorType::make(
+          retTensorType->getComponentType(), 
+          retTensorType->getDimensions(), isColumnVector);
+    }
   } else {
     retExpr = ir::TensorRead::make(tensor, indices);
   }
@@ -734,7 +752,8 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
       dataSize = util::getVectorSize(tensorVals.intVals);
       const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
                                                        tensor->transposed);
-      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), dataSize);
+      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), 
+                                  dataSize);
       return;
     }
     case DenseTensorValues::Type::FLOAT:
@@ -862,13 +881,11 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
   const auto varType = decl->type ? emitType(decl->type) : initExpr.type();
-  
   const auto var = ir::Var(decl->name->ident, varType);
-  iassert(!ctx->hasSymbol(var.getName(), true));
-
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
-  ctx->addSymbol(var.getName(), var, access);
+  
+  addSymbol(var.getName(), var, access);
 
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
       (isScalar(var.getType()) || !isScalar(initExpr.type()))) {
@@ -911,7 +928,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     const ir::Var var = ir::to<ir::VarExpr>(expr)->var;
     if (ir::isa<ir::CallStmt>(calls.back())) {
       const auto callStmt = ir::to<ir::CallStmt>(calls.back());
-      if (var == callStmt->results[0]) {
+      if ((callStmt->results.size() == 1) && (var == callStmt->results[0])) {
         topLevelStmt = callStmt;
         calls.pop_back();
       }
@@ -949,14 +966,14 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
 
         if (!ctx->hasSymbol(varName)) {
           var = ir::Var(varName, retVals[i].getType());
-          ctx->addSymbol(var);
+          addSymbol(var);
           ctx->addStatement(ir::VarDecl::make(var));
         }
 
         results.push_back(var);
       } else {
         const ir::Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
-        ctx->addSymbol(tmp);
+        addSymbol(tmp);
 
         if (!isCallStmt ||
             ir::to<ir::CallStmt>(topLevelStmt)->callee.getKind() !=
@@ -1025,13 +1042,27 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       // Target variable might not have been declared.
       if (!ctx->hasSymbol(varName)) {
         var = ir::Var(varName, expr.type());
-        ctx->addSymbol(varName, var, internal::Symbol::Read);
+        addSymbol(varName, var, internal::Symbol::Read);
       }
   
       ctx->addStatement(ir::AssignStmt::make(var, expr));
     }
   } else {
     iassert(lhs.size() == 0);
+  }
+}
+
+void IREmitter::addSymbol(ir::Var var, IdentDecl::Ptr decl) {
+  addSymbol(var.getName(), var, internal::Symbol::ReadWrite, decl);
+}
+
+void IREmitter::addSymbol(const std::string& name, ir::Var var, 
+                          internal::Symbol::Access access, 
+                          IdentDecl::Ptr decl) {
+  ctx->addSymbol(name, var, access);
+
+  if (decl && isa<SetType>(decl->type)) {
+    setExprs[to<SetType>(decl->type)] = ctx->getSymbol(name).getExpr();
   }
 }
 

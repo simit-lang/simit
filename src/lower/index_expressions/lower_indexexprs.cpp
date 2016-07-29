@@ -269,12 +269,12 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
         if (isa<TensorRead>(op->tensor)) {
           reductionVarWriteBackStmt = TensorWrite::make(op->tensor, op->indices,
-                                               reductionVar,
-                                               CompoundOperator::Add);
+                                                        reductionVar,
+                                                        CompoundOperator::Add);
         }
         else {
           reductionVarWriteBackStmt = TensorWrite::make(op->tensor, op->indices,
-                                               reductionVar);
+                                                        reductionVar, op->cop);
         }
       }
       else {
@@ -292,7 +292,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
         reductionVarWriteBackStmt = FieldWrite::make(op->elementOrSet,
                                                      op->fieldName,
-                                                     reductionVar);
+                                                     reductionVar, op->cop);
       }
       else {
         stmt = op;
@@ -644,9 +644,17 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
   }
 
   // Initialize the result. Only necessary for sparse computations or
-  // reductions to scalars.
+  // reductions to scalars. If original statement is compound assignment, 
+  // then result is assumed to have already been initialized at some point 
+  // and therefore do not initialize again.
   bool isResultScalar = containsReductionVar(stmt) && !containsFreeVar(stmt);
-  if (isResultScalar || sig.isSparse()) {
+  bool isCompoundAssign = (isa<AssignStmt>(stmt) && 
+      (to<AssignStmt>(stmt)->cop != CompoundOperator::None)) ||
+      (isa<TensorWrite>(stmt) && 
+      (to<TensorWrite>(stmt)->cop != CompoundOperator::None)) ||
+      (isa<FieldWrite>(stmt) &&
+      (to<FieldWrite>(stmt)->cop != CompoundOperator::None));
+  if ((isResultScalar || sig.isSparse()) && !isCompoundAssign) {
     loopNest = Block::make(initializeLhsToZero(stmt), loopNest);
   }
 

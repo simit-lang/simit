@@ -16,6 +16,8 @@ namespace util {
 template <typename Key, typename Value>
 class ScopedMap {
 public:
+  enum class SearchScope {All, CurrentOnly};
+
   typedef std::map<Key, Value> Scope;
   typedef typename std::list<Scope>::const_iterator Iterator;
 
@@ -43,12 +45,16 @@ public:
     scopes.front().insert(symVal);
   }
 
-  // True iff the symbol table contains the given symbol in the current scope 
-  // or an outer scope (and currentScopeOnly == false).
-  bool contains(const Key &symbol, bool currentScopeOnly = false) const {
-    if (currentScopeOnly) {
-      return (scopes.front().find(symbol) != scopes.front().end());
+  // True iff the symbol table contains the given symbol in the relevant scopes.
+  bool contains(const Key &symbol, 
+                const SearchScope searchScope = SearchScope::All) const {
+    switch (searchScope) {
+      case SearchScope::CurrentOnly:
+        return scopes.front().find(symbol) != scopes.front().end();
+      default:
+        break;
     }
+
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
         return true;
@@ -59,7 +65,17 @@ public:
 
   /// Return the first match.  It is an error to call get if the symbol is not
   /// in the symbol table.
-  Value &get(const Key &symbol) {
+  Value &get(const Key &symbol, 
+             const SearchScope searchScope = SearchScope::All) {
+    switch (searchScope) {
+      case SearchScope::CurrentOnly:
+        iassert(scopes.front().find(symbol) != scopes.front().end()) <<
+            "Attempting to load symbol (" << symbol << ") not in current scope";
+        return scopes.front().at(symbol);
+      default:
+        break;
+    }
+
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
         return scope.at(symbol);
@@ -71,7 +87,17 @@ public:
     return scopes.begin()->begin()->second;  // silence warning
   }
 
-  const Value &get(const Key &symbol) const {
+  const Value &get(const Key &symbol, 
+                   const SearchScope searchScope = SearchScope::All) const {
+    switch (searchScope) {
+      case SearchScope::CurrentOnly:
+        iassert(scopes.front().find(symbol) != scopes.front().end()) <<
+            "Attempting to load symbol (" << symbol << ") not in current scope";
+        return scopes.front().at(symbol);
+      default:
+        break;
+    }
+
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
         return scope.at(symbol);

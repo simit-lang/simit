@@ -1,6 +1,7 @@
 #ifndef SIMIT_IR_EMITTER_H
 #define SIMIT_IR_EMITTER_H
 
+#include <unordered_map>
 #include <vector>
 
 #include "hir.h"
@@ -116,6 +117,8 @@ private:
     Type                  type;
   };
 
+  typedef std::unordered_map<SetType::Ptr, ir::Expr> SetExprMap;
+
 private:
   ir::Expr emitExpr(HIRNode::Ptr ptr) {
     retExpr = ir::Expr();
@@ -145,7 +148,7 @@ private:
     retIndexSet = ir::IndexSet();
     return ret;
   }
-  ir::Field emitField(Field::Ptr ptr) {
+  ir::Field emitField(FieldDecl::Ptr ptr) {
     retField = ir::Field("", ir::Type());
     ptr->accept(this);
     const ir::Field ret = retField;
@@ -171,6 +174,10 @@ private:
   void addWhileOrDoWhile(WhileStmt::Ptr, bool = false);
   void addAssign(const std::vector<ir::Expr> &, ir::Expr);
 
+  void addSymbol(ir::Var, IdentDecl::Ptr = IdentDecl::Ptr());
+  void addSymbol(const std::string&, ir::Var, internal::Symbol::Access, 
+                 IdentDecl::Ptr = IdentDecl::Ptr());
+
   void              emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
   DenseTensorValues emitTensorValues(DenseTensorLiteral::Ptr);
 
@@ -191,6 +198,7 @@ private:
   Domain       retDomain;
 
   internal::ProgramContext *ctx;
+  SetExprMap                setExprs;
 };
 
 }

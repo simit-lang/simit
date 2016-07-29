@@ -27,10 +27,11 @@ public:
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(Identifier::Ptr);
   virtual void visit(IdentDecl::Ptr);
-  virtual void visit(Field::Ptr);
+  virtual void visit(FieldDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
+  virtual void visit(GenericParam::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
@@ -77,7 +78,7 @@ public:
   virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
-private:
+protected:
   void indent() { ++indentLevel; }
   void dedent() { --indentLevel; }
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }
@@ -85,7 +86,8 @@ private:
   void printComplex(double_complex val) {
     oss << "<" << val.real << "," << val.imag << ">";
   }
-  
+ 
+  void printIdentDecl(IdentDecl::Ptr);
   void printVarOrConstDecl(VarDecl::Ptr, const bool = false);
   void printMapOrApply(MapExpr::Ptr, const bool = false);
   void printUnaryExpr(UnaryExpr::Ptr, const std::string, const bool = false);

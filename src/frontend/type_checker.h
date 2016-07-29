@@ -6,14 +6,16 @@
 #include <string>
 #include <exception>
 #include <set>
+#include <unordered_map>
 
-#include "hir.h"
-#include "hir_visitor.h"
-#include "types.h"
 #include "domain.h"
-#include "program_context.h"
 #include "error.h"
+#include "hir.h"
+#include "hir_printer.h"
+#include "hir_rewriter.h"
+#include "hir_visitor.h"
 #include "ir.h"
+#include "util/scopedmap.h"
 
 namespace simit {
 namespace hir {
@@ -22,26 +24,21 @@ namespace hir {
 // undeclared identifiers.
 class TypeChecker : public HIRVisitor {
 public:
-  TypeChecker(std::vector<ParseError> *errors) : 
-    retField(ir::Field("", ir::Type())), 
-    skipCheckDeclared(false),
-    errors(errors) {}
+  TypeChecker(std::vector<ParseError> *);
 
-  void check(Program::Ptr program) { program->accept(this); }
+  void check(Program::Ptr);
 
 private:
   virtual void visit(Program::Ptr);
-  virtual void visit(RangeIndexSet::Ptr);
+  virtual void visit(StmtBlock::Ptr);
   virtual void visit(SetIndexSet::Ptr);
-  virtual void visit(DynamicIndexSet::Ptr);
+  virtual void visit(GenericIndexSet::Ptr op) {}
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
-  virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
@@ -49,10 +46,13 @@ private:
   virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
+  virtual void visit(IndexSetDomain::Ptr);
   virtual void visit(RangeDomain::Ptr);
   virtual void visit(ForStmt::Ptr);
   virtual void visit(PrintStmt::Ptr);
+  virtual void visit(ExprStmt::Ptr);
   virtual void visit(AssignStmt::Ptr);
+  virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
   virtual void visit(OrExpr::Ptr);
   virtual void visit(AndExpr::Ptr);
@@ -65,6 +65,7 @@ private:
   virtual void visit(DivExpr::Ptr);
   virtual void visit(ElwiseMulExpr::Ptr);
   virtual void visit(ElwiseDivExpr::Ptr);
+  virtual void visit(LeftDivExpr::Ptr);
   virtual void visit(NegExpr::Ptr);
   virtual void visit(ExpExpr::Ptr);
   virtual void visit(TransposeExpr::Ptr);
@@ -72,6 +73,7 @@ private:
   virtual void visit(TensorReadExpr::Ptr);
   virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
+  virtual void visit(ParenExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
@@ -83,9 +85,10 @@ private:
   virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(ApplyStmt::Ptr);
+  virtual void visit(Test::Ptr);
 
 private:
-  template <typename T> using Ptr = std::shared_ptr<T>;
+  enum class Access {NONE, READ, WRITE, READ_WRITE};
 
   class DimError : public std::exception {
     const char *what() const noexcept { return "mismatched dimension sizes"; }
@@ -106,7 +109,245 @@ private:
     void merge(const DenseTensorType &);
 
     std::vector<unsigned> dimSizes;
-    Type                      type;
+    Type                  type;
+  };
+
+  struct ExprType {
+    private:
+      bool isScalarType(ScalarType::Type scalarType) const {
+        return isScalar() && (to<ScalarType>(type[0])->type == scalarType);
+      }
+
+      bool isNumericType(ScalarType::Type scalarType) const;
+
+    public:
+      typedef std::vector<Type::Ptr> TypeVector;
+
+      ExprType(Access access = Access::NONE) : access(access), defined(false) {}
+      ExprType(Type::Ptr type, Access access = Access::READ) : 
+          ExprType(TypeVector(1, type), access) {}
+      ExprType(const TypeVector &type, Access access = Access::READ) :
+          type(type), access(access), defined(true) {}
+
+      bool isVoid() const {
+        iassert(defined);
+        return type.empty();
+      }
+
+      bool isSingleValue() const {
+        iassert(defined);
+        return type.size() == 1;
+      }
+
+      bool isTensor() const {
+        return isSingleValue() && isa<TensorType>(type[0]);
+      }
+      
+      bool isScalar() const {
+        return isSingleValue() && isa<ScalarType>(type[0]);
+      }
+
+      bool isString() const {
+        return isScalarType(ScalarType::Type::STRING); 
+      }
+
+      bool isScalarInt() const {
+        return isScalarType(ScalarType::Type::INT);
+      }
+
+      bool isScalarBoolean() const {
+        return isScalarType(ScalarType::Type::BOOL);
+      }
+
+      bool isScalarNumeric() const {
+        return isScalar() && isNumericType(to<ScalarType>(type[0])->type);
+      }
+
+      bool isNumericTensor() const;
+
+      bool isReadable() const;
+      bool isWritable() const;
+
+      TypeVector type;
+      Access     access;
+      bool       defined;
+  };
+
+  typedef std::unordered_map<std::string, IndexSet::Ptr> SetReplacementMap;
+  typedef std::vector<IndexSet::Ptr>                     IndexDomain;
+  typedef std::vector<IndexDomain>                       TensorDimensions;
+  
+  struct ReplaceTypeParams : public HIRRewriter {
+    using HIRRewriter::visit;
+
+    ReplaceTypeParams(SetReplacementMap &specializedSets) : 
+        specializedSets(specializedSets) {}
+    
+    virtual void visit(GenericIndexSet::Ptr);
+    virtual void visit(IndexSetDomain::Ptr);
+    virtual void visit(RangeConst::Ptr);
+
+    SetReplacementMap &specializedSets;
+  };
+
+  class Environment {
+    private:
+      struct SymbolType {
+        SymbolType() = default;
+        SymbolType(Type::Ptr type, Access access) : 
+            type(type), access(access) {}
+
+        Type::Ptr type;
+        Access    access;
+      };
+
+    public:
+      typedef std::unordered_map<std::string, Type::Ptr> ElementMap;
+      typedef util::ScopedMap<std::string, SymbolType>   SymbolTable;
+      typedef SymbolTable::SearchScope                   Scope;
+
+    private:
+      typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
+      typedef std::unordered_map<std::string, ElementMap>    ElementDeclMap;
+      typedef std::unordered_map<HIRNode::Ptr, SetType::Ptr> SetDefinitionMap;
+
+    public:
+      void scope() { symbolTable.scope(); }
+      void unscope() { symbolTable.unscope(); }
+
+      void addFunction(const std::string& name, FuncDecl::Ptr decl) {
+        funcDecls[name] = decl;
+      }
+
+      bool hasFunction(const std::string& name) const {
+        return funcDecls.find(name) != funcDecls.end();
+      }
+
+      FuncDecl::Ptr getFunction(const std::string& name) const {
+        iassert(hasFunction(name));
+        return funcDecls.at(name);
+      }
+
+      void addFunctionReplacement(const std::string& sig, FuncDecl::Ptr decl) {
+        funcReplace[sig] = decl;
+      }
+
+      bool hasFunctionReplacement(const std::string& sig) const {
+        return funcReplace.find(sig) != funcReplace.end();
+      }
+
+      FuncDecl::Ptr getFunctionReplacement(const std::string& sig) const {
+        iassert(hasFunctionReplacement(sig));
+        return funcReplace.at(sig);
+      }
+
+      void addElementType(const std::string& name, const ElementMap &map) {
+        elementDecls[name] = map;
+      }
+
+      bool hasElementType(const std::string& name) const {
+        return elementDecls.find(name) != elementDecls.end();
+      }
+
+      bool hasElementField(const std::string& elemName, 
+                           const std::string& fieldName) const {
+        iassert(hasElementType(elemName));
+        const auto &elemDecl = elementDecls.at(elemName);
+        return elemDecl.find(fieldName) != elemDecl.end();
+      }
+
+      Type::Ptr getElementField(const std::string& elemName, 
+                                const std::string& fieldName) const {
+        iassert(hasElementField(elemName, fieldName));
+        return elementDecls.at(elemName).at(fieldName);
+      }
+
+      void addSymbol(const std::string&, Type::Ptr, Access);
+
+      bool hasSymbol(const std::string& name, Scope scope = Scope::All) const {
+        return symbolTable.contains(name, scope);
+      }
+
+      Type::Ptr getSymbolType(const std::string& name, 
+                              Scope scope = Scope::All) const {
+        iassert(hasSymbol(name, scope));
+        return symbolTable.get(name, scope).type;
+      }
+
+      Access getSymbolAccess(const std::string& name, 
+                             Scope scope = Scope::All) const {
+        iassert(hasSymbol(name, scope));
+        return symbolTable.get(name, scope).access;
+      }
+
+      void addSetDefinition(SetIndexSet::Ptr set, SetType::Ptr def) {
+        set->setDef = def;
+      }
+
+      void addSetDefinition(GenericParam::Ptr set, SetType::Ptr def) {
+        setDefs[set] = def;
+      }
+
+      bool hasSetDefinition(SetIndexSet::Ptr set) const {
+        return (bool)(set->setDef);
+      }
+
+      bool hasSetDefinition(GenericParam::Ptr set) const {
+        return setDefs.find(set) != setDefs.end();
+      }
+
+      SetType::Ptr getSetDefinition(SetIndexSet::Ptr set) const {
+        iassert(hasSetDefinition(set));
+        return set->setDef;
+      }
+
+      SetType::Ptr getSetDefinition(GenericParam::Ptr set) const {
+        iassert(hasSetDefinition(set));
+        return setDefs.at(set);
+      }
+
+      bool compareIndexSets(IndexSet::Ptr, IndexSet::Ptr);
+      bool compareDomains(const IndexDomain&, const IndexDomain&);
+      bool compareTypes(Type::Ptr, Type::Ptr, bool = false);
+      
+    private:
+      FuncMap          funcDecls;
+      FuncMap          funcReplace;
+      ElementDeclMap   elementDecls;
+      SymbolTable      symbolTable;
+      SetDefinitionMap setDefs;
+  };
+  
+  class ComputeSetDefinitions : public HIRVisitor {
+    public:
+      ComputeSetDefinitions(Environment& env) : env(env) {}
+
+      void compute(Program::Ptr program) { program->accept(this); }
+
+    private:
+      virtual void visit(SetIndexSet::Ptr);
+      virtual void visit(IdentDecl::Ptr);
+      virtual void visit(FieldDecl::Ptr op) { HIRVisitor::visit(op); }
+      virtual void visit(FuncDecl::Ptr);
+      virtual void visit(VarDecl::Ptr);
+      virtual void visit(WhileStmt::Ptr);
+      virtual void visit(IfStmt::Ptr);
+      virtual void visit(ForStmt::Ptr);
+      virtual void visit(AssignStmt::Ptr);
+
+      typedef util::ScopedMap<std::string, SetType::Ptr> SymbolTable;
+
+      SymbolTable  decls;
+      Environment &env;
+  };
+
+  struct GenericCallTypeChecker {
+    GenericCallTypeChecker(Environment& env) : env(env) {}
+
+    void unify(Type::Ptr, Type::Ptr);
+
+    SetReplacementMap  specializedSets;
+    Environment       &env;
   };
 
 private:
@@ -118,72 +359,43 @@ private:
 
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
-  Ptr<Expr::Type> inferType(Expr::Ptr ptr) {
-    retType.reset();
-    ptr->accept(this);
-    const Ptr<Expr::Type> ret = retType;
-    retType.reset();
-    if (ret) {
-      ptr->type = *ret;
-    }
-    return ret;
-  }
-  Ptr<ir::IndexSet> getIndexSet(IndexSet::Ptr ptr) {
-    retIndexSet.reset();
-    ptr->accept(this);
-    const Ptr<ir::IndexSet> ret = retIndexSet;
-    retIndexSet.reset();
-    return ret;
-  }
-  ir::Expr getExpr(Endpoint::Ptr ptr) {
-    retExpr = ir::Expr();
-    ptr->accept(this);
-    const ir::Expr ret = retExpr;
-    retExpr = ir::Expr();
-    return ret;
-  }
-  ir::Type getIRType(hir::Type::Ptr ptr) {
-    retIRType = ir::Type();
-    ptr->accept(this);
-    const ir::Type ret = retIRType;
-    retIRType = ir::Type();
-    return ret;
-  }
-  ir::Field getField(Field::Ptr ptr) {
-    retField = ir::Field("", ir::Type());
-    ptr->accept(this);
-    const ir::Field ret = retField;
-    retField = ir::Field("", ir::Type());
-    return ret;
-  }
-  ir::Var getVar(IdentDecl::Ptr ptr) {
-    retVar = ir::Var();
-    ptr->accept(this);
-    const ir::Var ret = retVar;
-    retVar = ir::Var();
-    return ret;
-  }
+  ExprType inferType(Expr::Ptr);
+  bool     typeCheck(HIRNode::Ptr);
+  bool     typeCheckGlobalConstDecl(ConstDecl::Ptr);
 
-  static bool compareTypes(const ir::Type &, const ir::Type &);
+  static void getDimensions(TensorType::Ptr, TensorDimensions&);
+
+  static ScalarType::Type getComponentType(TensorType::Ptr);
+  static TensorDimensions getDimensions(TensorType::Ptr);
+  static unsigned         getOrder(TensorType::Ptr);
+  static bool             getTransposed(TensorType::Ptr);
+
+  static TensorType::Ptr makeTensorType(ScalarType::Type, 
+      const TensorDimensions& = TensorDimensions(), bool = false);
+
+  void addScalarIntrinsic(const std::string&,
+                          const std::vector<ScalarType::Type>&,
+                          const std::vector<ScalarType::Type>&);
+  void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
+                    const std::vector<Type::Ptr>&);
+
+  static std::string getConcretizedTypeSignatureString(FuncDecl::Ptr);
+
+  static std::string toString(ExprType);
+  static std::string toString(Type::Ptr, bool = true);
+  static std::string toString(ScalarType::Type);
   
-  static std::string typeString(const ir::Type &);
-  static std::string typeString(const Ptr<Expr::Type> &);
-  
-  void reportError(std::string, HIRNode::Ptr);
-  void reportUndeclared(std::string, std::string, HIRNode::Ptr);
-  void reportMultipleDefs(std::string, std::string, HIRNode::Ptr);
+  void reportError(const std::string&, HIRNode::Ptr);
+  void reportUndeclared(const std::string&, const std::string&, HIRNode::Ptr);
+  void reportMultipleDefs(const std::string&, const std::string&, HIRNode::Ptr);
 
 private:
-  Ptr<Expr::Type>   retType;
-  Ptr<ir::IndexSet> retIndexSet;
-  ir::Expr          retExpr;
-  ir::Type          retIRType;
-  ir::Field         retField;
-  ir::Var           retVar;
- 
-  bool                     skipCheckDeclared;
-  std::set<ir::Var>        writableArgs;
-  internal::ProgramContext ctx;
+  ExprType retType;
+  bool     retTypeChecked; 
+  
+  bool        skipCheckDeclared;
+  Environment env;
+  
   std::vector<ParseError> *errors;
 };
 

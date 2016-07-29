@@ -22,6 +22,11 @@ export func main()
   end
 end
 
+%%% bad-add-4
+func foo<N,M>(A : matrix[N,N](float), B : matrix[M,M](float))
+  A + B;
+end
+
 %%% bad-mul-1
 proc main
   t = [1 2];
@@ -95,6 +100,27 @@ end
 proc main
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
   M / 2.0;
+end
+
+%%% bad-solve-1
+func foo()
+  M = [1 2; 3 4];
+  v = [1.0 2.0]';
+  M \ v;
+end
+
+%%% bad-solve-2
+func foo()
+  M = [1 2; 3 4];
+  v = [1 2 3]';
+  M \ v;
+end
+
+%%% bad-solve-3
+func foo()
+  M = [1 2 3; 3 4 5];
+  v = [1 2]';
+  (M \ v) + v;
 end
 
 %%% bad-map-1
@@ -175,6 +201,21 @@ export func main()
   for e in elems
     map foo(e) to elems;
   end
+end
+
+%%% bad-map-7
+element E
+end
+
+extern A : set{E};
+extern B : set{E};
+
+func foo(e : E) -> (v : vector[A](float))
+  v(e) = 1.0;
+end
+
+export func main()
+  map foo to B;
 end
 
 %%% bad-and
