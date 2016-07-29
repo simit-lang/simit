@@ -7,9 +7,7 @@ namespace ir {
 
 // class IndexVarContent
 IndexVarContent::~IndexVarContent() {
-  if (fixedExpr != nullptr) {
-    delete fixedExpr;
-  }
+  delete fixedExpr;
 }
 
 // class IndexVar
