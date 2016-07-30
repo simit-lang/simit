@@ -1,0 +1,32 @@
+element Point
+  b : tensor[2](float);
+  c : tensor[2](float);
+end
+
+element Spring
+  a : tensor[2,2](float);
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+extern particles  : set{Point};
+extern connections : set{Spring}(particles,particles);
+
+extern func gemv<S,K>(A : tensor[S,S](tensor[K,K](float)), x : tensor[S](tensor[K](float)))
+    -> (y : tensor[S](tensor[K](float)));
+
+func dist_a<S>(s : Spring, p : (Point*2)) -> (M : tensor[S,S](tensor[2,2](float)))
+  M(p(0),p(0)) = s.a;
+  M(p(0),p(1)) = s.a;
+  M(p(1),p(0)) = s.a;
+  M(p(1),p(1)) = s.a;
+end
+
+proc main 
+  A_points = map dist_a to springs reduce +;
+  points.c = gemv(A_points, points.b);
+  
+  A_particles = map dist_a to connections reduce +;
+  particles.c = gemv(A_particles, particles.b);
+end

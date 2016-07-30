@@ -1,0 +1,95 @@
+%%% generic-call
+%! foo([1.0 1.0 1.0; 1.0 1.0 1.0], [1.0 1.0; 1.0 1.0; 1.0 1.0]) == [3.0 3.0; 3.0 3.0];
+
+func mul<M,K,N>(A : matrix[M,K](float), B : matrix[K,N](float)) -> (C : matrix[M,N](float))
+  C = A * B;
+end
+
+func foo(A : matrix[2,3](float), B : matrix[3,2](float)) -> (C : matrix[2,2](float))
+  C = mul(A, B);
+end
+
+%%% ranged-generic-call
+%! foo([1.0 1.0 1.0; 1.0 1.0 1.0], [1.0 1.0; 1.0 1.0; 1.0 1.0]) == [3.0 3.0; 3.0 3.0];
+
+func mul<0:M,0:K,0:N>(A : matrix[M,K](float), B : matrix[K,N](float)) -> (C : matrix[M,N](float))
+  C = A * B;
+end
+
+func foo(A : matrix[2,3](float), B : matrix[3,2](float)) -> (C : matrix[2,2](float))
+  C = mul(A, B);
+end
+
+%%% generic-call-iterate
+%! foo([1.0 1.0 1.0; 1.0 1.0 1.0], [1.0 1.0; 1.0 1.0; 1.0 1.0]) == [3.0 3.0; 3.0 3.0];
+
+func mul<M,K,N>(A : matrix[M,K](float), B : matrix[K,N](float)) -> (C : matrix[M,N](float))
+  for m in M
+    for n in N
+      var sum = 0.0;
+      for k in K
+        sum = sum + A(m,k) * B(k,n);
+      end
+      C(m,n) = sum;
+    end
+  end
+end
+
+func foo(A : matrix[2,3](float), B : matrix[3,2](float)) -> (C : matrix[2,2](float))
+  C = mul(A, B);
+end
+
+%%% ranged-generic-call-iterate
+%! foo([1.0 2.0 3.0 4.0]') == [4.0 3.0 2.0 1.0]';
+
+func reverse<0:N>(v : vector[N](float)) -> (w : vector[N](float))
+  for i in 0:N
+    j = N - 1 - i;
+    w(j) = v(i);
+  end
+end
+
+func foo(v : vector[4](float)) -> (w : vector[4](float))
+  w = reverse(v);
+end
+
+%%% nested-generic-calls
+%! foo([1.0 2.0; 3.0 4.0]) == [15.0 22.0; 33.0 48.0];
+
+func mul<N>(A : matrix[N,N](float), B : matrix[N,N](float)) -> (C : matrix[N,N](float))
+  C = A * B;
+end
+
+func add<N>(A : matrix[N,N](float), B : matrix[N,N](float)) -> (C : matrix[N,N](float))
+  C = A + B;
+end
+
+func muladd<N>(A : matrix[N,N](float), B : matrix[N,N](float)) -> (C : matrix[N,N](float))
+  C = add(mul(A, B), mul(B, A));
+end
+
+func foo(A : matrix[2,2](float)) -> (B : matrix[2,2](float))
+  B = add(muladd(A, A), A);
+end
+
+%%% multiple-generic-calls
+%! foo() == true;
+
+func equal<M,N>(A : matrix[M,N](float), B : matrix[M,N](float)) -> (r : bool)
+  r = true;
+  for m in M
+    for n in N
+      if A(m,n) != B(m,n)
+        r = false;
+      end
+    end
+  end
+end
+
+func foo() -> (r : bool)
+  A = [1.0 2.0; 3.0 4.0];
+  B = [1.0 2.0 3.0; 4.0 5.0 6.0];
+  C = [1.0 2.0 4.0; 4.0 5.0 6.0];
+  r = equal(A, A) and equal(B, B) and not equal(B,C);
+end
+

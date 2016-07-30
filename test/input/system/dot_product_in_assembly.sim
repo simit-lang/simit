@@ -1,0 +1,24 @@
+element Vertex
+  a : float;
+  b : float;
+end
+
+element Edge
+  e : float;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(u : tensor[V](float), e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
+  A(v(0),v(0)) = u' * u;
+  A(v(0),v(1)) = e.e;
+  A(v(1),v(0)) = e.e;
+  A(v(1),v(1)) = e.e;
+end
+
+proc main
+  const u : tensor[V](float) = 0.0;
+  A = map f(u) to E reduce +;
+  V.a = A * V.b;
+end

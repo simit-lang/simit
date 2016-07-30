@@ -78,13 +78,11 @@ StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet) {
                 auto col = op->indices[1];
                 iassert(row.type().isElement() &&
                         col.type().isElement());
-                iassert(kernel.getArguments().size() >= 3)
-                    << "Kernel must have element, and two sets as arguments";
+                iassert(kernel.getArguments().size() >= 2)
+                    << "Kernel must have element and lattice set as arguments";
                 // The first argument to the kernel is an alias for points[0,0,...]
                 Var origin = kernel.getArguments()[0];
-                Var points = kernel.getArguments()[kernel.getArguments().size()-1];
-                Var links = kernel.getArguments()[kernel.getArguments().size()-2];
-                iassert(points.getType().isSet());
+                Var links = kernel.getArguments()[kernel.getArguments().size()-1];
                 iassert(links.getType().isSet());
                 iassert(links.getType().toSet()->kind == SetType::LatticeLink);
                 int dims = links.getType().toSet()->dimensions;

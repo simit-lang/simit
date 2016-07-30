@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <iostream>
+#include <unordered_set>
 
 #include "types.h"
 #include "scanner.h"
@@ -14,6 +15,21 @@
 namespace simit {
 namespace hir {
 
+struct HIRNode;
+struct SetType;
+
+template <typename T>
+inline bool isa(std::shared_ptr<HIRNode> ptr) {
+  return (bool)std::dynamic_pointer_cast<T>(ptr);
+}
+
+template <typename T>
+inline const std::shared_ptr<T> to(std::shared_ptr<HIRNode> ptr) {
+  std::shared_ptr<T> ret = std::dynamic_pointer_cast<T>(ptr);
+  iassert((bool)ret);
+  return ret;
+}
+
 // Base class for higher-level intermediate representation used by frontend.
 struct HIRNode : public std::enable_shared_from_this<HIRNode> {
 protected:
@@ -22,10 +38,22 @@ protected:
   unsigned lineEnd;
   unsigned colEnd;
 
+  template <typename T = HIRNode> std::shared_ptr<T> self() {
+    return to<T>(shared_from_this());
+  }
+
 public:
   typedef std::shared_ptr<HIRNode> Ptr;
 
   HIRNode() : lineBegin(0), colBegin(0), lineEnd(0), colEnd(0) {}
+
+  virtual void copy(HIRNode::Ptr node) { setLoc(node); }
+  
+  virtual HIRNode::Ptr cloneImpl() = 0;
+
+  template <typename T = HIRNode> std::shared_ptr<T> clone() {
+    return to<T>(cloneImpl());
+  }
 
   virtual void accept(HIRVisitor *) = 0; 
 
@@ -42,24 +70,17 @@ public:
   friend std::ostream &operator<<(std::ostream &, HIRNode &);
 };
 
-template <typename T>
-inline bool isa(HIRNode::Ptr ptr) {
-  return (bool)std::dynamic_pointer_cast<T>(ptr);
-}
-
-template <typename T>
-inline const std::shared_ptr<T> to(HIRNode::Ptr ptr) {
-  iassert(isa<T>(ptr));
-  return std::static_pointer_cast<T>(ptr);
-}
-
 struct Program : public HIRNode {
   std::vector<HIRNode::Ptr> elems;
 
   typedef std::shared_ptr<Program> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl(); 
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Program>(shared_from_this()));
+    visitor->visit(self<Program>());
   }
 };
 
@@ -71,24 +92,22 @@ struct StmtBlock : public Stmt {
   std::vector<Stmt::Ptr> stmts;
   
   typedef std::shared_ptr<StmtBlock> Ptr;
-  
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) { 
-    visitor->visit(to<StmtBlock>(shared_from_this()));
+    visitor->visit(self<StmtBlock>());
   }
 };
 
+struct Type : public HIRNode {
+  typedef std::shared_ptr<Type> Ptr;
+};
+
 struct Expr : public HIRNode {
-  typedef std::vector<ir::Type> Type;
-
-  Type                     type;
-  internal::Symbol::Access access;
-
   typedef std::shared_ptr<Expr> Ptr;
-
-  Expr() : access(internal::Symbol::Read) {}
-
-  bool isReadable();
-  bool isWritable();
 };
 
 struct IndexSet : public HIRNode {
@@ -100,56 +119,90 @@ struct RangeIndexSet : public IndexSet {
   
   typedef std::shared_ptr<RangeIndexSet> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) { 
-    visitor->visit(to<RangeIndexSet>(shared_from_this()));
+    visitor->visit(self<RangeIndexSet>());
   }
 };
 
 struct SetIndexSet : public IndexSet {
-  std::string setName;
+  std::string              setName;
+  std::shared_ptr<SetType> setDef; // Reference to original definition of set.
   
   typedef std::shared_ptr<SetIndexSet> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<SetIndexSet>(shared_from_this()));
+    visitor->visit(self<SetIndexSet>());
+  }
+};
+
+struct GenericIndexSet : public SetIndexSet {
+  enum class Type {UNKNOWN, RANGE};
+
+  Type type;
+  
+  typedef std::shared_ptr<GenericIndexSet> Ptr;
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<GenericIndexSet>());
   }
 };
 
 struct DynamicIndexSet : public IndexSet {
   typedef std::shared_ptr<DynamicIndexSet> Ptr;
   
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DynamicIndexSet>(shared_from_this()));
+    visitor->visit(self<DynamicIndexSet>());
   }
 };
 
-struct Type : public HIRNode {
-  typedef std::shared_ptr<Type> Ptr;
-};
-
 struct ElementType : public Type {
-  std::string ident;
+  std::string      ident;
+  SetIndexSet::Ptr source; // Reference to inferred source index set.
   
   typedef std::shared_ptr<ElementType> Ptr;
-  
+ 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ElementType>(shared_from_this()));
+    visitor->visit(self<ElementType>());
   }
 };
 
 struct Endpoint : public HIRNode {
-  std::string setName;
+  SetIndexSet::Ptr set;
+  ElementType::Ptr element;
   
   typedef std::shared_ptr<Endpoint> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Endpoint>(shared_from_this()));
+    visitor->visit(self<Endpoint>());
   }
 };
 
 struct SetType : public Type {
   ElementType::Ptr           element;
   typedef std::shared_ptr<SetType> Ptr;
+  static SetType::Ptr getUndefinedSetType();
 };
 
 struct UnstructuredSetType : public SetType {
@@ -157,8 +210,12 @@ struct UnstructuredSetType : public SetType {
 
   typedef std::shared_ptr<UnstructuredSetType> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<UnstructuredSetType>(shared_from_this()));
+    visitor->visit(self<UnstructuredSetType>());
   }
 };
 
@@ -168,8 +225,12 @@ struct LatticeLinkSetType : public SetType {
   
   typedef std::shared_ptr<LatticeLinkSetType> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<LatticeLinkSetType>(shared_from_this()));
+    visitor->visit(self<LatticeLinkSetType>());
   }
 };
 
@@ -178,8 +239,12 @@ struct TupleLength : public HIRNode {
 
   typedef std::shared_ptr<TupleLength> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<TupleLength>(shared_from_this()));
+    visitor->visit(self<TupleLength>());
   }
 };
 
@@ -189,8 +254,12 @@ struct TupleType : public Type {
   
   typedef std::shared_ptr<TupleType> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<TupleType>(shared_from_this()));
+    visitor->visit(self<TupleType>());
   }
 };
 
@@ -204,9 +273,13 @@ struct ScalarType : public TensorType {
   Type type;
   
   typedef std::shared_ptr<ScalarType> Ptr;
-  
+ 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ScalarType>(shared_from_this()));
+    visitor->visit(self<ScalarType>());
   }
 };
 
@@ -216,9 +289,13 @@ struct NDTensorType : public TensorType {
   bool                       transposed;
   
   typedef std::shared_ptr<NDTensorType> Ptr;
-  
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<NDTensorType>(shared_from_this()));
+    visitor->visit(self<NDTensorType>());
   }
 };
 
@@ -227,8 +304,12 @@ struct Identifier : public HIRNode {
 
   typedef std::shared_ptr<Identifier> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Identifier>(shared_from_this()));
+    visitor->visit(self<Identifier>());
   }
 };
 
@@ -237,9 +318,13 @@ struct IdentDecl : public HIRNode {
   Type::Ptr       type;
   
   typedef std::shared_ptr<IdentDecl> Ptr;
-  
+ 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<IdentDecl>(shared_from_this()));
+    visitor->visit(self<IdentDecl>());
   }
   
   virtual unsigned getLineBegin() { return name->getLineBegin(); }
@@ -248,52 +333,53 @@ struct IdentDecl : public HIRNode {
   virtual unsigned getColEnd() { return type->getColEnd(); }
 };
 
-struct Field : public HIRNode {
-  IdentDecl::Ptr field;
+struct FieldDecl : public IdentDecl {
+  typedef std::shared_ptr<FieldDecl> Ptr;
   
-  typedef std::shared_ptr<Field> Ptr;
-  
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Field>(shared_from_this()));
+    visitor->visit(self<FieldDecl>());
   }
 
-  virtual unsigned getLineBegin() { return field->getLineBegin(); }
-  virtual unsigned getColBegin() { return field->getColBegin(); }
+  virtual unsigned getLineEnd() { return HIRNode::getLineEnd(); }
+  virtual unsigned getColEnd() { return HIRNode::getColEnd(); }
 };
 
 struct ElementTypeDecl : public HIRNode {
-  Identifier::Ptr         name;
-  std::vector<Field::Ptr> fields; 
+  Identifier::Ptr             name;
+  std::vector<FieldDecl::Ptr> fields; 
   
   typedef std::shared_ptr<ElementTypeDecl> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ElementTypeDecl>(shared_from_this()));
+    visitor->visit(self<ElementTypeDecl>());
   }
 };
 
-struct Argument : public HIRNode {
-  IdentDecl::Ptr arg;
-  
+struct Argument : public IdentDecl {
   typedef std::shared_ptr<Argument> Ptr;
-  
+ 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Argument>(shared_from_this()));
+    visitor->visit(self<Argument>());
   }
   
-  virtual unsigned getLineBegin() { return arg->getLineBegin(); }
-  virtual unsigned getColBegin() { return arg->getColBegin(); }
-  virtual unsigned getLineEnd() { return arg->getLineEnd(); }
-  virtual unsigned getColEnd() { return arg->getColEnd(); }
-
   virtual bool isInOut() { return false; }
 };
 
 struct InOutArgument : public Argument {
   typedef std::shared_ptr<InOutArgument> Ptr;
   
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<InOutArgument>(shared_from_this()));
+    visitor->visit(self<InOutArgument>());
   }
   
   virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
@@ -302,28 +388,57 @@ struct InOutArgument : public Argument {
   virtual bool isInOut() { return true; }
 };
 
-struct ExternDecl : public HIRNode {
-  IdentDecl::Ptr var;
-  
+struct ExternDecl : public IdentDecl {
   typedef std::shared_ptr<ExternDecl> Ptr;
   
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ExternDecl>(shared_from_this()));
+    visitor->visit(self<ExternDecl>());
+  }
+  
+  virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
+  virtual unsigned getColBegin() { return HIRNode::getColBegin(); }
+  virtual unsigned getLineEnd() { return HIRNode::getLineEnd(); }
+  virtual unsigned getColEnd() { return HIRNode::getColEnd(); }
+};
+
+struct GenericParam : public HIRNode {
+  enum class Type {UNKNOWN, RANGE};
+
+  std::string name;
+  Type        type;
+
+  typedef std::shared_ptr<GenericParam> Ptr;
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<GenericParam>());
   }
 };
 
 struct FuncDecl : public HIRNode {
-  Identifier::Ptr             name;
-  std::vector<Argument::Ptr>  args;
-  std::vector<IdentDecl::Ptr> results;
-  StmtBlock::Ptr              body;
-  bool                        exported;
-  bool                        external;
+  enum class Type {INTERNAL, EXPORTED, EXTERNAL};
+
+  Identifier::Ptr                name;
+  std::vector<GenericParam::Ptr> genericParams;
+  std::vector<Argument::Ptr>     args;
+  std::vector<IdentDecl::Ptr>    results;
+  StmtBlock::Ptr                 body;
+  Type                           type;
+  std::string                    originalName;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<FuncDecl>(shared_from_this()));
+    visitor->visit(self<FuncDecl>());
   }
 };
 
@@ -334,16 +449,22 @@ struct VarDecl : public Stmt {
 
   typedef std::shared_ptr<VarDecl> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<VarDecl>(shared_from_this()));
+    visitor->visit(self<VarDecl>());
   }
 };
 
 struct ConstDecl : public VarDecl {
   typedef std::shared_ptr<ConstDecl> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ConstDecl>(shared_from_this()));
+    visitor->visit(self<ConstDecl>());
   }
 };
 
@@ -353,16 +474,22 @@ struct WhileStmt : public Stmt {
   
   typedef std::shared_ptr<WhileStmt> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<WhileStmt>(shared_from_this()));
+    visitor->visit(self<WhileStmt>());
   }
 };
 
 struct DoWhileStmt : public WhileStmt {
   typedef std::shared_ptr<DoWhileStmt> Ptr;
   
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DoWhileStmt>(shared_from_this()));
+    visitor->visit(self<DoWhileStmt>());
   }
 
   virtual unsigned getLineEnd() { return cond->getLineEnd(); }
@@ -376,8 +503,12 @@ struct IfStmt : public Stmt {
   
   typedef std::shared_ptr<IfStmt> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<IfStmt>(shared_from_this()));
+    visitor->visit(self<IfStmt>());
   }
 };
 
@@ -390,8 +521,12 @@ struct IndexSetDomain : public ForDomain {
 
   typedef std::shared_ptr<IndexSetDomain> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<IndexSetDomain>(shared_from_this()));
+    visitor->visit(self<IndexSetDomain>());
   }
 
   virtual unsigned getLineBegin() { return set->getLineBegin(); }
@@ -406,8 +541,12 @@ struct RangeDomain : public ForDomain {
 
   typedef std::shared_ptr<RangeDomain> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<RangeDomain>(shared_from_this()));
+    visitor->visit(self<RangeDomain>());
   }
   
   virtual unsigned getLineBegin() { return lower->getLineBegin(); }
@@ -423,8 +562,12 @@ struct ForStmt : public Stmt {
   
   typedef std::shared_ptr<ForStmt> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ForStmt>(shared_from_this()));
+    visitor->visit(self<ForStmt>());
   }
 };
 
@@ -434,8 +577,12 @@ struct PrintStmt : public Stmt {
   
   typedef std::shared_ptr<PrintStmt> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<PrintStmt>(shared_from_this()));
+    visitor->visit(self<PrintStmt>());
   }
 };
 
@@ -444,8 +591,12 @@ struct ExprStmt : public Stmt {
   
   typedef std::shared_ptr<ExprStmt> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ExprStmt>(shared_from_this()));
+    visitor->visit(self<ExprStmt>());
   }
 
   virtual unsigned getLineBegin() { return expr->getLineBegin(); }
@@ -457,8 +608,12 @@ struct AssignStmt : public ExprStmt {
  
   typedef std::shared_ptr<AssignStmt> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<AssignStmt>(shared_from_this()));
+    visitor->visit(self<AssignStmt>());
   }
 
   virtual unsigned getLineBegin() { return lhs.front()->getLineBegin(); }
@@ -474,8 +629,10 @@ struct ReadParam : public HIRNode {
 struct Slice : public ReadParam {
   typedef std::shared_ptr<Slice> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Slice>(shared_from_this()));
+    visitor->visit(self<Slice>());
   }
 
   virtual bool isSlice() { return true; }
@@ -486,8 +643,12 @@ struct ExprParam : public ReadParam {
   
   typedef std::shared_ptr<ExprParam> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ExprParam>(shared_from_this()));
+    visitor->visit(self<ExprParam>());
   }
   
   virtual unsigned getLineBegin() { return expr->getLineBegin(); }
@@ -499,13 +660,15 @@ struct ExprParam : public ReadParam {
 struct MapExpr : public Expr {
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
-  Identifier::Ptr        target;
-  Identifier::Ptr        through;
+  SetIndexSet::Ptr        target;
+  SetIndexSet::Ptr        through;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<MapExpr>(shared_from_this()));
+    visitor->visit(self<MapExpr>());
   }
 
   virtual bool isReduced() = 0;
@@ -518,8 +681,12 @@ struct ReducedMapExpr : public MapExpr {
 
   typedef std::shared_ptr<ReducedMapExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ReducedMapExpr>(shared_from_this()));
+    visitor->visit(self<ReducedMapExpr>());
   }
 
   virtual bool isReduced() { return true; }
@@ -528,8 +695,10 @@ struct ReducedMapExpr : public MapExpr {
 struct UnreducedMapExpr : public MapExpr {
   typedef std::shared_ptr<UnreducedMapExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<UnreducedMapExpr>(shared_from_this()));
+    visitor->visit(self<UnreducedMapExpr>());
   }
   
   virtual unsigned getLineEnd() { return target->getLineEnd(); }
@@ -543,6 +712,8 @@ struct UnaryExpr : public Expr {
   Expr::Ptr operand;
 
   typedef std::shared_ptr<UnaryExpr> Ptr;
+  
+  virtual void copy(HIRNode::Ptr);
 };
 
 struct BinaryExpr : public Expr {
@@ -551,40 +722,49 @@ struct BinaryExpr : public Expr {
 
   typedef std::shared_ptr<BinaryExpr> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
   virtual unsigned getLineBegin() { return lhs->getLineBegin(); }
   virtual unsigned getColBegin() { return lhs->getColBegin(); }
   virtual unsigned getLineEnd() { return rhs->getLineEnd(); }
   virtual unsigned getColEnd() { return rhs->getColEnd(); }
 };
-typedef std::shared_ptr<BinaryExpr> BinaryExprPtr;
 
 struct NaryExpr : public Expr {
   std::vector<Expr::Ptr> operands;
 
   typedef std::shared_ptr<NaryExpr> Ptr;
+  
+  virtual void copy(HIRNode::Ptr);
 };
 
 struct OrExpr : public BinaryExpr {
   typedef std::shared_ptr<OrExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<OrExpr>(shared_from_this()));
+    visitor->visit(self<OrExpr>());
   }
 };
 
 struct AndExpr : public BinaryExpr {
   typedef std::shared_ptr<AndExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<AndExpr>(shared_from_this()));
+    visitor->visit(self<AndExpr>());
   }
 };
 
 struct XorExpr : public BinaryExpr {
   typedef std::shared_ptr<XorExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<XorExpr>(shared_from_this()));
+    visitor->visit(self<XorExpr>());
   }
 };
 
@@ -595,8 +775,12 @@ struct EqExpr : public NaryExpr {
   
   typedef std::shared_ptr<EqExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<EqExpr>(shared_from_this()));
+    visitor->visit(self<EqExpr>());
   }
   
   virtual unsigned getLineBegin() { return operands.front()->getLineBegin(); }
@@ -608,8 +792,10 @@ struct EqExpr : public NaryExpr {
 struct NotExpr : public UnaryExpr {
   typedef std::shared_ptr<NotExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<NotExpr>(shared_from_this()));
+    visitor->visit(self<NotExpr>());
   }
 
   virtual unsigned getLineEnd() { return operand->getLineEnd(); }
@@ -619,56 +805,70 @@ struct NotExpr : public UnaryExpr {
 struct AddExpr : public BinaryExpr {
   typedef std::shared_ptr<AddExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<AddExpr>(shared_from_this()));
+    visitor->visit(self<AddExpr>());
   }
 };
 
 struct SubExpr : public BinaryExpr {
   typedef std::shared_ptr<SubExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<SubExpr>(shared_from_this()));
+    visitor->visit(self<SubExpr>());
   }
 };
 
 struct MulExpr : public BinaryExpr {
   typedef std::shared_ptr<MulExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<MulExpr>(shared_from_this()));
+    visitor->visit(self<MulExpr>());
   }
 };
 
 struct DivExpr : public BinaryExpr {
   typedef std::shared_ptr<DivExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DivExpr>(shared_from_this()));
+    visitor->visit(self<DivExpr>());
   }
 };
 
 struct ElwiseMulExpr : public BinaryExpr {
   typedef std::shared_ptr<ElwiseMulExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ElwiseMulExpr>(shared_from_this()));
+    visitor->visit(self<ElwiseMulExpr>());
   }
 };
 
 struct ElwiseDivExpr : public BinaryExpr {
   typedef std::shared_ptr<ElwiseDivExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ElwiseDivExpr>(shared_from_this()));
+    visitor->visit(self<ElwiseDivExpr>());
   }
 };
 
 struct LeftDivExpr : public BinaryExpr {
   typedef std::shared_ptr<LeftDivExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<LeftDivExpr>(shared_from_this()));
+    visitor->visit(self<LeftDivExpr>());
   }
 };
 
@@ -677,8 +877,12 @@ struct NegExpr : public UnaryExpr {
   
   typedef std::shared_ptr<NegExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<NegExpr>(shared_from_this()));
+    visitor->visit(self<NegExpr>());
   }
 
   virtual unsigned getLineEnd() { return operand->getLineEnd(); }
@@ -688,16 +892,20 @@ struct NegExpr : public UnaryExpr {
 struct ExpExpr : public BinaryExpr {
   typedef std::shared_ptr<ExpExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ExpExpr>(shared_from_this()));
+    visitor->visit(self<ExpExpr>());
   }
 };
 
 struct TransposeExpr : public UnaryExpr {
   typedef std::shared_ptr<TransposeExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<TransposeExpr>(shared_from_this()));
+    visitor->visit(self<TransposeExpr>());
   }
 
   virtual unsigned getLineBegin() { return operand->getLineBegin(); }
@@ -706,12 +914,17 @@ struct TransposeExpr : public UnaryExpr {
 
 struct CallExpr : public Expr {
   Identifier::Ptr        func;
+  std::vector<Expr::Ptr> genericArgs;
   std::vector<Expr::Ptr> args;
   
   typedef std::shared_ptr<CallExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<CallExpr>(shared_from_this()));
+    visitor->visit(self<CallExpr>());
   }
 
   virtual unsigned getLineBegin() { return func->getLineBegin(); }
@@ -724,8 +937,12 @@ struct TensorReadExpr : public Expr {
   
   typedef std::shared_ptr<TensorReadExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<TensorReadExpr>(shared_from_this()));
+    visitor->visit(self<TensorReadExpr>());
   }
   
   virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
@@ -739,8 +956,12 @@ struct SetReadExpr : public Expr {
   typedef std::shared_ptr<SetReadExpr> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<SetReadExpr>(shared_from_this()));
+    visitor->visit(self<SetReadExpr>());
   }
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
 
   virtual unsigned getLineBegin() { return set->getLineBegin(); }
   virtual unsigned getColBegin() { return set->getColBegin(); }
@@ -752,8 +973,13 @@ struct TupleReadExpr : public Expr {
 
   typedef std::shared_ptr<TupleReadExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  template <typename T> std::shared_ptr<T> cloneImpl2() { return to<T>(cloneImpl()); }
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<TupleReadExpr>(shared_from_this()));
+    visitor->visit(self<TupleReadExpr>());
   }
 
   virtual unsigned getLineBegin() { return tuple->getLineBegin(); }
@@ -766,8 +992,12 @@ struct FieldReadExpr : public Expr {
   
   typedef std::shared_ptr<FieldReadExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<FieldReadExpr>(shared_from_this()));
+    visitor->visit(self<FieldReadExpr>());
   }
   
   virtual unsigned getLineBegin() { return setOrElem->getLineBegin(); }
@@ -781,8 +1011,12 @@ struct ParenExpr : public Expr {
 
   typedef std::shared_ptr<ParenExpr> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ParenExpr>(shared_from_this()));
+    visitor->visit(self<ParenExpr>());
   }
 };
 
@@ -791,8 +1025,22 @@ struct VarExpr : public Expr {
   
   typedef std::shared_ptr<VarExpr> Ptr;
  
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<VarExpr>(shared_from_this()));
+    visitor->visit(self<VarExpr>());
+  }
+};
+
+struct RangeConst : public VarExpr {
+  typedef std::shared_ptr<RangeConst> Ptr;
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<RangeConst>());
   }
 };
 
@@ -805,8 +1053,12 @@ struct IntLiteral : public TensorLiteral {
 
   typedef std::shared_ptr<IntLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<IntLiteral>(shared_from_this()));
+    visitor->visit(self<IntLiteral>());
   }
 };
 
@@ -815,8 +1067,12 @@ struct FloatLiteral : public TensorLiteral {
   
   typedef std::shared_ptr<FloatLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<FloatLiteral>(shared_from_this()));
+    visitor->visit(self<FloatLiteral>());
   }
 };
 
@@ -825,8 +1081,12 @@ struct BoolLiteral : public TensorLiteral {
   
   typedef std::shared_ptr<BoolLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<BoolLiteral>(shared_from_this()));
+    visitor->visit(self<BoolLiteral>());
   }
 };
 
@@ -835,8 +1095,12 @@ struct ComplexLiteral : public TensorLiteral {
 
   typedef std::shared_ptr<ComplexLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ComplexLiteral>(shared_from_this()));
+    visitor->visit(self<ComplexLiteral>());
   }
 };
 
@@ -845,8 +1109,12 @@ struct StringLiteral : public TensorLiteral {
   
   typedef std::shared_ptr<StringLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<StringLiteral>(shared_from_this()));
+    visitor->visit(self<StringLiteral>());
   }
 };
 
@@ -854,6 +1122,8 @@ struct DenseTensorLiteral : public TensorLiteral {
   bool transposed;
 
   typedef std::shared_ptr<DenseTensorLiteral> Ptr;
+  
+  virtual void copy(HIRNode::Ptr);
 };
 
 struct IntVectorLiteral : public DenseTensorLiteral {
@@ -861,8 +1131,12 @@ struct IntVectorLiteral : public DenseTensorLiteral {
   
   typedef std::shared_ptr<IntVectorLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<IntVectorLiteral>(shared_from_this()));
+    visitor->visit(self<IntVectorLiteral>());
   }
 };
 
@@ -871,8 +1145,12 @@ struct FloatVectorLiteral : public DenseTensorLiteral {
   
   typedef std::shared_ptr<FloatVectorLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<FloatVectorLiteral>(shared_from_this()));
+    visitor->visit(self<FloatVectorLiteral>());
   }
 };
 
@@ -881,8 +1159,12 @@ struct ComplexVectorLiteral : public DenseTensorLiteral {
 
   typedef std::shared_ptr<ComplexVectorLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ComplexVectorLiteral>(shared_from_this()));
+    visitor->visit(self<ComplexVectorLiteral>());
   }
 };
 
@@ -891,8 +1173,12 @@ struct NDTensorLiteral : public DenseTensorLiteral {
   
   typedef std::shared_ptr<NDTensorLiteral> Ptr;
 
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<NDTensorLiteral>(shared_from_this()));
+    visitor->visit(self<NDTensorLiteral>());
   }
 };
 
@@ -901,8 +1187,12 @@ struct ApplyStmt : public Stmt {
   
   typedef std::shared_ptr<ApplyStmt> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ApplyStmt>(shared_from_this()));
+    visitor->visit(self<ApplyStmt>());
   }
 
   virtual unsigned getLineBegin() { return map->getLineBegin(); }
@@ -916,8 +1206,12 @@ struct Test : public HIRNode {
   
   typedef std::shared_ptr<Test> Ptr;
   
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Test>(shared_from_this()));
+    visitor->visit(self<Test>());
   }
 };
 

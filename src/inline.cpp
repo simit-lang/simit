@@ -65,7 +65,14 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
   }
   if (this->throughSet.defined()) {
     this->throughEdges = *argIt++;
-    this->throughPoints = *argIt++;
+    // TODO: We assume the lattice link set refers to the point set
+    // by the extern variable.
+    Expr pointsSet = this->throughEdges.getType().toSet()
+        ->latticePointSet.getSet();
+    tassert(isa<VarExpr>(pointsSet))
+        << "Lattice link set " << this->throughEdges
+        << " must refer to underlying point set via the extern variable";
+    this->throughPoints = to<VarExpr>(pointsSet)->var;
   }
 
   return rewrite(kernel.getBody());
