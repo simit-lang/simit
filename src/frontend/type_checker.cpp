@@ -183,7 +183,6 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
     errMsg << "expected lattice point set of Unstructured kind but got "
            << type->latticePointSet->set->setName;
     reportError(errMsg.str(), type->latticePointSet);
-    retTypeChecked = false;
   }
   // Check lattice point set is cardinality zero
   else if (to<UnstructuredSetType>(type->latticePointSet->set->setDef)
@@ -193,7 +192,6 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
            << to<UnstructuredSetType>(type->latticePointSet->set->setDef)
         ->endpoints.size();
     reportError(errMsg.str(), type->latticePointSet);
-    retTypeChecked = false;
   }
 }
 
@@ -293,17 +291,9 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
       reportMultipleDefs("function parameter", name, genericParam);
     }
 
-    Type::Ptr type;
-    if (genericParam->type == GenericParam::Type::RANGE) {
-      type = to<Type>(makeTensorType(ScalarType::Type::INT));
-    }
-    else {
-      SetType::Ptr setDef = env.getSetDefinition(genericParam);
-      // We have to guard for undefined nullptr set definitions.
-      if (setDef) {
-        type = to<Type>(setDef);
-      }
-    }
+    const Type::Ptr type = (genericParam->type == GenericParam::Type::RANGE) ?
+                           to<Type>(makeTensorType(ScalarType::Type::INT)) :
+                           to<Type>(env.getSetDefinition(genericParam));
     env.addSymbol(name, type, Access::READ);
   }
 
@@ -1256,15 +1246,14 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
     // Case 1: Node set, single tuple index, DONT know dims
     if (isa<UnstructuredSetType>(type)) {
       // TODO: No good way to check indices = #dims
-      bool typeChecked = true;
       for (auto index : expr->indices) {
         if (index->isSlice()) {
           reportError("lattice point access expects integral indices", index);
-          typeChecked = false;
+          retTypeChecked = false;
         }
       }
 
-      if (typeChecked) {
+      if (retTypeChecked) {
         for (auto index : expr->indices) {
           const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
           const ExprType indexType = inferType(indexExpr);
@@ -1274,14 +1263,14 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
             errMsg << "lattice point access expects an integral index but got "
                    << "an index of type " << toString(indexType);
             reportError(errMsg.str(), index);
-            typeChecked = false;
+            retTypeChecked = false;
           }
         }
       }
-      if (typeChecked && to<UnstructuredSetType>(type)->endpoints.size() != 0) {
+      if (retTypeChecked &&
+          to<UnstructuredSetType>(type)->endpoints.size() != 0) {
         reportError("lattice point set cannot have non-zero cardinality",
                     expr->set);
-        typeChecked = false;
       }
 
       retType = ExprType(to<SetType>(type)->element, lhsType.access);
@@ -1298,15 +1287,13 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
         reportError(errMsg.str(), expr->indices[0]);
       }
       else {
-        bool typeChecked = true;
         for (auto index : expr->indices) {
           if (index->isSlice()) {
             reportError("lattice edge set access expects integral indices", index);
-            typeChecked = false;
           }
         }
 
-        if (typeChecked) {
+        if (retTypeChecked) {
           for (auto index : expr->indices) {
             const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
             const ExprType indexType = inferType(indexExpr);
@@ -1316,7 +1303,7 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
               errMsg << "lattice point access expects an integral index but got "
                      << "an index of type " << toString(indexType);
               reportError(errMsg.str(), index);
-              typeChecked = false;
+              retTypeChecked = false;
             }
           }
         }
