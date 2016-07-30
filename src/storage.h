@@ -57,9 +57,6 @@ public:
   /// Create an indexed tensor storage descriptor with an index.
   TensorStorage(Kind kind, const TensorIndex& index);
 
-  // TensorStorage(string assemblyFunc, string targetVar,
-  //               const Expr &targetSet, const Expr &throughSet);
-
   /// Retrieve the tensor storage type.
   Kind getKind() const;
 
@@ -71,23 +68,9 @@ public:
   const TensorIndex& getTensorIndex() const;
   TensorIndex& getTensorIndex();
 
-  /// Retrieve properties of the stencil storage
-  // std::string getStencilFunc() const;
-  // std::string getStencilVar() const;
-  /// Stencil structure (built during assembly map lowering)
-  // bool hasStencilLayout() const;
-  // const StencilLayout& getStencilLayout() const;
-  // void setStencilLayout(const StencilLayout& stencil);
-
   /// Set the storage descriptor's tensor index.
   void setTensorIndex(Var tensor);
 
-  /// Create a stencil based tensor index. `assemblyFunc' is the stencil
-  /// assembly kernel whose access pattern determines the sparsity. `targetVar'
-  /// is the output variable within the assembly func whose sparsity is being
-  /// determined here.
-  // void setTensorIndex(Var tensor, std::string assemblyFunc,
-  //                     std::string targetVar);
 private:
   struct Content;
   std::shared_ptr<Content> content;

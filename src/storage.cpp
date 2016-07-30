@@ -17,26 +17,6 @@ namespace ir {
 
 // class TensorStorage
 struct TensorStorage::Content {
-  /// The target set that was used to assemble the system if the tensor is
-  /// stored on a system, undefined otherwise.
-  // Expr systemTargetSet;
-  // Expr systemStorageSet;
-
-  /// The stencil assembly information for stencil-type storage
-  // string-based ref to func, to avoid dangling references to a rewritten Func
-  string assemblyFunc;
-  // string-based ref to output var, again avoiding dangling references
-  string targetVar;
-  // fully resolve stencil structure: map from list of offsets to
-  // ``stencil index'', i.e. a labelling of the stencil offsets from 0 to
-  // the total size, defining an ordering of matrix elements in memory
-  // TODO: MOVE THIS TO TENSOR INDEXx
-  bool stencilDefined;
-  StencilLayout stencil;
-
-  // pe::PathExpression pathExpression;
-  // map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
-
   Kind        kind;
   TensorIndex index;
 };
@@ -54,44 +34,9 @@ TensorStorage::TensorStorage(Kind kind, const TensorIndex& index)
   content->index = index;
 }
 
-// TensorStorage::TensorStorage(string assemblyFunc, string targetVar,
-//                              const Expr &targetSet,
-//                              const Expr &throughSet)
-//     : TensorStorage(Kind::Stencil) {
-//   content->assemblyFunc = assemblyFunc;
-//   content->targetVar = targetVar;
-//   content->systemTargetSet = targetSet;
-//   content->systemStorageSet = throughSet;
-// }
-
-
 TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
-
-// TODO: MOVE TO TENSOR INDEX
-// std::string TensorStorage::getStencilFunc() const {
-//   iassert(content->kind == Kind::Stencil);
-//   return content->assemblyFunc;
-// }
-
-// std::string TensorStorage::getStencilVar() const {
-//   iassert(content->kind == Kind::Stencil);
-//   return content->targetVar;
-// }
-
-// bool TensorStorage::hasStencilLayout() const {
-//   return content->stencilDefined;
-// }
-
-// const StencilLayout& TensorStorage::getStencilLayout() const {
-//   return content->stencil;
-// }
-
-// void TensorStorage::setStencilLayout(const StencilLayout& stencil) {
-//   content->stencil = stencil;
-//   content->stencilDefined = true;
-// }
 
 bool TensorStorage::hasTensorIndex() const {
   return content->index.defined();
@@ -120,15 +65,6 @@ TensorIndex& TensorStorage::getTensorIndex() {
 void TensorStorage::setTensorIndex(Var tensor) {
   content->index = TensorIndex(tensor.getName()+"_index", pe::PathExpression());
 }
-
-// void TensorStorage::setTensorIndex(Var tensor, std::string assemblyFunc,
-//                                    std::string targetVar) {
-//   StencilContent *stencilContent = new StencilContent;
-//   stencilContent->assemblyFunc = assemblyFunc;
-//   stencilContent->targetVar = targetVar;
-//   content->index = TensorIndex(tensor.getName()+"_index",
-//                                StencilLayout(stencilContent));
-// }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
   switch (ts.getKind()) {
@@ -500,14 +436,6 @@ private:
             case TensorStorage::Stencil: {
               auto index = getTensorIndex(var);
               tensorStorage = TensorStorage(TensorStorage::Stencil, index);
-              //     TensorStorage(operandStorage.getStencilFunc(),
-              //                   operandStorage.getStencilVar(),
-              //                   operandStorage.getSystemTargetSet(),
-              //                   operandStorage.getSystemStorageSet());
-              // if (operandStorage.hasStencilLayout()) {
-              //   tensorStorage.setStencilLayout(
-              //       operandStorage.getStencilLayout());
-              // }
               break;
             }
             case TensorStorage::Diagonal:
