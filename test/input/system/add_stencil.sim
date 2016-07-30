@@ -18,16 +18,15 @@ func f(l : Link, p : (Point*2)) -> (A : tensor[points,points](float))
   A(p(1), p(1)) = l.a;
 end
 
-func vonNeumann(g00 : Point,
-                l : lattice[2]{Link}(points),
-                g : set{Point})
+func vonNeumann(orig : Point,
+                l : lattice[2]{Link}(points))
     -> (vnMat : tensor[points,points](float))
-    vnMat(g00,g00) = l[0,0;0,1].a + l[0,0;0,-1].a +
+    vnMat(orig,orig) = l[0,0;0,1].a + l[0,0;0,-1].a +
                      l[0,0;1,0].a + l[0,0;-1,0].a;
-    vnMat(g00,g[0,1]) = l[0,0;0,1].a;
-    vnMat(g00,g[0,-1]) = l[0,0;0,-1].a;
-    vnMat(g00,g[1,0]) = l[0,0;1,0].a;
-    vnMat(g00,g[-1,0]) = l[0,0;-1,0].a;
+    vnMat(orig,points[0,1]) = l[0,0;0,1].a;
+    vnMat(orig,points[0,-1]) = l[0,0;0,-1].a;
+    vnMat(orig,points[1,0]) = l[0,0;1,0].a;
+    vnMat(orig,points[-1,0]) = l[0,0;-1,0].a;
 end
 
 proc main

@@ -570,7 +570,7 @@ public:
     }
 
     ~FieldData() {
-      if (data != nullptr) free(data);
+      free(data);
       delete type;
     }
 

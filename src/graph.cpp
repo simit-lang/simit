@@ -15,9 +15,7 @@ Set::~Set() {
   free(latticePoints);
   free(latticeLinks);
 
-  if (this->neighbors != nullptr) {
-    delete this->neighbors;
-  }
+  delete this->neighbors;
 }
 
 void Set::increaseCapacity() {

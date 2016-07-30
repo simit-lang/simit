@@ -213,7 +213,7 @@ std::vector<Func> getCallTree(Func func) {
     map<Func, set<Func>> reverseCallGraph;
 
     void addReverseEdge(Func caller, Func callee) {
-      if (reverseCallGraph.find(caller) == reverseCallGraph.end()) {
+      if (reverseCallGraph.find(callee) == reverseCallGraph.end()) {
         reverseCallGraph[callee] = set<Func>();
       }
       reverseCallGraph[callee].insert(caller);

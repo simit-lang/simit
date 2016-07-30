@@ -52,6 +52,20 @@ func f(a : A) -> (t : tensor[X,X](int))
   t(0,0) = 0;
 end
 
+%%% bad-tensor-read-7
+element A
+  a : float;
+end
+
+extern X : set{A};
+extern Y : set{A};
+
+export func main()
+  for x in X
+    Y.a(x);
+  end
+end
+
 %%% bad-tuple-read-1
 element e
 end

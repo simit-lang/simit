@@ -1,3 +1,39 @@
+%%% bad-generic-1
+func foo<N>(v : vector[N](float))
+end
+
+func bar()
+  i = 1;
+  foo(i);
+end
+
+%%% bad-generic-2
+func foo<N>(M : matrix[N,N](float))
+end
+
+func bar()
+  M = [1.0; 2.0];
+  foo(M);
+end
+
+%%% bad-generic-3
+func foo<N>(M : tensor[N,N,N](float))
+end
+
+func bar()
+  M = [1.0 2.0; 3.0 4.0];
+  foo(M);
+end
+
+%%% bad-generic-4
+func foo<N>(M : matrix[N,N](float), K : matrix[N,N](float))
+end
+
+func bar()
+  M = [1.0 2.0; 3.0 4.0];
+  foo(M);
+end
+
 %%% bad-call-1
 func foo(i : int)
 end
@@ -61,14 +97,6 @@ proc main
 end
 
 %%% bad-call-9
-proc main
-  var M : matrix[3,3](float);
-  var y : vector[3](float);
-  const x : vector[3](float) = 0.0;
-  solve(M, y, x);
-end
-
-%%% bad-call-10
 func g(inout a : tensor[1](int)) -> (f : int)
   a(0) = 2;
 end
@@ -79,7 +107,7 @@ proc main
   g(x);
 end
 
-%%% bad-call-11
+%%% bad-call-10
 element E
 end
 

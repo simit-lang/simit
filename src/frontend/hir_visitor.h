@@ -10,6 +10,7 @@ struct Program;
 struct StmtBlock;
 struct RangeIndexSet;
 struct SetIndexSet;
+struct GenericIndexSet;
 struct DynamicIndexSet;
 struct ElementType;
 struct Endpoint;
@@ -21,11 +22,12 @@ struct ScalarType;
 struct NDTensorType;
 struct Identifier;
 struct IdentDecl;
-struct Field;
+struct FieldDecl;
 struct ElementTypeDecl;
 struct Argument;
 struct InOutArgument;
 struct ExternDecl;
+struct GenericParam;
 struct FuncDecl;
 struct VarDecl;
 struct ConstDecl;
@@ -68,6 +70,7 @@ struct TupleReadExpr;
 struct FieldReadExpr;
 struct ParenExpr;
 struct VarExpr;
+struct RangeConst;
 struct IntLiteral;
 struct FloatLiteral;
 struct BoolLiteral;
@@ -86,9 +89,10 @@ public:
   virtual void visit(std::shared_ptr<StmtBlock>);
   virtual void visit(std::shared_ptr<RangeIndexSet> op) {}
   virtual void visit(std::shared_ptr<SetIndexSet> op) {}
+  virtual void visit(std::shared_ptr<GenericIndexSet>);
   virtual void visit(std::shared_ptr<DynamicIndexSet> op) {}
   virtual void visit(std::shared_ptr<ElementType> op) {}
-  virtual void visit(std::shared_ptr<Endpoint> op) {}
+  virtual void visit(std::shared_ptr<Endpoint>);
   virtual void visit(std::shared_ptr<UnstructuredSetType>);
   virtual void visit(std::shared_ptr<LatticeLinkSetType>);
   virtual void visit(std::shared_ptr<TupleLength> op) {}
@@ -97,11 +101,12 @@ public:
   virtual void visit(std::shared_ptr<NDTensorType>);
   virtual void visit(std::shared_ptr<Identifier> op) {}
   virtual void visit(std::shared_ptr<IdentDecl>);
-  virtual void visit(std::shared_ptr<Field>);
+  virtual void visit(std::shared_ptr<FieldDecl>);
   virtual void visit(std::shared_ptr<ElementTypeDecl>);
   virtual void visit(std::shared_ptr<Argument>);
   virtual void visit(std::shared_ptr<InOutArgument>);
   virtual void visit(std::shared_ptr<ExternDecl>);
+  virtual void visit(std::shared_ptr<GenericParam> op) {}
   virtual void visit(std::shared_ptr<FuncDecl>);
   virtual void visit(std::shared_ptr<VarDecl>);
   virtual void visit(std::shared_ptr<ConstDecl>);
@@ -141,6 +146,7 @@ public:
   virtual void visit(std::shared_ptr<FieldReadExpr>);
   virtual void visit(std::shared_ptr<ParenExpr>);
   virtual void visit(std::shared_ptr<VarExpr> op) {}
+  virtual void visit(std::shared_ptr<RangeConst>);
   virtual void visit(std::shared_ptr<IntLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}
   virtual void visit(std::shared_ptr<BoolLiteral> op) {}

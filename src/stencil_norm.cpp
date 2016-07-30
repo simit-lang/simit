@@ -9,7 +9,8 @@ namespace simit {
 namespace ir {
 
 class NormalizeRowIndices : public IRRewriter {
-  Var origin, linkSet, pointSet;
+  Var origin, linkSet;
+  Expr pointSet;
   int dims;
   vector<Var> arguments;
   set<Var> outputTensors;
@@ -112,26 +113,24 @@ class NormalizeRowIndices : public IRRewriter {
 
     // TODO: Bit of a sketchy pattern-match. Need map context to do this properly.
     arguments = op->getArguments();
-    // Stencil kernels have at least 3 arguments: a node, link set, and nodes set.
-    if (arguments.size() < 3) {
+    // Stencil kernels have at least 2 arguments: a node and a link set
+    if (arguments.size() < 2) {
       IRRewriter::visit(op);
       return;
     }
 
     if (!arguments[0].getType().isElement() ||
-        !arguments[arguments.size()-1].getType().isSet() ||
-        !arguments[arguments.size()-2].getType().isSet()) {
+        !arguments[arguments.size()-1].getType().isSet()) {
       IRRewriter::visit(op);
       return;
     }
     origin = arguments[0];
-    linkSet = arguments[arguments.size()-2];
-    pointSet = arguments[arguments.size()-1];
-
+    linkSet = arguments[arguments.size()-1];
     if (linkSet.getType().toSet()->kind != SetType::LatticeLink) {
       IRRewriter::visit(op);
       return;
     }
+    pointSet = linkSet.getType().toSet()->latticePointSet.getSet();
     dims = linkSet.getType().toSet()->dimensions;
     
     for (auto &res : op->getResults()) {
