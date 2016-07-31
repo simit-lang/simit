@@ -676,8 +676,8 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
         // Use canonical memory ordering to infer j from stencil offsets
         Expr latticeSet = stencil.getLatticeSet();
-        iassert(latticeSet.type().isSet());
-        unsigned dims = latticeSet.type().toSet()->dimensions;
+        iassert(latticeSet.type().isLatticeLinkSet());
+        unsigned dims = latticeSet.type().toLatticeLinkSet()->dimensions;
 
         // Fetch the full LoopVar corresponding to the i lattice loop
         iassert(latticeLoopVars.count(i));

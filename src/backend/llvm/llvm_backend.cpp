@@ -379,7 +379,7 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
       val = layout->getNbrsArray();
       break;
     case ir::IndexRead::LatticeDim:
-      iassert(indexRead.edgeSet.type().toSet()->kind == SetType::LatticeLink);
+      iassert(indexRead.edgeSet.type().isLatticeLinkSet());
       val = layout->getSize(indexRead.index);
       break;
     default:

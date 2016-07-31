@@ -492,8 +492,7 @@ Expr IndexRead::make(Expr edgeSet, Kind kind) {
 }
 
 Expr IndexRead::make(Expr edgeSet, Kind kind, int index) {
-  iassert(edgeSet.type().isSet());
-  iassert(edgeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(edgeSet.type().isLatticeLinkSet());
   iassert(kind == LatticeDim);
 
   IndexRead *node = new IndexRead;
@@ -890,16 +889,16 @@ Expr SetRead::make(Expr set, std::vector<Expr> indices) {
   }
 #endif
 
-  if (set.type().toSet()->kind == SetType::Kind::Unstructured &&
-      set.type().toSet()->getCardinality() == 0) {
+  if (set.type().isUnstructuredSet() &&
+      set.type().toUnstructuredSet()->getCardinality() == 0) {
     // TODO: Can't check dimensions of a free-standing unstructured
     // set, we probably need to track this globally at some point.
     // For now, this is checked during map lowering.
   }
-  else if (set.type().toSet()->kind == SetType::Kind::LatticeLink) {
+  else if (set.type().isLatticeLinkSet()) {
     // Indices should index both the source offset and sink offset
     // giving 2*dims indices.
-    iassert(indices.size() == set.type().toSet()->dimensions*2);
+    iassert(indices.size() == set.type().toLatticeLinkSet()->dimensions*2);
   }
   else {
     not_supported_yet;

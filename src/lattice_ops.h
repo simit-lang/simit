@@ -11,10 +11,9 @@ namespace ir {
 /// `indices' should run from innermost (fastest running) to outermost
 /// (slowest running).
 inline Expr getLatticeCoord(vector<Expr> indices, Expr latticeSet) {
-  iassert(latticeSet.type().isSet());
-  iassert(latticeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(latticeSet.type().isLatticeLinkSet());
 
-  const SetType *setType = latticeSet.type().toSet();
+  const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
 
   iassert(indices.size() == ndims);
@@ -32,10 +31,9 @@ inline Expr getLatticeCoord(vector<Expr> indices, Expr latticeSet) {
 /// `indices' should run from innermost (fastest running) to outermost
 /// (slowest running), and include a directional index (mu) innermost.
 inline Expr getLatticeLinkCoord(vector<Expr> indices, Expr latticeSet) {
-  iassert(latticeSet.type().isSet());
-  iassert(latticeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(latticeSet.type().isLatticeLinkSet());
 
-  const SetType *setType = latticeSet.type().toSet();
+  const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
 
   // ndims + 1 indices define a lattice link
@@ -58,10 +56,9 @@ inline Expr getLatticeLinkCoord(vector<Expr> indices, Expr latticeSet) {
 
 /// Compute the set of lattice indices from a linearized grid coordinate
 inline vector<Expr> getLatticeIndices(Expr coord, Expr latticeSet) {
-  iassert(latticeSet.type().isSet());
-  iassert(latticeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(latticeSet.type().isLatticeLinkSet());
 
-  const SetType *setType = latticeSet.type().toSet();
+  const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
 
   vector<Expr> indices;
@@ -77,10 +74,9 @@ inline vector<Expr> getLatticeIndices(Expr coord, Expr latticeSet) {
 
 /// Compute the set of lattice indices from a linearized link coordinate
 inline vector<Expr> getLatticeLinkIndices(Expr coord, Expr latticeSet) {
-  iassert(latticeSet.type().isSet());
-  iassert(latticeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(latticeSet.type().isLatticeLinkSet());
 
-  const SetType *setType = latticeSet.type().toSet();
+  const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
 
   vector<Expr> indices;
@@ -101,10 +97,9 @@ inline vector<Expr> getLatticeLinkIndices(Expr coord, Expr latticeSet) {
 inline vector<Expr> getLatticeOffsetIndices(
     vector<Expr> base, vector<Expr> offset, Expr latticeSet) {
   iassert(base.size() == offset.size());
-  iassert(latticeSet.type().isSet());
-  iassert(latticeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(latticeSet.type().isLatticeLinkSet());
 
-  const SetType *setType = latticeSet.type().toSet();
+  const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
   iassert(base.size() == ndims);
 
@@ -126,10 +121,9 @@ inline vector<Expr> getLatticeOffsetIndices(
 inline vector<Expr> getLatticeLinkOffsetIndices(
     vector<Expr> base, vector<Expr> offset, Expr latticeSet) {
   iassert(base.size() == offset.size());
-  iassert(latticeSet.type().isSet());
-  iassert(latticeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(latticeSet.type().isLatticeLinkSet());
 
-  const SetType *setType = latticeSet.type().toSet();
+  const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
   iassert(base.size() == ndims+1);
 
