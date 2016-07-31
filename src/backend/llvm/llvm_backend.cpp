@@ -25,10 +25,14 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 
-#include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#if LLVM_MAJOR_VERSION <=3 && LLVM_MINOR_VERSION <= 6
+#include "llvm/PassManager.h"
+#else
+#include "llvm/IR/LegacyPassManager.h"
+#endif
 
 #include "llvm_types.h"
 #include "llvm_codegen.h"
@@ -66,7 +70,12 @@ const std::string LEN_SUFFIX(".len");
 bool LLVMBackend::llvmInitialized = false;
 
 shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
   shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(module));
+#else
+  shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(
+      unique_ptr<llvm::Module>(module)));
+#endif
   return engineBuilder;
 }
 
@@ -230,8 +239,13 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
   llvm::FunctionPassManager fpm(module);
   llvm::PassManager mpm;
+#else
+  llvm::legacy::FunctionPassManager fpm(module);
+  llvm::legacy::PassManager mpm;
+#endif
   llvm::PassManagerBuilder pmBuilder;
   
   pmBuilder.OptLevel = 3;
@@ -242,10 +256,12 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   pmBuilder.SLPVectorize = 1;
 
   llvm::DataLayout dataLayout(module);
-#if LLVM_MAJOR_VERSION >= 3 && LLVM_MINOR_VERSION >= 5
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
+  fpm.add(new llvm::DataLayout(dataLayout));
+#elif LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
   fpm.add(new llvm::DataLayoutPass(dataLayout));
 #else
-  fpm.add(new llvm::DataLayout(dataLayout));
+  module->setDataLayout(dataLayout);
 #endif
 
   pmBuilder.populateFunctionPassManager(fpm);
@@ -1544,7 +1560,11 @@ llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
   std::vector<llvm::Constant*> idx;
   idx.push_back(zero);
   idx.push_back(zero);
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
   return llvm::ConstantExpr::getGetElementPtr(strGlobal, idx);
+#else
+  return llvm::ConstantExpr::getGetElementPtr(nullptr, strGlobal, idx);
+#endif
 }
 
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,

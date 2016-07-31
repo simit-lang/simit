@@ -44,9 +44,18 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
       harnessModule(new llvm::Module("simit_harness", LLVM_CTX)),
       storage(storage),
       engineBuilder(engineBuilder),
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
       executionEngine(engineBuilder->setUseMCJIT(true).create()), // MCJIT EE
-      harnessEngineBuilder(new llvm::EngineBuilder(harnessModule)),
-      harnessExecEngine(harnessEngineBuilder->setUseMCJIT(true).create()),
+#else
+      executionEngine(engineBuilder->create()),
+#endif
+      harnessEngineBuilder(new llvm::EngineBuilder(
+          unique_ptr<llvm::Module>(harnessModule))),
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
+      harnessExecEngine(harnessEngineBuilder->setUseMCJIT(true).create()), // MCJIT EE
+#else
+      harnessExecEngine(harnessEngineBuilder->create()),
+#endif
       deinit(nullptr) {
 
   // Finalize existing module so we can get global pointer hooks
