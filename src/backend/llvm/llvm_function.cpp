@@ -49,11 +49,12 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
 #else
       executionEngine(engineBuilder->create()),
 #endif
-      harnessEngineBuilder(new llvm::EngineBuilder(
-          unique_ptr<llvm::Module>(harnessModule))),
 #if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
+      harnessEngineBuilder(new llvm::EngineBuilder(harnessModule)),
       harnessExecEngine(harnessEngineBuilder->setUseMCJIT(true).create()), // MCJIT EE
 #else
+      harnessEngineBuilder(new llvm::EngineBuilder(
+          unique_ptr<llvm::Module>(harnessModule))),
       harnessExecEngine(harnessEngineBuilder->create()),
 #endif
       deinit(nullptr) {
