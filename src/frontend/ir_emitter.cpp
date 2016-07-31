@@ -51,13 +51,14 @@ void IREmitter::visit(UnstructuredSetType::Ptr type) {
     endpoints.push_back(endpoint);
   }
 
-  retType = ir::SetType::make(elementType, endpoints);
+  retType = ir::UnstructuredSetType::make(elementType, endpoints);
 }
 
 void IREmitter::visit(LatticeLinkSetType::Ptr type) {
   const ir::Type elementType = emitType(type->element);
   const ir::Expr latticePointSet = emitExpr(type->latticePointSet);
-  retType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
+  retType = ir::LatticeLinkSetType::make(
+      elementType, latticePointSet, type->dimensions);
 }
 
 void IREmitter::visit(TupleType::Ptr type) {
@@ -384,8 +385,11 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   }
   
   std::vector<ir::Expr> endpoints;
-  for (const ir::Expr *endpoint : target.type().toSet()->endpointSets) {
-    endpoints.push_back(*endpoint);
+  if (target.type().isUnstructuredSet()) {
+    for (const ir::Expr *endpoint :
+             target.type().toUnstructuredSet()->endpointSets) {
+      endpoints.push_back(*endpoint);
+    }
   }
 
   // Map expressions are translated to map statements whose values are stored 

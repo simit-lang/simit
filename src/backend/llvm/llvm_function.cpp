@@ -127,12 +127,12 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
 
   if (hasArg(name)) {
     // Check set kinds match
-    const ir::SetType* setType = getArgType(name).toSet();
-    if (setType->kind == ir::SetType::Unstructured) {
+    Type argType = getArgType(name);
+    if (argType.isUnstructuredSet()) {
       uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
     }
-    else if (setType->kind == ir::SetType::LatticeLink) {
+    else if (argType.isLatticeLinkSet()) {
       uassert(set->getKind() == simit::Set::LatticeLink)
           << "Must bind a lattice link set to " << name;
     }
@@ -144,16 +144,16 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
   }
   else {
     globals[name] = std::unique_ptr<Actual>(new SetActual(set));
-    const ir::SetType* setType = getGlobalType(name).toSet();
+    Type globalType = getGlobalType(name);
 
-    if (setType->kind == ir::SetType::Unstructured) {
+    if (globalType.isUnstructuredSet()) {
       uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
     }
-    else if (setType->kind == ir::SetType::LatticeLink) {
+    else if (globalType.isLatticeLinkSet()) {
       uassert(set->getKind() == simit::Set::LatticeLink)
           << "Must bind a lattice link set to " << name;
-      unsigned ndims = setType->dimensions;
+      unsigned ndims = globalType.toLatticeLinkSet()->dimensions;
       vector<int> dimensions = set->getDimensions();
       uassert(dimensions.size() == ndims)
           << "Lattice link set with wrong number of dimensions: "
@@ -167,7 +167,7 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     // Write set values and pointers to the relevant extern
     iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
     void *externPtr = externPtrs.at(name)[0];
-    writeSet(set, getGlobalType(name), externPtr);
+    writeSet(set, globalType, externPtr);
   }
 }
 

@@ -34,7 +34,7 @@ llvm::Value* UnstructuredSetLayout::makeSet(Set *actual, ir::Type type) {
   iassert(actual->getKind() == Set::Unstructured);
   iassert(actual->getCardinality() == 0);
 
-  const ir::SetType *setType = type.toSet();
+  const ir::UnstructuredSetType *setType = type.toUnstructuredSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
   vector<llvm::Constant*> setData;
 
@@ -90,7 +90,7 @@ int UnstructuredEdgeSetLayout::getFieldsOffset() {
 llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
   iassert(actual->getKind() == Set::Unstructured);
 
-  const ir::SetType *setType = type.toSet();
+  const ir::UnstructuredSetType *setType = type.toUnstructuredSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
   vector<llvm::Constant*> setData;
 
@@ -137,7 +137,7 @@ void UnstructuredEdgeSetLayout::writeSet(
 }
 
 llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
-  iassert(i < set.type().toSet()->dimensions);
+  iassert(i < set.type().toLatticeLinkSet()->dimensions);
   auto sizes = builder->CreateExtractValue(value, {0}, util::toString(set)+".sizes()");
   std::string name = string(sizes->getName()) + "[" + std::to_string(i) + "]";
   auto out = builder->CreateInBoundsGEP(sizes, llvmInt(i), name);
@@ -145,9 +145,9 @@ llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
 }
 
 llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
-  unsigned dims = set.type().toSet()->dimensions;
+  unsigned dims = set.type().toLatticeLinkSet()->dimensions;
   // directional dimension
-  llvm::Value *total = llvmInt(set.type().toSet()->dimensions);
+  llvm::Value *total = llvmInt(set.type().toLatticeLinkSet()->dimensions);
   // lattice sites dimensions
   for (unsigned i = 0; i < dims; ++i) {
     total = builder->CreateMul(
@@ -185,12 +185,12 @@ int LatticeEdgeSetLayout::getFieldsOffset() {
 llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
   iassert(actual->getKind() == Set::LatticeLink);
 
-  const ir::SetType *setType = type.toSet();
+  const ir::LatticeLinkSetType *setType = type.toLatticeLinkSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
   vector<llvm::Constant*> setData;
 
   // Set sizes
-  unsigned ndims = type.toSet()->dimensions;
+  unsigned ndims = setType->dimensions;
   const vector<int> &dimensions = actual->getDimensions();
   uassert(dimensions.size() == ndims)
       << "Lattice link set with wrong number of dimensions: "
@@ -264,8 +264,8 @@ void LatticeEdgeSetLayout::writeSet(Set *actual, ir::Type type, void *externPtr)
 std::shared_ptr<SetLayout> getSetLayout(
     ir::Expr set, llvm::Value *value, SimitIRBuilder *builder) {
   iassert(set.type().isSet());
-  if (set.type().toSet()->kind == ir::SetType::Unstructured) {
-    if (set.type().toSet()->getCardinality() == 0) {
+  if (set.type().isUnstructuredSet()) {
+    if (set.type().toUnstructuredSet()->getCardinality() == 0) {
       return std::shared_ptr<SetLayout>(
           new UnstructuredSetLayout(set, value, builder));
     }
@@ -274,7 +274,7 @@ std::shared_ptr<SetLayout> getSetLayout(
           new UnstructuredEdgeSetLayout(set, value, builder));
     }
   }
-  else if (set.type().toSet()->kind == ir::SetType::LatticeLink) {
+  else if (set.type().isLatticeLinkSet()) {
     return std::shared_ptr<SetLayout>(
         new LatticeEdgeSetLayout(set, value, builder));
   }
@@ -287,15 +287,15 @@ std::shared_ptr<SetLayout> getSetLayout(
 /// Build llvm set struct from runtime Set object
 llvm::Value* makeSet(Set *actual, ir::Type type) {
   iassert(type.isSet());
-  if (type.toSet()->kind == ir::SetType::Unstructured) {
-    if (type.toSet()->getCardinality() == 0) {
+  if (type.isUnstructuredSet()) {
+    if (type.toUnstructuredSet()->getCardinality() == 0) {
       return UnstructuredSetLayout::makeSet(actual, type);
     }
     else {
       return UnstructuredEdgeSetLayout::makeSet(actual, type);
     }
   }
-  else if (type.toSet()->kind == ir::SetType::LatticeLink) {
+  else if (type.isLatticeLinkSet()) {
     return LatticeEdgeSetLayout::makeSet(actual, type);
   }
   else {
@@ -307,15 +307,15 @@ llvm::Value* makeSet(Set *actual, ir::Type type) {
 /// Write set pointers to extern pointer structure
 void writeSet(Set *actual, ir::Type type, void *externPtr) {
   iassert(type.isSet());
-  if (type.toSet()->kind == ir::SetType::Unstructured) {
-    if (type.toSet()->getCardinality() == 0) {
+  if (type.isUnstructuredSet()) {
+    if (type.toUnstructuredSet()->getCardinality() == 0) {
       return UnstructuredSetLayout::writeSet(actual, type, externPtr);
     }
     else {
       return UnstructuredEdgeSetLayout::writeSet(actual, type, externPtr);
     }
   }
-  else if (type.toSet()->kind == ir::SetType::LatticeLink) {
+  else if (type.isLatticeLinkSet()) {
     return LatticeEdgeSetLayout::writeSet(actual, type, externPtr);
   }
   else {

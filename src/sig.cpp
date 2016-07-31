@@ -356,8 +356,8 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
         }
         else {
-          iassert(latticeSet.type().isSet());
-          int ndims = latticeSet.type().toSet()->dimensions;
+          iassert(latticeSet.type().isLatticeLinkSet());
+          int ndims = latticeSet.type().toLatticeLinkSet()->dimensions;
           string varName = nameGenerator.getName(indexVar.getName());
           Var var(varName, Int);
           // We only reduce w.r.t. to the inner loop variable.

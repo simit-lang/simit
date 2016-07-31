@@ -83,9 +83,8 @@ StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet) {
                 // The first argument to the kernel is an alias for points[0,0,...]
                 Var origin = kernel.getArguments()[0];
                 Var links = kernel.getArguments()[kernel.getArguments().size()-1];
-                iassert(links.getType().isSet());
-                iassert(links.getType().toSet()->kind == SetType::LatticeLink);
-                int dims = links.getType().toSet()->dimensions;
+                iassert(links.getType().isLatticeLinkSet());
+                int dims = links.getType().toLatticeLinkSet()->dimensions;
                 // We assume row index normalization has been performed already
                 iassert((isa<VarExpr>(row) && to<VarExpr>(row)->var == origin) ||
                         (isa<SetRead>(row) && util::isAllZeros(

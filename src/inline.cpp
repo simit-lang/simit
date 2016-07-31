@@ -67,7 +67,7 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
     this->throughEdges = *argIt++;
     // TODO: We assume the lattice link set refers to the point set
     // by the extern variable.
-    Expr pointsSet = this->throughEdges.getType().toSet()
+    Expr pointsSet = this->throughEdges.getType().toLatticeLinkSet()
         ->latticePointSet.getSet();
     tassert(isa<VarExpr>(pointsSet))
         << "Lattice link set " << this->throughEdges
@@ -140,7 +140,8 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
     // Lattice offset points
     else if (to<VarExpr>(sr->set)->var == throughPoints) {
       Expr setFieldRead = FieldRead::make(
-          throughSet.type().toSet()->latticePointSet.getSet(), op->fieldName);
+          throughSet.type().toLatticeLinkSet()->latticePointSet.getSet(),
+          op->fieldName);
       Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
     }
@@ -176,7 +177,7 @@ void MapFunctionRewriter::visit(const TupleRead *op) {
 void MapFunctionRewriter::visit(const SetRead *op) {
   iassert(isa<VarExpr>(op->set)) << "Set read set must be a variable";
   const Var& setVar = to<VarExpr>(op->set)->var;
-  unsigned dims = throughEdges.getType().toSet()->dimensions;
+  unsigned dims = throughEdges.getType().toLatticeLinkSet()->dimensions;
   if (setVar == throughEdges) {
     iassert(op->indices.size() == dims*2);
     iassert(latticeIndexVars.size() == dims);
@@ -275,8 +276,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
 
   Expr target = map->target;
   iassert(map->target.type().isSet());
-  const SetType* setType = map->target.type().toSet();
-  int cardinality = setType->endpointSets.size();
+  int cardinality = map->target.type().toUnstructuredSet()->endpointSets.size();
   // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
     iassert(ivs.size() == 0);
@@ -397,7 +397,7 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
   
   Var loopVar(targetVar.getName(), Int);
   int ndims = map->through.defined() ?
-      map->through.type().toSet()->dimensions : 0;
+      map->through.type().toLatticeLinkSet()->dimensions : 0;
   vector<Var> latticeIndexVars;
   for (int i = 0; i < ndims; ++i) {
     latticeIndexVars.emplace_back(targetVar.getName()+"_d"+to_string(i), Int);
@@ -421,9 +421,9 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
     loop = For::make(loopVar, domain, inlinedMapFunc);
   }
   else {
-    iassert(map->through.type().toSet()->kind == SetType::LatticeLink);
+    iassert(map->through.type().isLatticeLinkSet());
     initializers.push_back(AssignStmt::make(loopVar, 0));
-    int dims = map->through.type().toSet()->dimensions;
+    int dims = map->through.type().toLatticeLinkSet()->dimensions;
     loop = Block::make(inlinedMapFunc, AssignStmt::make(
         loopVar, 1, CompoundOperator::Add));
     for (int i = 0; i < dims; ++i) {

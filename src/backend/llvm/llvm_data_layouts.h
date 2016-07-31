@@ -54,8 +54,7 @@ public:
 
   UnstructuredSetLayout(ir::Expr set, llvm::Value *value, SimitIRBuilder *builder)
       : set(set), value(value), builder(builder) {
-    iassert(set.type().isSet());
-    iassert(set.type().toSet()->kind == ir::SetType::Unstructured);
+    iassert(set.type().isUnstructuredSet());
   }
 private:
   ir::Expr set;
@@ -81,8 +80,7 @@ public:
                             SimitIRBuilder *builder)
       : UnstructuredSetLayout(set, value, builder),
         set(set), value(value), builder(builder) {
-    iassert(set.type().isSet());
-    iassert(set.type().toSet()->kind == ir::SetType::Unstructured);
+    iassert(set.type().isUnstructuredSet());
   }
 private:
   ir::Expr set;

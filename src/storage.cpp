@@ -308,7 +308,9 @@ private:
     // expression
     Type targetType = op->target.type();
     iassert(targetType.isSet());
-    if (targetType.toSet()->getCardinality() == 0) {
+    if (targetType.isLatticeLinkSet() ||
+        (targetType.isUnstructuredSet() &&
+         targetType.toUnstructuredSet()->getCardinality() == 0)) {
       for (const Var& var : op->vars) {
         iassert(var.getType().isTensor());
         const TensorType* type = var.getType().toTensor();

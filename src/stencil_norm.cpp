@@ -126,12 +126,12 @@ class NormalizeRowIndices : public IRRewriter {
     }
     origin = arguments[0];
     linkSet = arguments[arguments.size()-1];
-    if (linkSet.getType().toSet()->kind != SetType::LatticeLink) {
+    if (!linkSet.getType().isLatticeLinkSet()) {
       IRRewriter::visit(op);
       return;
     }
-    pointSet = linkSet.getType().toSet()->latticePointSet.getSet();
-    dims = linkSet.getType().toSet()->dimensions;
+    pointSet = linkSet.getType().toLatticeLinkSet()->latticePointSet.getSet();
+    dims = linkSet.getType().toLatticeLinkSet()->dimensions;
     
     for (auto &res : op->getResults()) {
       outputTensors.insert(res);

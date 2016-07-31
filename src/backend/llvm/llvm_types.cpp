@@ -44,7 +44,7 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
       not_supported_yet;
       break;
     case Type::Set:
-      return llvmType(*type.toSet(), addrspace);
+      return llvmType(type.toSet(), addrspace);
     case Type::Tuple:
       ierror << "Tuples not supported in the backend";
       break;
@@ -55,39 +55,38 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
   return nullptr;
 }
 
+llvm::StructType *llvmType(const ir::SetType *setType,
+                           unsigned addrspace, bool packed) {
+  // Delegate to the appropriate subclass type builder
+  const ir::UnstructuredSetType *uSetType =
+      dynamic_cast<const ir::UnstructuredSetType*>(setType);
+  const ir::LatticeLinkSetType *lSetType =
+      dynamic_cast<const ir::LatticeLinkSetType*>(setType);
+  if (uSetType != nullptr) {
+    return llvmType(*uSetType, addrspace, packed);
+  }
+  else if (lSetType != nullptr) {
+    return llvmType(*lSetType, addrspace, packed);
+  }
+  unreachable;
+  return nullptr;
+}
+
 // TODO: replace anonymous struct with one struct per element and set type
-llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace,
-                           bool packed) {
+llvm::StructType *llvmType(const ir::UnstructuredSetType& setType,
+                           unsigned addrspace, bool packed) {
   const ElementType *elemType = setType.elementType.toElement();
   vector<llvm::Type*> llvmFieldTypes;
 
-  if (setType.kind == SetType::Unstructured) {
-    // Set size
-    llvmFieldTypes.push_back(LLVM_INT);
+  // Set size
+  llvmFieldTypes.push_back(LLVM_INT);
 
-    // Edge indices (if the set is an edge set)
-    if (setType.endpointSets.size() > 0) {
-      // Endpoints
-      llvmFieldTypes.push_back(
-          llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-
-      // Neighbor Index
-      // row starts (block row)
-      llvmFieldTypes.push_back(
-          llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-      // col indexes (block column)
-      llvmFieldTypes.push_back(
-          llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-    }
-  }
-  else if (setType.kind == SetType::LatticeLink) {
-    // Pointer to array of sizes
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-
+  // Edge indices (if the set is an edge set)
+  if (setType.endpointSets.size() > 0) {
     // Endpoints
     llvmFieldTypes.push_back(
         llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+
     // Neighbor Index
     // row starts (block row)
     llvmFieldTypes.push_back(
@@ -96,9 +95,34 @@ llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace,
     llvmFieldTypes.push_back(
         llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
   }
-  else {
-    not_supported_yet;
+
+  // Fields
+  for (const Field &field : elemType->fields) {
+    llvmFieldTypes.push_back(llvmType(field.type, addrspace));
   }
+  return llvm::StructType::get(LLVM_CTX, llvmFieldTypes, packed);
+}
+
+// TODO: replace anonymous struct with one struct per element and set type
+llvm::StructType *llvmType(const ir::LatticeLinkSetType& setType,
+                           unsigned addrspace, bool packed) {
+  const ElementType *elemType = setType.elementType.toElement();
+  vector<llvm::Type*> llvmFieldTypes;
+
+  // Pointer to array of sizes
+  llvmFieldTypes.push_back(
+      llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+
+  // Endpoints
+  llvmFieldTypes.push_back(
+      llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+  // Neighbor Index
+  // row starts (block row)
+  llvmFieldTypes.push_back(
+      llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+  // col indexes (block column)
+  llvmFieldTypes.push_back(
+      llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
 
   // Fields
   for (const Field &field : elemType->fields) {

@@ -12,6 +12,27 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+// class Type
+bool Type::isUnstructuredSet() const {
+  return _kind == Set &&
+      dynamic_cast<UnstructuredSetType*>(set) != nullptr;
+}
+
+bool Type::isLatticeLinkSet() const {
+  return _kind == Set &&
+      dynamic_cast<LatticeLinkSetType*>(set) != nullptr;
+}
+
+const UnstructuredSetType* Type::toUnstructuredSet() const {
+  iassert(isUnstructuredSet());
+  return dynamic_cast<UnstructuredSetType*>(set);
+}
+
+const LatticeLinkSetType* Type::toLatticeLinkSet() const {
+  iassert(isLatticeLinkSet());
+  return dynamic_cast<LatticeLinkSetType*>(set);
+}
+
 // Default to double size
 unsigned ScalarType::floatBytes = sizeof(double);
 
@@ -139,38 +160,40 @@ bool TensorType::hasSystemDimensions() const {
 }
 
 // struct SetType
-// UNSTRUCTURED set factory
-Type SetType::make(Type elementType, const std::vector<Expr>& endpointSets) {
+SetType::~SetType() {}
+
+// struct UnstructuredSetType
+Type UnstructuredSetType::make(Type elementType,
+                               const std::vector<Expr>& endpointSets) {
   iassert(elementType.isElement());
-  SetType *type = new SetType;
+  UnstructuredSetType *type = new UnstructuredSetType;
   type->elementType = elementType;
   for (auto& eps : endpointSets) {
     type->endpointSets.push_back(new Expr(eps));
   }
-  type->kind = SetType::Unstructured;
-  return type;
-}
-// LATTICE LINK set factory
-Type SetType::make(Type elementType, IndexSet latticePointSet,
-                   size_t dimensions) {
-  iassert(elementType.isElement());
-  iassert(latticePointSet.getKind() == IndexSet::Kind::Set);
-  iassert(latticePointSet.getSet().type().toSet()->kind == Unstructured);
-  iassert(latticePointSet.getSet().type().toSet()->getCardinality() == 0);
-  SetType *type = new SetType;
-  type->elementType = elementType;
-  type->latticePointSet = latticePointSet;
-  type->dimensions = dimensions;
-  type->kind = SetType::LatticeLink;
   return type;
 }
 
-SetType::~SetType() {
+UnstructuredSetType::~UnstructuredSetType() {
   for (auto& eps : endpointSets) {
     delete eps;
   }
 }
 
+// struct LatticeLinkSetType
+Type LatticeLinkSetType::make(Type elementType, IndexSet latticePointSet,
+                              size_t dimensions) {
+  iassert(elementType.isElement());
+  iassert(latticePointSet.getKind() == IndexSet::Kind::Set);
+  iassert(latticePointSet.getSet().type().isUnstructuredSet());
+  iassert(latticePointSet.getSet().type()
+          .toUnstructuredSet()->getCardinality() == 0);
+  LatticeLinkSetType *type = new LatticeLinkSetType;
+  type->elementType = elementType;
+  type->latticePointSet = latticePointSet;
+  type->dimensions = dimensions;
+  return type;
+}
 
 // Free operator functions
 bool operator==(const Type& l, const Type& r) {
@@ -186,7 +209,19 @@ bool operator==(const Type& l, const Type& r) {
     case Type::Element:
       return *l.toElement() == *r.toElement();
     case Type::Set:
-      return *l.toSet() == *r.toSet();
+      if (l.isUnstructuredSet()) {
+        if (r.isUnstructuredSet()) {
+          return *l.toUnstructuredSet() == *r.toUnstructuredSet();
+        }
+        return false;
+      }
+      else if (l.isLatticeLinkSet()) {
+        if (r.isLatticeLinkSet()) {
+          return *l.toLatticeLinkSet() == *r.toLatticeLinkSet();
+        }
+        return false;
+      }
+      unreachable;
     case Type::Tuple:
       return *l.toTuple() == *r.toTuple();
     case Type::Array:
@@ -236,8 +271,24 @@ bool operator==(const ElementType& l, const ElementType& r) {
 }
 
 
-bool operator==(const SetType& l, const SetType& r) {
+bool operator==(const UnstructuredSetType& l, const UnstructuredSetType& r) {
+  if (l.getCardinality() != r.getCardinality()) {
+    return false;
+  }
+
+  for (int i = 0; i < l.getCardinality(); ++i) {
+    Expr *lexpr = l.endpointSets[i];
+    Expr *rexpr = r.endpointSets[i];
+    if (*lexpr != *rexpr) return false;
+  }
+  
   return l.elementType == r.elementType;
+}
+
+bool operator==(const LatticeLinkSetType& l, const LatticeLinkSetType& r) {
+  return l.elementType == r.elementType &&
+      l.latticePointSet == r.latticePointSet &&
+      l.dimensions == r.dimensions;
 }
 
 bool operator==(const TupleType& l, const TupleType& r) {
@@ -256,7 +307,11 @@ bool operator!=(const ElementType& l, const ElementType& r) {
   return !(l == r);
 }
 
-bool operator!=(const SetType& l, const SetType& r) {
+bool operator!=(const UnstructuredSetType& l, const UnstructuredSetType& r) {
+  return !(l == r);
+}
+
+bool operator!=(const LatticeLinkSetType& l, const LatticeLinkSetType& r) {
   return !(l == r);
 }
 
@@ -277,7 +332,16 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
     case Type::Element:
       return os << *type.toElement();
     case Type::Set:
-      return os << *type.toSet();
+      if (type.isUnstructuredSet()) {
+        return os << *type.toUnstructuredSet();
+      }
+      else if (type.isLatticeLinkSet()) {
+        return os << *type.toLatticeLinkSet();
+      }
+      else {
+        unreachable;
+        return os;
+      }
     case Type::Tuple:
       return os << *type.toTuple();
     case Type::Array:
@@ -327,26 +391,24 @@ std::ostream& operator<<(std::ostream& os, const ElementType& type) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const SetType& type) {
-  if (type.kind == SetType::Unstructured) {
-    os << "set{" << type.elementType.toElement()->name << "}";
+std::ostream& operator<<(std::ostream& os, const UnstructuredSetType& type) {
+  os << "set{" << type.elementType.toElement()->name << "}";
 
-    if (type.endpointSets.size() > 0) {
-      os << "(" << *type.endpointSets[0];
-      for (auto& epSet : util::excludeFirst(type.endpointSets)) {
-        os << ", " << *epSet;
-      }
-      os << ")";
+  if (type.endpointSets.size() > 0) {
+    os << "(" << *type.endpointSets[0];
+    for (auto& epSet : util::excludeFirst(type.endpointSets)) {
+      os << ", " << *epSet;
     }
+    os << ")";
   }
-  else if (type.kind == SetType::LatticeLink) {
-    os << "lattice[" << type.dimensions << "]{"
-       << type.elementType.toElement()->name << "}("
-       << type.latticePointSet << ")";
-  }
-  else {
-    unreachable;
-  }
+  
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const LatticeLinkSetType& type) {
+  os << "lattice[" << type.dimensions << "]{"
+     << type.elementType.toElement()->name << "}("
+     << type.latticePointSet << ")";
 
   return os;
 }

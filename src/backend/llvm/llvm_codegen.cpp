@@ -207,7 +207,7 @@ llvm::GlobalVariable* createGlobal(llvm::Module *module, const Var& var,
 
   // Make sure extern structs are packed, so that we can correctly set them
   llvm::Type* externType = (type.isSet())
-                             ? llvmType(*type.toSet(), addrspace, isExtern)
+                             ? llvmType(type.toSet(), addrspace, isExtern)
                              : llvmType(type, addrspace);
 
   llvm::Constant* initializer = defaultInitializer(externType);
