@@ -1249,7 +1249,6 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
       for (auto index : expr->indices) {
         if (index->isSlice()) {
           reportError("lattice point access expects integral indices", index);
-          retTypeChecked = false;
         }
       }
 
@@ -1263,7 +1262,6 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
             errMsg << "lattice point access expects an integral index but got "
                    << "an index of type " << toString(indexType);
             reportError(errMsg.str(), index);
-            retTypeChecked = false;
           }
         }
       }
@@ -1303,7 +1301,6 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
               errMsg << "lattice point access expects an integral index but got "
                      << "an index of type " << toString(indexType);
               reportError(errMsg.str(), index);
-              retTypeChecked = false;
             }
           }
         }
@@ -1705,7 +1702,6 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
                << "link set with target " << expr->target->setName
                << " as an endpoint";
         reportError(errMsg.str(), expr->through);
-        retTypeChecked = false;
       }
     }
   }
