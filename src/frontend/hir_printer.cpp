@@ -505,11 +505,7 @@ void HIRPrinter::visit(CallExpr::Ptr expr) {
       oss << ", ";
     }
 
-    if (arg) {
-      arg->accept(this);
-    } else {
-      oss << "?";
-    }
+    arg->accept(this);
     printDelimiter = true;
   }
 
@@ -535,14 +531,9 @@ void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
 
 void HIRPrinter::visit(TupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
+  
   oss << "(";
-
-  if (expr->index) {
-    expr->index->accept(this);
-  } else {
-    oss << "?";
-  }
-
+  expr->index->accept(this);
   oss << ")";
 }
 

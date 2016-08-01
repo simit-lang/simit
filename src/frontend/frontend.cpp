@@ -13,7 +13,6 @@
 
 #include "const_checker.h"
 #include "const_fold.h"
-#include "context_sensitive_rewriter.h"
 #include "infer_element_sources.h"
 #include "ir_emitter.h"
 #include "specialize_generic_functions.h"
@@ -29,7 +28,6 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
-  //program = hir::ContextSensitiveRewriter(errors).rewrite(program);
   program = hir::ConstantFolding().rewrite(program);
   hir::ConstChecker(errors).check(program);
   hir::InferElementSources().infer(program);
