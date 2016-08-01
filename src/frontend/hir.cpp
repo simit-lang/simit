@@ -608,7 +608,7 @@ void CallExpr::copy(HIRNode::Ptr node) {
   Expr::copy(callExpr);
   func = callExpr->func->clone<Identifier>();
   for (const auto &genericArg : callExpr->genericArgs) {
-    genericArgs.push_back(genericArg->clone<Expr>());
+    genericArgs.push_back(genericArg->clone<IndexSet>());
   }
   for (const auto &arg : callExpr->args) {
     args.push_back(arg ? arg->clone<Expr>() : Expr::Ptr());

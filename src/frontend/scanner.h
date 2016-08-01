@@ -1,5 +1,5 @@
-#ifndef SCANNER_NEW_H
-#define SCANNER_NEW_H
+#ifndef SCANNER_H
+#define SCANNER_H
 
 #include <sstream>
 #include <string>

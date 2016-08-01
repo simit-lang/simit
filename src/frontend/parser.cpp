@@ -1,10 +1,11 @@
 #include <memory>
 #include <string>
 
+#include "complex_types.h"
+#include "hir.h"
+#include "intrinsics.h"
 #include "parser.h"
 #include "scanner.h"
-#include "hir.h"
-#include "complex_types.h"
 
 namespace simit { 
 namespace internal {
@@ -15,6 +16,12 @@ namespace internal {
 
 hir::Program::Ptr Parser::parse(const TokenStream &tokens) {
   this->tokens = tokens;
+  
+  decls = SymbolTable();
+  for (const auto kv : ir::intrinsics::byNames()) {
+    decls.insert(kv.first, IdentType::FUNCTION);
+  }
+
   return parseProgram();
 }
 
@@ -28,7 +35,7 @@ hir::Program::Ptr Parser::parseProgram() {
       program->elems.push_back(element);
     }
   }
-  
+ 
   return program;
 }
 
@@ -65,6 +72,7 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
     skipTo({Token::Type::TEST, Token::Type::FUNC, Token::Type::PROC, 
             Token::Type::EXPORT, Token::Type::ELEMENT, Token::Type::EXTERN, 
             Token::Type::CONST});
+    
     return hir::HIRNode::Ptr();
   }
 }
@@ -140,81 +148,135 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
 
 // extern_func_decl: 'extern' 'func' ident generic_params arguments results ';'
 hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
-  auto externFuncDecl = std::make_shared<hir::FuncDecl>();
-  externFuncDecl->type = hir::FuncDecl::Type::EXTERNAL;
-  
-  const Token externToken = consume(Token::Type::EXTERN);
-  externFuncDecl->setBeginLoc(externToken);
-  consume(Token::Type::FUNC);
-  
-  externFuncDecl->name = parseIdent();
-  externFuncDecl->genericParams = parseGenericParams();
-  externFuncDecl->args = parseArguments();
-  externFuncDecl->results = parseResults();
-  
-  const Token endToken = consume(Token::Type::SEMICOL);
-  externFuncDecl->setEndLoc(endToken);
-  
-  return externFuncDecl;
+  const unsigned originalLevel = decls.levels();
+
+  try {
+    auto externFuncDecl = std::make_shared<hir::FuncDecl>();
+    externFuncDecl->type = hir::FuncDecl::Type::EXTERNAL;
+    
+    const Token externToken = consume(Token::Type::EXTERN);
+    externFuncDecl->setBeginLoc(externToken);
+    consume(Token::Type::FUNC);
+    
+    externFuncDecl->name = parseIdent();
+    
+    decls.insert(externFuncDecl->name->ident, IdentType::FUNCTION);
+    decls.scope();
+    
+    externFuncDecl->genericParams = parseGenericParams();
+    externFuncDecl->args = parseArguments();
+    externFuncDecl->results = parseResults();
+    
+    decls.unscope();
+    
+    const Token endToken = consume(Token::Type::SEMICOL);
+    externFuncDecl->setEndLoc(endToken);
+    
+    return externFuncDecl;
+  } catch (const SyntaxError &) {
+    while (decls.levels() != originalLevel) {
+      decls.unscope();
+    }
+
+    throw;
+  }
 }
 
 // func_decl: ['export'] 'func' ident generic_params
 //            arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
-  auto funcDecl = std::make_shared<hir::FuncDecl>();
+  const unsigned originalLevel = decls.levels();
 
-  const Token funcToken = peek();
-  funcDecl->setBeginLoc(funcToken);
-  funcDecl->type = (funcToken.type == Token::Type::EXPORT) ? 
-                   hir::FuncDecl::Type::EXPORTED : 
-                   hir::FuncDecl::Type::INTERNAL;
+  try {
+    auto funcDecl = std::make_shared<hir::FuncDecl>();
   
-  tryconsume(Token::Type::EXPORT);
-  consume(Token::Type::FUNC);
-  
-  funcDecl->name = parseIdent();
-  funcDecl->genericParams = parseGenericParams();
-  funcDecl->args = parseArguments();
-  funcDecl->results = parseResults();
-  funcDecl->body = parseStmtBlock();
-  
-  const Token endToken = consume(Token::Type::BLOCKEND);
-  funcDecl->setEndLoc(endToken);
+    const Token funcToken = peek();
+    funcDecl->setBeginLoc(funcToken);
+    funcDecl->type = (funcToken.type == Token::Type::EXPORT) ? 
+                     hir::FuncDecl::Type::EXPORTED : 
+                     hir::FuncDecl::Type::INTERNAL;
+    
+    tryconsume(Token::Type::EXPORT);
+    consume(Token::Type::FUNC);
+    
+    funcDecl->name = parseIdent();
+    
+    decls.insert(funcDecl->name->ident, IdentType::FUNCTION);
+    decls.scope();
+    
+    funcDecl->genericParams = parseGenericParams();
+    funcDecl->args = parseArguments();
+    funcDecl->results = parseResults();
 
-  return funcDecl;
+    decls.scope();
+    funcDecl->body = parseStmtBlock();
+    decls.unscope();
+    
+    decls.unscope();
+  
+    const Token endToken = consume(Token::Type::BLOCKEND);
+    funcDecl->setEndLoc(endToken);
+  
+    return funcDecl;
+  } catch (const SyntaxError &) {
+    while (decls.levels() != originalLevel) {
+      decls.unscope();
+    }
+
+    throw;
+  }
 }
 
 // proc_decl: 'proc' ident [type_params arguments results] stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
-  auto procDecl = std::make_shared<hir::FuncDecl>();
-  procDecl->type = hir::FuncDecl::Type::EXPORTED;
+  const unsigned originalLevel = decls.levels();
 
-  const Token procToken = consume(Token::Type::PROC);
-  procDecl->setBeginLoc(procToken);
-
-  procDecl->name = parseIdent();
-  if (peek().type == Token::Type::LP) {
-    switch (peek(1).type) {
-      case Token::Type::IDENT:
-        if (peek(2).type != Token::Type::COL) {
-          break;
-        }
-      case Token::Type::RP:
-      case Token::Type::INOUT:
-        procDecl->genericParams = parseGenericParams();
-        procDecl->args = parseArguments();
-        procDecl->results = parseResults();
-        break;
-      default:
-        break;
-    }
-  }
-  procDecl->body = parseStmtBlock();
+  try {
+    auto procDecl = std::make_shared<hir::FuncDecl>();
+    procDecl->type = hir::FuncDecl::Type::EXPORTED;
   
-  const Token endToken = consume(Token::Type::BLOCKEND);
-  procDecl->setEndLoc(endToken);
+    const Token procToken = consume(Token::Type::PROC);
+    procDecl->setBeginLoc(procToken);
+  
+    procDecl->name = parseIdent();
+    
+    decls.insert(procDecl->name->ident, IdentType::FUNCTION);
+    decls.scope();
+    
+    if (peek().type == Token::Type::LP) {
+      switch (peek(1).type) {
+        case Token::Type::IDENT:
+          if (peek(2).type != Token::Type::COL) {
+            break;
+          }
+        case Token::Type::RP:
+        case Token::Type::INOUT:
+          procDecl->genericParams = parseGenericParams();
+          procDecl->args = parseArguments();
+          procDecl->results = parseResults();
+          break;
+        default:
+          break;
+      }
+    }
 
-  return procDecl;
+    decls.scope();
+    procDecl->body = parseStmtBlock();
+    decls.unscope();
+    
+    decls.unscope();
+    
+    const Token endToken = consume(Token::Type::BLOCKEND);
+    procDecl->setEndLoc(endToken);
+  
+    return procDecl;
+  } catch (const SyntaxError &) {
+    while (decls.levels() != originalLevel) {
+      decls.unscope();
+    }
+
+    throw;
+  }
 }
 
 // generic_params: ['<' generic_param {',' generic_param} '>']
@@ -234,21 +296,25 @@ std::vector<hir::GenericParam::Ptr> Parser::parseGenericParams() {
 
 // generic_param: [INT_LITERAL(0) ':'] ident
 hir::GenericParam::Ptr Parser::parseGenericParam() {
-  auto param = std::make_shared<hir::GenericParam>();
-  param->type = hir::GenericParam::Type::UNKNOWN;
+  auto genericParam = std::make_shared<hir::GenericParam>();
+  genericParam->type = hir::GenericParam::Type::UNKNOWN;
 
   if (peek().type == Token::Type::INT_LITERAL && peek().num == 0) {
     consume(Token::Type::INT_LITERAL);
     consume(Token::Type::COL);
     
-    param->type = hir::GenericParam::Type::RANGE;
+    genericParam->type = hir::GenericParam::Type::RANGE;
   }
 
   const Token identToken = consume(Token::Type::IDENT);
-  param->setLoc(identToken);
-  param->name = identToken.str;
+  genericParam->setLoc(identToken);
+  genericParam->name = identToken.str;
 
-  return param;
+  const auto type = (genericParam->type == hir::GenericParam::Type::RANGE) ?
+                    IdentType::RANGE_GENERIC_PARAM : IdentType::GENERIC_PARAM;
+  decls.insert(genericParam->name, type); 
+
+  return genericParam;
 }
 
 // arguments: '(' [argument_decl {',' argument_decl}] ')'
@@ -372,11 +438,13 @@ hir::VarDecl::Ptr Parser::parseVarDecl() {
     const Token endToken = consume(Token::Type::SEMICOL);
     varDecl->setEndLoc(endToken);
 
+    decls.insert(varDecl->name->ident, IdentType::OTHER);
+
     return varDecl;
   } catch (const SyntaxError &) {
     skipTo({Token::Type::SEMICOL});
-    
     consume(Token::Type::SEMICOL);
+
     return hir::VarDecl::Ptr();
   }
 }
@@ -399,11 +467,13 @@ hir::ConstDecl::Ptr Parser::parseConstDecl() {
     const Token endToken = consume(Token::Type::SEMICOL);
     constDecl->setEndLoc(endToken);
 
+    decls.insert(constDecl->name->ident, IdentType::OTHER);
+
     return constDecl;
   } catch (const SyntaxError &) {
-    skipTo({Token::Type::SEMICOL});
-    
+    skipTo({Token::Type::SEMICOL}); 
     consume(Token::Type::SEMICOL);
+
     return hir::ConstDecl::Ptr();
   }
 }
@@ -415,6 +485,10 @@ hir::IdentDecl::Ptr Parser::parseIdentDecl() {
   identDecl->name = parseIdent();
   consume(Token::Type::COL);
   identDecl->type = parseType();
+  
+  const auto type = hir::isa<hir::TupleType>(identDecl->type) ? 
+                    IdentType::TUPLE : IdentType::OTHER;
+  decls.insert(identDecl->name->ident, type);
   
   return identDecl;
 }
@@ -430,6 +504,8 @@ hir::IdentDecl::Ptr Parser::parseTensorDecl() {
   consume(Token::Type::COL);
   tensorDecl->type = parseTensorType();
   
+  decls.insert(tensorDecl->name->ident, IdentType::OTHER);
+
   return tensorDecl;
 }
 
@@ -442,7 +518,10 @@ hir::WhileStmt::Ptr Parser::parseWhileStmt() {
     whileStmt->setBeginLoc(whileToken);
     
     whileStmt->cond = parseExpr();
+    
+    decls.scope();
     whileStmt->body = parseStmtBlock();
+    decls.unscope();
 
     const Token endToken = consume(Token::Type::BLOCKEND);
     whileStmt->setEndLoc(endToken);
@@ -450,8 +529,8 @@ hir::WhileStmt::Ptr Parser::parseWhileStmt() {
     return whileStmt;
   } catch (const SyntaxError &) {
     skipTo({Token::Type::BLOCKEND});
-    
     consume(Token::Type::BLOCKEND);
+
     return hir::WhileStmt::Ptr();
   }
 }
@@ -463,8 +542,11 @@ hir::DoWhileStmt::Ptr Parser::parseDoWhileStmt() {
     
     const Token doToken = consume(Token::Type::DO);
     doWhileStmt->setBeginLoc(doToken);
-    
+   
+    decls.scope();
     doWhileStmt->body = parseStmtBlock();
+    decls.unscope();
+
     consume(Token::Type::BLOCKEND);
     consume(Token::Type::WHILE);
     doWhileStmt->cond = parseExpr();
@@ -475,6 +557,7 @@ hir::DoWhileStmt::Ptr Parser::parseDoWhileStmt() {
             Token::Type::END, Token::Type::VAR, Token::Type::CONST, 
             Token::Type::IF, Token::Type::WHILE, Token::Type::DO, 
             Token::Type::FOR, Token::Type::PRINT, Token::Type::PRINTLN});
+    
     return hir::DoWhileStmt::Ptr();
   }
 }
@@ -488,8 +571,14 @@ hir::IfStmt::Ptr Parser::parseIfStmt() {
     ifStmt->setBeginLoc(ifToken);
     
     ifStmt->cond = parseExpr();
+
+    decls.scope();
     ifStmt->ifBody = parseStmtBlock();
+    decls.unscope();
+
+    decls.scope();
     ifStmt->elseBody = parseElseClause();
+    decls.unscope();
 
     const Token endToken = consume(Token::Type::BLOCKEND);
     ifStmt->setEndLoc(endToken);
@@ -512,23 +601,34 @@ hir::Stmt::Ptr Parser::parseElseClause() {
       consume(Token::Type::ELSE);
       return parseStmtBlock();
     case Token::Type::ELIF:
+    {
       try {
         auto elifClause = std::make_shared<hir::IfStmt>();
         
         const Token elifToken = consume(Token::Type::ELIF);
         elifClause->setBeginLoc(elifToken);
-    
+ 
         elifClause->cond = parseExpr();
+
+        decls.scope();
         elifClause->ifBody = parseStmtBlock();
+        decls.unscope();
+
+        decls.scope();
         elifClause->elseBody = parseElseClause();
+        decls.unscope();
 
         return elifClause;
       } catch (const SyntaxError &) {
         skipTo({Token::Type::ELIF, Token::Type::ELSE, Token::Type::BLOCKEND});
         
+        decls.scope();
         parseElseClause();
+        decls.unscope();
+
         return hir::Stmt::Ptr();
       }
+    }
     default:
       return hir::Stmt::Ptr();
   }
@@ -541,35 +641,34 @@ hir::ForStmt::Ptr Parser::parseForStmt() {
 
     const Token forToken = consume(Token::Type::FOR);
     forStmt->setBeginLoc(forToken);
-    
+   
     forStmt->loopVar = parseIdent();
     consume(Token::Type::IN);
     forStmt->domain = parseForDomain();
-    forStmt->body = parseStmtBlock();
+  
+    decls.scope();
+    decls.insert(forStmt->loopVar->ident, IdentType::OTHER);
+    
+    forStmt->body = parseStmtBlock(); 
+    decls.unscope();
 
     const Token endToken = consume(Token::Type::BLOCKEND);
     forStmt->setEndLoc(endToken);
 
     return forStmt;
   } catch (const SyntaxError &) {
-    skipTo({Token::Type::BLOCKEND});
-    
+    skipTo({Token::Type::BLOCKEND});    
     consume(Token::Type::BLOCKEND);
+
     return hir::ForStmt::Ptr();
   }
 }
 
-// for_domain: ident | (expr ':' expr)
+// for_domain: set_index_set | (expr ':' expr)
 hir::ForDomain::Ptr Parser::parseForDomain() {
   if (peek().type == Token::Type::IDENT && peek(1).type != Token::Type::COL) {
-    auto setIndexSet = std::make_shared<hir::SetIndexSet>();
-    
-    const Token identToken = consume(Token::Type::IDENT);
-    setIndexSet->setLoc(identToken);
-    setIndexSet->setName = identToken.str;
-    
     auto indexSetDomain = std::make_shared<hir::IndexSetDomain>();
-    indexSetDomain->set = setIndexSet;
+    indexSetDomain->set = parseSetIndexSet();
     
     return indexSetDomain;
   }
@@ -608,14 +707,15 @@ hir::PrintStmt::Ptr Parser::parsePrintStmt() {
 
     return printStmt;
   } catch (const SyntaxError &) {
-    skipTo({Token::Type::SEMICOL});
-    
+    skipTo({Token::Type::SEMICOL}); 
     consume(Token::Type::SEMICOL);
+
     return hir::PrintStmt::Ptr();
   }
 }
 
-// apply_stmt: apply ident [call_params] 'to' set_index_set ';'
+// apply_stmt: apply ident ['<' endpoints '>'] ['(' [call_params] ')'] 
+//             'to' set_index_set ';'
 hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
   try {
     auto applyStmt = std::make_shared<hir::ApplyStmt>();
@@ -625,8 +725,17 @@ hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
     applyStmt->map->setBeginLoc(applyToken);
  
     applyStmt->map->func = parseIdent();
-    if (peek().type == Token::Type::LP) {
-      applyStmt->map->partialActuals = parseCallParams();
+  
+    if (tryconsume(Token::Type::LA)) {
+      applyStmt->map->genericArgs = parseIndexSets();
+      consume(Token::Type::RA);
+    }
+
+    if (tryconsume(Token::Type::LP)) {
+      if (!tryconsume(Token::Type::RP)) {
+        applyStmt->map->partialActuals = parseCallParams();
+        consume(Token::Type::RP);
+      }
     }
     
     consume(Token::Type::TO);
@@ -637,9 +746,9 @@ hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
 
     return applyStmt;
   } catch (const SyntaxError &) {
-    skipTo({Token::Type::SEMICOL});
-    
+    skipTo({Token::Type::SEMICOL}); 
     consume(Token::Type::SEMICOL);
+
     return hir::ApplyStmt::Ptr();
   }
 }
@@ -663,9 +772,20 @@ hir::ExprStmt::Ptr Parser::parseExprOrAssignStmt() {
             const hir::Expr::Ptr expr = parseExpr();
             assignStmt->lhs.push_back(expr);
           }
+          
           consume(Token::Type::ASSIGN);
           assignStmt->expr = parseExpr();
           
+          for (const auto lhs : assignStmt->lhs) {
+            if (hir::isa<hir::VarExpr>(lhs)) {
+              const std::string varName = hir::to<hir::VarExpr>(lhs)->ident;
+              
+              if (!decls.contains(varName)) {
+                decls.insert(varName, IdentType::OTHER);
+              }
+            }
+          }
+
           stmt = assignStmt;
           break;
         }
@@ -684,8 +804,8 @@ hir::ExprStmt::Ptr Parser::parseExprOrAssignStmt() {
     return stmt;
   } catch (const SyntaxError &) {
     skipTo({Token::Type::SEMICOL});
-    
     consume(Token::Type::SEMICOL);
+
     return hir::ExprStmt::Ptr();
   }
 }
@@ -695,14 +815,24 @@ hir::Expr::Ptr Parser::parseExpr() {
   return (peek().type == Token::Type::MAP) ? parseMapExpr() : parseOrExpr();
 }
 
-// map_expr: 'map' ident [call_params] 'to' set_index_set ['reduce' '+']
+// map_expr: 'map' ident ['<' endpoints '>'] ['(' [call_params] ')'] 
+//           'to' set_index_set ['reduce' '+']
 hir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
   const hir::Identifier::Ptr func = parseIdent();
-  
+ 
+  std::vector<hir::IndexSet::Ptr> genericArgs;
+  if (tryconsume(Token::Type::LA)) {
+    genericArgs = parseIndexSets();
+    consume(Token::Type::RA);
+  }
+    
   std::vector<hir::Expr::Ptr> partialActuals;
-  if (peek().type == Token::Type::LP) {
-    partialActuals = parseCallParams();
+  if (tryconsume(Token::Type::LP)) {
+    if (!tryconsume(Token::Type::RP)) {
+      partialActuals = parseCallParams();
+      consume(Token::Type::RP);
+    }
   }
   
   consume(Token::Type::TO);
@@ -715,6 +845,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
     mapExpr->setBeginLoc(mapToken);
     
     mapExpr->func = func;
+    mapExpr->genericArgs = genericArgs;
     mapExpr->partialActuals = partialActuals;
     mapExpr->target = target;
     mapExpr->op = hir::ReducedMapExpr::ReductionOp::SUM;
@@ -729,6 +860,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
   mapExpr->setBeginLoc(mapToken);
 
   mapExpr->func = func;
+  mapExpr->genericArgs = genericArgs;
   mapExpr->partialActuals = partialActuals;
   mapExpr->target = target;
 
@@ -1003,9 +1135,9 @@ hir::Expr::Ptr Parser::parseCallOrReadExpr() {
   }
 }
 
-// factor: ('(' expr ')') | ident | tensor_literal
+// factor: ('(' expr ')') | call_expr | tuple_read_expr | range_const 
+//       | var_expr | tensor_literal
 hir::Expr::Ptr Parser::parseFactor() {
-  hir::Expr::Ptr factor;
   switch (peek().type) {
     case Token::Type::LP:
     {
@@ -1019,19 +1151,29 @@ hir::Expr::Ptr Parser::parseFactor() {
       const Token rightParenToken = consume(Token::Type::RP);
       parenExpr->setEndLoc(rightParenToken);
 
-      factor = parenExpr;
-      break;
+      return parenExpr;
     }
     case Token::Type::IDENT:
     {
-      auto var = std::make_shared<hir::VarExpr>(); 
-      
-      const Token identToken = consume(Token::Type::IDENT);
-      var->setLoc(identToken);
-      var->ident = identToken.str;
-      
-      factor = var;
-      break;
+      const std::string identStr = peek().str;
+
+      if (decls.contains(identStr)) {
+        switch (decls.get(identStr)) {
+          case IdentType::FUNCTION:
+            return parseCallExpr();
+          case IdentType::RANGE_GENERIC_PARAM:
+            return parseRangeConst();
+          case IdentType::TUPLE:
+            if (peek(1).type == Token::Type::LP) {
+              return parseTupleReadExpr();
+            }
+            break;
+          default:
+            break;
+        }
+      }
+
+      return parseVarExpr();
     }
     case Token::Type::INT_LITERAL:
     case Token::Type::FLOAT_LITERAL:
@@ -1040,15 +1182,74 @@ hir::Expr::Ptr Parser::parseFactor() {
     case Token::Type::FALSE:
     case Token::Type::LB:
     case Token::Type::LA:
-      factor = parseTensorLiteral();
-      break;
+      return parseTensorLiteral();
     default:
       reportError(peek(), "an expression");
       throw SyntaxError();
       break;
   }
 
-  return factor;
+  return hir::Expr::Ptr();
+}
+
+// var_expr: ident
+hir::VarExpr::Ptr Parser::parseVarExpr() {
+  auto varExpr = std::make_shared<hir::VarExpr>(); 
+  
+  const Token identToken = consume(Token::Type::IDENT);
+  varExpr->setLoc(identToken);
+  varExpr->ident = identToken.str;
+ 
+  return varExpr;
+}
+
+// range_const: ident
+hir::RangeConst::Ptr Parser::parseRangeConst() {
+  auto rangeConst = std::make_shared<hir::RangeConst>(); 
+  
+  const Token identToken = consume(Token::Type::IDENT);
+  rangeConst->setLoc(identToken);
+  rangeConst->ident = identToken.str;
+ 
+  return rangeConst;
+}
+
+// call_expr: ident ['<' endpoints '>'] '(' [call_params] ')'
+hir::CallExpr::Ptr Parser::parseCallExpr() {
+  auto call = std::make_shared<hir::CallExpr>();
+  
+  call->func = parseIdent();
+
+  if (tryconsume(Token::Type::LA)) {
+    call->genericArgs = parseIndexSets();
+    consume(Token::Type::RA);
+  }
+
+  consume(Token::Type::LP);
+
+  if (peek().type != Token::Type::RP) {
+    call->args = parseCallParams();
+  }
+  
+  const Token endToken = consume(Token::Type::RP);
+  call->setEndLoc(endToken);
+  
+  return call;
+}
+
+// tuple_read_expr: var_expr '(' expr ')'
+hir::TupleReadExpr::Ptr Parser::parseTupleReadExpr() {
+  auto tupleRead = std::make_shared<hir::TupleReadExpr>();
+  
+  tupleRead->tuple = parseVarExpr();
+  consume(Token::Type::LP);
+
+  tupleRead->index = parseExpr();
+
+  const Token endToken = consume(Token::Type::RP);
+  tupleRead->setEndLoc(endToken);
+  
+  return tupleRead;
 }
 
 // ident: IDENT
@@ -1091,18 +1292,14 @@ hir::ReadParam::Ptr Parser::parseReadParam() {
   return param;
 }
 
-// call_params: '(' [expr {',' expr}] ')'
+// call_params: expr {',' expr}
 std::vector<hir::Expr::Ptr> Parser::parseCallParams() {
   std::vector<hir::Expr::Ptr> callParams;
 
-  consume(Token::Type::LP);
-  if (peek().type != Token::Type::RP) {
-    do {
-      const hir::Expr::Ptr param = parseExpr();
-      callParams.push_back(param);
-    } while (tryconsume(Token::Type::COMMA));
-  }
-  consume(Token::Type::RP);
+  do {
+    const hir::Expr::Ptr param = parseExpr();
+    callParams.push_back(param);
+  } while (tryconsume(Token::Type::COMMA));
 
   return callParams;
 }
@@ -1434,11 +1631,40 @@ hir::IndexSet::Ptr Parser::parseIndexSet() {
 
 // set_index_set: ident
 hir::SetIndexSet::Ptr Parser::parseSetIndexSet() {
-  auto setIndexSet = std::make_shared<hir::SetIndexSet>();
-  
   const Token identToken = consume(Token::Type::IDENT);
+  const std::string identStr = identToken.str;
+
+  hir::SetIndexSet::Ptr setIndexSet;
+  
+  if (decls.contains(identStr)) {
+    switch (decls.get(identStr)) {
+      case IdentType::GENERIC_PARAM:
+      {
+        auto genericIndexSet = std::make_shared<hir::GenericIndexSet>();
+        genericIndexSet->type = hir::GenericIndexSet::Type::UNKNOWN;
+
+        setIndexSet = genericIndexSet;
+        break;
+      }
+      case IdentType::RANGE_GENERIC_PARAM:
+      {
+        auto genericIndexSet = std::make_shared<hir::GenericIndexSet>();
+        genericIndexSet->type = hir::GenericIndexSet::Type::RANGE;
+
+        setIndexSet = genericIndexSet;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  if (!setIndexSet) {
+    setIndexSet = std::make_shared<hir::SetIndexSet>();
+  }
+  
   setIndexSet->setLoc(identToken);
-  setIndexSet->setName = identToken.str;
+  setIndexSet->setName = identStr;
 
   return setIndexSet;
 }
@@ -1725,15 +1951,18 @@ double Parser::parseSignedFloatLiteral() {
 
 // complex_literal: '<' signed_float_literal ',' signed_float_literal '>'
 double_complex Parser::parseComplexLiteral() {
-  consume(Token::Type::LA);
+  consume(Token::Type::LA); 
   double real = parseSignedFloatLiteral();
+
   consume(Token::Type::COMMA);
+  
   double imag = parseSignedFloatLiteral();
   consume(Token::Type::RA);
+  
   return double_complex(real, imag);
 }
 
-// '%!' ident call_params '==' expr ';'
+// '%!' ident '(' [call_params] ')' '==' expr ';'
 hir::Test::Ptr Parser::parseTest() {
   auto test = std::make_shared<hir::Test>();
 
@@ -1744,7 +1973,13 @@ hir::Test::Ptr Parser::parseTest() {
   switch (peek().type) {
     case Token::Type::LP:
     {
-      test->args = parseCallParams();
+      consume(Token::Type::LP);
+
+      if (!tryconsume(Token::Type::RP)) {
+        test->args = parseCallParams();
+        consume(Token::Type::RP);
+      }
+
       consume(Token::Type::EQ);
       test->expected = parseExpr();
       

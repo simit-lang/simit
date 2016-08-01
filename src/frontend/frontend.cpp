@@ -29,7 +29,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
-  program = hir::ContextSensitiveRewriter(errors).rewrite(program);
+  //program = hir::ContextSensitiveRewriter(errors).rewrite(program);
   program = hir::ConstantFolding().rewrite(program);
   hir::ConstChecker(errors).check(program);
   hir::InferElementSources().infer(program);

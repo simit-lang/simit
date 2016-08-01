@@ -159,8 +159,11 @@ void HIRVisitor::visit(ExprParam::Ptr param) {
 
 void HIRVisitor::visit(MapExpr::Ptr expr) {
   expr->func->accept(this);
-  for (auto param : expr->partialActuals) {
-    param->accept(this);
+  for (auto genericArg : expr->genericArgs) {
+    genericArg->accept(this);
+  }
+  for (auto arg : expr->partialActuals) {
+    arg->accept(this);
   }
   expr->target->accept(this);
 }
@@ -239,9 +242,7 @@ void HIRVisitor::visit(CallExpr::Ptr expr) {
     genericArg->accept(this);
   }
   for (auto arg : expr->args) {
-    if (arg) {
-      arg->accept(this);
-    }
+    arg->accept(this);
   }
 }
 
@@ -254,9 +255,7 @@ void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
 
 void HIRVisitor::visit(TupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
-  if (expr->index) {
-    expr->index->accept(this);
-  }
+  expr->index->accept(this);
 }
 
 void HIRVisitor::visit(FieldReadExpr::Ptr expr) {

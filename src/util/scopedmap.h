@@ -24,16 +24,18 @@ public:
   ScopedMap(const Scope &scope = Scope()) {this->scope(scope);}
   ~ScopedMap() { unscope(); }
 
+  size_t levels() const { return scopes.size(); }
+
   void clear() {
-    iassert(scopes.size() == 1);
+    iassert(levels() == 1);
     scopes.front().clear();
   }
 
   /// Add a new level of symbol scoping.
-  void scope(const Scope &scope = Scope()) {scopes.push_front(scope);}
+  void scope(const Scope &scope = Scope()) { scopes.push_front(scope); }
 
   /// Remove the top symbol scope.
-  void unscope() {scopes.pop_front();}
+  void unscope() { scopes.pop_front(); }
 
   // Insert key-value pair into current scope
   void insert(const Key &symbol, const Value &value) {

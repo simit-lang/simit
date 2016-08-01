@@ -1,5 +1,5 @@
-#ifndef PARSER_NEW_H
-#define PARSER_NEW_H
+#ifndef PARSER_H
+#define PARSER_H
 
 #include <exception>
 #include <vector>
@@ -7,9 +7,10 @@
 #include <string>
 #include <iostream>
 
-#include "token.h"
-#include "hir.h"
 #include "error.h"
+#include "hir.h"
+#include "token.h"
+#include "util/scopedmap.h"
 
 namespace simit { 
 namespace internal {
@@ -22,6 +23,11 @@ public:
 
 private:
   class SyntaxError : public std::exception {};
+  
+  enum class IdentType {GENERIC_PARAM, RANGE_GENERIC_PARAM, 
+                        TUPLE, FUNCTION, OTHER};
+
+  typedef util::ScopedMap<std::string, IdentType> SymbolTable;
 
 private:
   hir::Program::Ptr                      parseProgram();
@@ -68,6 +74,10 @@ private:
   hir::Expr::Ptr                         parseTransposeExpr();
   hir::Expr::Ptr                         parseCallOrReadExpr();
   hir::Expr::Ptr                         parseFactor();
+  hir::VarExpr::Ptr                      parseVarExpr();
+  hir::RangeConst::Ptr                   parseRangeConst();
+  hir::CallExpr::Ptr                     parseCallExpr();
+  hir::TupleReadExpr::Ptr                parseTupleReadExpr();
   hir::Identifier::Ptr                   parseIdent();
   std::vector<hir::ReadParam::Ptr>       parseReadParams();
   hir::ReadParam::Ptr                    parseReadParam();
@@ -109,6 +119,7 @@ private:
   bool  tryconsume(Token::Type type) { return tokens.consume(type); }
 
 private:
+  SymbolTable              decls;
   TokenStream              tokens;
   std::vector<ParseError> *errors;
 };

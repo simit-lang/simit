@@ -68,6 +68,14 @@ func foo(a : int, inout a : float)
 end
 
 %%% redeclaration-7
+func foo<N>(N : matrix[N,N](float))
+end
+
+func bar(M : matrix[5,5](float))
+  foo(M);
+end
+
+%%% redeclaration-8
 element E
   v : int;
   v : int;

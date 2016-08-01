@@ -45,7 +45,7 @@ void HIRPrinter::visit(SetType::Ptr type) {
   type->element->accept(this);
   oss << "}";
   
-  if (type->endpoints.size() > 0) {
+  if (!type->endpoints.empty()) {
     oss << "(";
     
     bool printDelimiter = false;
@@ -99,7 +99,7 @@ void HIRPrinter::visit(ScalarType::Ptr type) {
 
 void HIRPrinter::visit(NDTensorType::Ptr type) {
   oss << "tensor";
-  if (type->indexSets.size() > 0) {
+  if (!type->indexSets.empty()) {
     oss << "[";
     
     bool printDelimiter = false;
@@ -188,16 +188,19 @@ void HIRPrinter::visit(FuncDecl::Ptr decl) {
   oss << "func ";
   decl->name->accept(this);
   
-  if (decl->genericParams.size() > 0) {
+  if (!decl->genericParams.empty()) {
     oss << "<";
+
     bool printDelimiter = false;
     for (auto genericParam : decl->genericParams) {
       if (printDelimiter) {
         oss << ", ";
       }
+
       genericParam->accept(this);
       printDelimiter = true;
     }
+
     oss << ">";
   }
   
@@ -215,7 +218,7 @@ void HIRPrinter::visit(FuncDecl::Ptr decl) {
   
   oss << ") ";
   
-  if (decl->results.size() > 0) {
+  if (!decl->results.empty()) {
     oss << "-> (";
     
     bool printDelimiter = false;
@@ -477,6 +480,23 @@ void HIRPrinter::visit(TransposeExpr::Ptr expr) {
 
 void HIRPrinter::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
+
+  if (!expr->genericArgs.empty()) {
+    oss << "<";
+
+    bool printDelimiter = false;
+    for (auto genericArg : expr->genericArgs) {
+      if (printDelimiter) {
+        oss << ", ";
+      }
+
+      genericArg->accept(this);
+      printDelimiter = true;
+    }
+
+    oss << ">";
+  }
+
   oss << "(";
 
   bool printDelimiter = false;
@@ -685,7 +705,7 @@ void HIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   oss << (isApply ? "apply " : "map ");
   expr->func->accept(this);
 
-  if (expr->partialActuals.size() > 0) {
+  if (!expr->partialActuals.empty()) {
     oss << "(";
 
     bool printDelimiter = false;

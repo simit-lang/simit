@@ -93,3 +93,31 @@ func foo() -> (r : bool)
   r = equal(A, A) and equal(B, B) and not equal(B,C);
 end
 
+%%% explicit-generic-arguments
+%! bar() == true;
+
+func foo<M,0:N,K>(a : vector[K](int)) -> (b : vector[M](int), c : vector[N](int), d : vector[K](int))
+  for m in M
+    b(m) = 1;
+  end
+  for n in 0:N
+    c(n) = n + 1;
+  end
+  d = a;
+end
+
+func equal<N>(a : vector[N](int), b : vector[N](int)) -> (r : bool)
+  r = true;
+  for n in N
+    if a(n) != b(n)
+      r = false;
+    end
+  end
+end
+
+func bar() -> (r : bool)
+  a = [1 2 3]';
+  b, c, d = foo<5,6>(a);
+  r = equal(b, [1 1 1 1 1]') and equal(c, [1 2 3 4 5 6]') and equal(a, d);
+end
+

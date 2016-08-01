@@ -344,6 +344,7 @@ private:
   struct GenericCallTypeChecker {
     GenericCallTypeChecker(Environment& env) : env(env) {}
 
+    void unify(IndexSet::Ptr, IndexSet::Ptr);
     void unify(Type::Ptr, Type::Ptr);
 
     SetReplacementMap  specializedSets;

@@ -638,9 +638,10 @@ struct ExprParam : public ReadParam {
 };
 
 struct MapExpr : public Expr {
-  Identifier::Ptr        func;
-  std::vector<Expr::Ptr> partialActuals;
-  SetIndexSet::Ptr       target;
+  Identifier::Ptr            func;
+  std::vector<IndexSet::Ptr> genericArgs;
+  std::vector<Expr::Ptr>     partialActuals;
+  SetIndexSet::Ptr           target;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -892,9 +893,9 @@ struct TransposeExpr : public UnaryExpr {
 };
 
 struct CallExpr : public Expr {
-  Identifier::Ptr        func;
-  std::vector<Expr::Ptr> genericArgs;
-  std::vector<Expr::Ptr> args;
+  Identifier::Ptr            func;
+  std::vector<IndexSet::Ptr> genericArgs;
+  std::vector<Expr::Ptr>     args;
   
   typedef std::shared_ptr<CallExpr> Ptr;
 

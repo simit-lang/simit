@@ -149,6 +149,9 @@ void HIRRewriter::visit(ExprParam::Ptr param) {
 
 void HIRRewriter::visit(MapExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
+  for (auto &genericArg : expr->genericArgs) {
+    genericArg = rewrite<IndexSet>(genericArg);
+  }
   for (auto &arg : expr->partialActuals) {
     arg = rewrite<Expr>(arg);
   }
@@ -219,12 +222,10 @@ void HIRRewriter::visit(TransposeExpr::Ptr expr) {
 void HIRRewriter::visit(CallExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
   for (auto &genericArg : expr->genericArgs) {
-    genericArg = rewrite<Expr>(genericArg);
+    genericArg = rewrite<IndexSet>(genericArg);
   }
   for (auto &arg : expr->args) {
-    if (arg) {
-      arg = rewrite<Expr>(arg);
-    }
+    arg = rewrite<Expr>(arg);
   }
   node = expr;
 }
@@ -239,9 +240,7 @@ void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
 
 void HIRRewriter::visit(TupleReadExpr::Ptr expr) {
   expr->tuple = rewrite<Expr>(expr->tuple);
-  if (expr->index) {
-    expr->index = rewrite<Expr>(expr->index);
-  }
+  expr->index = rewrite<Expr>(expr->index);
   node = expr;
 }
 
