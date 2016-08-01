@@ -54,7 +54,7 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
 # Turn off excessive warnings on Linux/GCC
   set(C_CXX_FLAGS "-Wno-unused-parameter -Wno-missing-field-initializers -Wno-deprecated")
 else()
-  set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-unused-local-typedef -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
+  set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
 endif()
 if (DEFINED ENV{WERROR})
   # Promote warnings to errors based on env variable
