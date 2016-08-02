@@ -30,7 +30,7 @@ inline const std::shared_ptr<T> to(std::shared_ptr<FIRNode> ptr) {
   return ret;
 }
 
-// Base class for higher-level intermediate representation used by front end.
+// Base class for front-end intermediate representation.
 struct FIRNode : public std::enable_shared_from_this<FIRNode> {
   typedef std::shared_ptr<FIRNode> Ptr;
 
