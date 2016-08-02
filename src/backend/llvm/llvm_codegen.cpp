@@ -200,13 +200,13 @@ llvm::Function* createPrototype(const std::string &name,
 
 llvm::GlobalVariable* createGlobal(llvm::Module *module, const Var& var,
                                    llvm::GlobalValue::LinkageTypes linkage,
-                                   unsigned addrspace) {
+                                   unsigned addrspace, bool packed) {
   bool isExtern = (linkage == llvm::GlobalValue::ExternalLinkage);
 
   Type type = var.getType();
 
   // Make sure extern structs are packed, so that we can correctly set them
-  llvm::Type* externType = (type.isSet())
+  llvm::Type* externType = (type.isSet() && packed)
                              ? llvmType(type.toSet(), addrspace, isExtern)
                              : llvmType(type, addrspace);
 

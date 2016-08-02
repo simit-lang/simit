@@ -19,6 +19,9 @@ endforeach()
 set(SIMIT_HEADERS ${SIMIT_HEADERS})
 set(SIMIT_SOURCES ${SIMIT_SOURCES})
 
+# Collect LLVM components from subprojects
+set(LLVM_COMPONENTS "")
+
 add_subdirectory(backend)
 add_subdirectory(frontend)
 add_subdirectory(lower)
@@ -27,7 +30,7 @@ add_subdirectory(visualizer)
 add_definitions(${SIMIT_DEFINITIONS})
 include_directories(${SIMIT_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURCES})
-target_link_libraries(${PROJECT_NAME} ${SIMIT_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SIMIT_LIBRARIES})
 
 
 # LLVM
@@ -68,16 +71,23 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
 execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE)
 include_directories("${LLVM_INCLUDES}")
 
-set(LLVM_COMPONENTS core mcjit bitwriter x86 ipo)
+set(LLVM_COMPONENTS "${LLVM_COMPONENTS}" core bitwriter x86 ipo)
+if (LLVM_VERSION LESS 35)
+  list(APPEND LLVM_COMPONENTS jit)
+else()
+  list(APPEND LLVM_COMPONENTS mcjit)
+endif()
 if (LLVM_VERSION GREATER 36)
  list(APPEND LLVM_COMPONENTS passes)
 else()
  list(APPEND LLVM_COMPONENTS ipo)
 endif()
+message("-- Compiling with components: ${LLVM_COMPONENTS}")
 
 execute_process(COMMAND "${LLVM_CONFIG}" --libfiles ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
 separate_arguments(LLVM_LIBS)  # Turn the space-separate string into a ;-separated list
-target_link_libraries(${PROJECT_NAME} PRIVATE ${LLVM_LIBS})
+message("-- Specific libraries: ${LLVM_LIBS}")
+target_link_libraries(${PROJECT_NAME} PUBLIC ${LLVM_LIBS})
 
 if (${LLVM_VERSION} GREATER 34)
   execute_process(COMMAND "${LLVM_CONFIG}" --system-libs ${LLVM_COMPONENTS} OUTPUT_VARIABLE EXTRA_LIBS)
