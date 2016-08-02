@@ -276,7 +276,7 @@ bool operator==(const UnstructuredSetType& l, const UnstructuredSetType& r) {
     return false;
   }
 
-  for (int i = 0; i < l.getCardinality(); ++i) {
+  for (size_t i = 0; i < l.getCardinality(); ++i) {
     Expr *lexpr = l.endpointSets[i];
     Expr *rexpr = r.endpointSets[i];
     if (*lexpr != *rexpr) return false;
