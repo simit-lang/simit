@@ -17,9 +17,7 @@ public:
 
   void visit(const Func *op) {
     const Environment& env = op->getEnvironment();
-    for (auto &global : env.getConstants()) {
-      rootVars.insert(global.first);
-    }
+    // Consider all environmental variables EXCEPT constants
     for (const Var& tmp : env.getTemporaries()) {
       rootVars.insert(tmp);
     }

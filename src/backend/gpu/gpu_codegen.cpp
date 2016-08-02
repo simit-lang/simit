@@ -8,6 +8,7 @@
 
 #include "error.h"
 #include "backend/llvm/llvm_codegen.h"
+#include "backend/llvm/llvm_versions.h"
 
 namespace simit {
 namespace backend {
@@ -154,8 +155,10 @@ std::string generatePtx(llvm::Module *module,
 
 void addNVVMAnnotation(llvm::Value *target, std::string annot,
                        llvm::Value *value, llvm::Module *module) {
-  llvm::Value *mdVals[] = {
-    target, llvm::MDString::get(LLVM_CTX, annot), value
+  LLVM_Metadata *mdVals[] = {
+    LLVM_MD_WRAP(target),
+    llvm::MDString::get(LLVM_CTX, annot),
+    LLVM_MD_WRAP(value)
   };
   llvm::MDNode *node = llvm::MDNode::get(LLVM_CTX, mdVals);
   llvm::NamedMDNode *nvvmAnnot = module

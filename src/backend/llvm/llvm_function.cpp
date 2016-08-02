@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+/// LLVM version branching
+
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
@@ -10,15 +13,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/DynamicLibrary.h"
 
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-#include "llvm/Analysis/Verifier.h"
-#else
-#include "llvm/IR/Verifier.h"
-#endif
-
 #include "llvm_types.h"
 #include "llvm_codegen.h"
 #include "llvm_data_layouts.h"
+#include "llvm_versions.h"
 
 #include "backend/actual.h"
 #include "graph.h"
@@ -43,20 +41,20 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
       harnessModule(new llvm::Module("simit_harness", LLVM_CTX)),
       storage(storage),
       engineBuilder(engineBuilder),
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
-      executionEngine(engineBuilder->setUseMCJIT(true).create()), // MCJIT EE
-#else
-      executionEngine(engineBuilder->create()),
-#endif
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
-      harnessEngineBuilder(new llvm::EngineBuilder(harnessModule)),
-      harnessExecEngine(harnessEngineBuilder->setUseMCJIT(true).create()), // MCJIT EE
-#else
-      harnessEngineBuilder(new llvm::EngineBuilder(
-          unique_ptr<llvm::Module>(harnessModule))),
-      harnessExecEngine(harnessEngineBuilder->create()),
-#endif
+      harnessEngineBuilder(new llvm::EngineBuilder(LLVM_MOD_WRAP(harnessModule))),
       deinit(nullptr) {
+
+  LLVM_EB_WRAP(engineBuilder);
+  LLVM_EB_WRAP(harnessEngineBuilder);
+  engineBuilder->setEngineKind(llvm::EngineKind::JIT);
+  harnessEngineBuilder->setEngineKind(llvm::EngineKind::JIT);
+  std::string errStr;
+  engineBuilder->setErrorStr(&errStr);
+  this->executionEngine.reset(engineBuilder->create());
+  iassert((bool)this->executionEngine) << errStr;
+  harnessEngineBuilder->setErrorStr(&errStr);
+  this->harnessExecEngine.reset(harnessEngineBuilder->create());
+  iassert((bool)this->harnessExecEngine) << errStr;
 
   // Finalize existing module so we can get global pointer hooks
   // from the LLVM memory manager.
@@ -71,7 +69,7 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
     // Store a pointer to each of the bindable's extern in externPtrs
     vector<void**> extPtrs;
     for (const Var& ext : externMapping.getMappings()) {
-      uint64_t addr = executionEngine->getGlobalValueAddress(ext.getName());
+      uint64_t addr = getGlobalAddr(ext.getName(), module, executionEngine);
       void** extPtr = (void**)addr;
       *extPtr = nullptr;
       extPtrs.push_back(extPtr);
@@ -84,8 +82,7 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   for (const Var& tmp : env.getTemporaries()) {
     iassert(tmp.getType().isTensor())
         << "Only support tensor temporaries";
-    // llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
-    uint64_t addr = executionEngine->getGlobalValueAddress(tmp.getName());
+    uint64_t addr = getGlobalAddr(tmp.getName(), module, executionEngine);
     void** tmpPtr = (void**)addr;
     *tmpPtr = nullptr;
     temporaryPtrs.insert({tmp.getName(), tmpPtr});
@@ -97,12 +94,12 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
 
     if (tensorIndex.getKind() == TensorIndex::PExpr) {
       const Var& rowptr = tensorIndex.getRowptrArray();
-      addr = executionEngine->getGlobalValueAddress(rowptr.getName());
+      addr = getGlobalAddr(rowptr.getName(), module, executionEngine);
       const uint32_t** rowptrPtr = (const uint32_t**)addr;
       *rowptrPtr = nullptr;
 
       const Var& colidx = tensorIndex.getColidxArray();
-      addr = executionEngine->getGlobalValueAddress(colidx.getName());
+      addr = getGlobalAddr(colidx.getName(), module, executionEngine);
       const uint32_t** colidxPtr = (const uint32_t**)addr;
       *colidxPtr = nullptr;
 
@@ -324,15 +321,11 @@ Function::FuncType LLVMFunction::init() {
   if (llvmFunc->getArgumentList().size() == 0) {
     llvm::Function *initFunc = getInitFunc();
     llvm::Function *deinitFunc = getDeinitFunc();
-    uint64_t addr = executionEngine->getFunctionAddress(initFunc->getName());
-    FuncPtrType init = reinterpret_cast<decltype(init)>(addr);
-    init();
-    addr = executionEngine->getFunctionAddress(deinitFunc->getName());
-    FuncPtrType deinitPtr = reinterpret_cast<decltype(deinitPtr)>(addr);
-    deinit = deinitPtr;
-    addr = executionEngine->getFunctionAddress(llvmFunc->getName());
-    FuncPtrType funcPtr = reinterpret_cast<decltype(funcPtr)>(addr);
-    func = funcPtr;
+    // Call init()
+    getGlobalFunc(initFunc, executionEngine.get())();
+    // Store deinit(), func()
+    deinit = getGlobalFunc(deinitFunc, executionEngine.get());
+    func = getGlobalFunc(llvmFunc, executionEngine.get());
   }
   else {
     llvm::SmallVector<llvm::Value*, 8> args;
@@ -380,6 +373,16 @@ Function::FuncType LLVMFunction::init() {
     const std::string deinitFuncName = string(llvmFunc->getName())+"_deinit";
     const std::string funcName = llvmFunc->getName();
 
+    // Create Init/deinit function harnesses
+    llvm::Function *initProto, *deinitProto, *funcProto;
+    llvm::Function *initHarness =
+        createHarness(initFuncName, args, &initProto);
+    llvm::Function *deinitHarness =
+        createHarness(deinitFuncName, args, &deinitProto);
+    llvm::Function *funcHarness =
+        createHarness(funcName, args, &funcProto);
+
+#ifdef LLVM_USE_MCJIT
     // Calling main module functions from the harness requires the
     // symbols to be loaded into the memory manager ahead of finalization
     llvm::sys::DynamicLibrary::AddSymbol(
@@ -391,22 +394,25 @@ Function::FuncType LLVMFunction::init() {
     llvm::sys::DynamicLibrary::AddSymbol(
         funcName,
         (void*) executionEngine->getFunctionAddress(funcName));
-
-    // Create Init/deinit function harnesses
-    createHarness(initFuncName, args);
-    createHarness(deinitFuncName, args);
-    createHarness(funcName, args);
-
+#else
+    harnessExecEngine->addGlobalMapping(
+        initProto, executionEngine->getPointerToFunction(getInitFunc()));
+    harnessExecEngine->addGlobalMapping(
+        deinitProto, executionEngine->getPointerToFunction(getDeinitFunc()));
+    harnessExecEngine->addGlobalMapping(
+        funcProto, executionEngine->getPointerToFunction(llvmFunc));
+#endif
+    
     // Finalize harness module
     harnessExecEngine->finalizeObject();
 
     // Fetch hard addresses from ExecutionEngine
-    auto init = getHarnessFunctionAddress(initFuncName);
-    init();
-    deinit = getHarnessFunctionAddress(deinitFuncName);
+    // call init()
+    getGlobalFunc(initHarness, harnessExecEngine.get())();
+    // store deinit(), func()
+    deinit = getGlobalFunc(deinitHarness, harnessExecEngine.get());
+    func = getGlobalFunc(funcHarness, harnessExecEngine.get());
 
-    // Compute function
-    func = getHarnessFunctionAddress(funcName);
     iassert(!llvm::verifyModule(*module))
         << "LLVM module does not pass verification";
     iassert(!llvm::verifyModule(*harnessModule))
@@ -427,7 +433,7 @@ void LLVMFunction::printMachine(std::ostream &os) const {
   llvm::TargetMachine *target = engineBuilder->selectTarget();
   target->Options.PrintMachineCode = true;
   llvm::ExecutionEngine *printee(engineBuilder->create(target));
-  printee->getFunctionAddress(llvmFunc->getName());
+  getGlobalFunc(llvmFunc, printee);
   target->Options.PrintMachineCode = false;
 }
 
@@ -460,9 +466,10 @@ void LLVMFunction::initIndices(pe::PathIndexBuilder& piBuilder,
   }
 }
 
-void LLVMFunction::createHarness(
+llvm::Function* LLVMFunction::createHarness(
     const std::string &name,
-    const llvm::SmallVector<llvm::Value*,8> &args) {
+    const llvm::SmallVector<llvm::Value*,8> &args,
+    llvm::Function** harnessProto) {
   // Build prototype in harnass module as an extrnal linkage to the
   // function in the main module
   llvm::Function *llvmFunc = module->getFunction(name);
@@ -474,6 +481,7 @@ void LLVMFunction::createHarness(
   }
   llvm::Function *llvmFuncProto = createPrototypeLLVM(
       name, argNames, argTypes, harnessModule, true);
+  *harnessProto = llvmFuncProto;
       
   std::string harnessName = name + "_harness";
   llvm::Function *harness = createPrototype(
@@ -482,18 +490,7 @@ void LLVMFunction::createHarness(
   llvm::CallInst *call = llvm::CallInst::Create(llvmFuncProto, args, "", entry);
   call->setCallingConv(llvmFunc->getCallingConv());
   llvm::ReturnInst::Create(harnessModule->getContext(), entry);
-}
-
-LLVMFunction::FuncType
-LLVMFunction::getHarnessFunctionAddress(const std::string &name) {
-  std::string fullName = name + "_harness";
-  uint64_t addr = harnessExecEngine->getFunctionAddress(fullName);
-  iassert(addr != 0)
-      << "MCJIT prevents modifying the module after ExecutionEngine code "
-      << "generation. Ensure all functions are created before fetching "
-      << "function addresses.";
-  FuncPtrType funcPtr = reinterpret_cast<decltype(funcPtr)>(addr);
-  return funcPtr;
+  return harness;
 }
 
 llvm::Function *LLVMFunction::getInitFunc() const {

@@ -8,6 +8,7 @@ namespace simit {
 namespace ir {
 
 class ReductionOperator;
+class VarCleaner;
 struct ForDomain;
 
 struct VarContent {
@@ -27,8 +28,25 @@ public:
 
   const std::string &getName() const {return ptr->name;}
   const Type &getType() const {return ptr->type;}
+
+  friend class VarCleaner;
 };
 
+/// A privileged class which allows cleaning Var names. Used for backend
+/// code generation when particular symbols are protected for a specific target.
+class VarCleaner {
+public:
+  // Default impl does nothing
+  virtual std::string cleanImpl(std::string name) const {return name;}
+  void clean(Var &inp) const {
+    inp.ptr->name = cleanImpl(inp.ptr->name);
+  }
+  // Hack: break the const contract very specifically
+  void clean(const Var &inp) const {
+    Var &inpFree = const_cast<Var&>(inp);
+    clean(inpFree);
+  }
+};
 
 /// A Simit loop variable, consisting of a variable and its iteration domain.
 class LoopVar {

@@ -32,7 +32,7 @@ protected:
 
     // Add shared arg
     std::vector<Var> args = func.getArguments();
-    sharedVar = Var("$shared", SetType::make(
+    sharedVar = Var("$shared", UnstructuredSetType::make(
         ElementType::make("$shared", sharedFields), {}));
     args.push_back(sharedVar);
     func = Func(func.getName(), args, func.getResults(),
@@ -50,11 +50,11 @@ protected:
       std::cerr << "Lowering assign to $shared " << op->var << "\n";
       // TODO(gkanwar): This type is incorrect for the set, because it doesn't
       // include future fields.
-      Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
+      Type type(UnstructuredSetType::make(
+          ElementType::make("$shared", sharedFields), {}));
       // Build a 0 index into the $shared set
-      int zero = 0;
       auto fieldRead = FieldRead::make(Var("$shared", type), varName);
-      stmt = Store::make(fieldRead, Literal::make(Int, &zero), value, op->cop);
+      stmt = Store::make(fieldRead, Literal::make(0), value, op->cop);
       std::cerr << "   " << stmt << "\n";
     }
     else {
@@ -68,11 +68,11 @@ protected:
       std::cerr << "Lowering ref to $shared " << op->var << "\n";
       // This type is incorrect for the set, because it doesn't
       // include future fields. ReplaceShared will fix this in a second pass.
-      Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
+      Type type(UnstructuredSetType::make(
+          ElementType::make("$shared", sharedFields), {}));
       // Build a 0 index into the $shared set
-      int zero = 0;
       auto fieldRead = FieldRead::make(Var("$shared", type), op->var.getName());
-      expr = Load::make(fieldRead, Literal::make(Int, &zero));
+      expr = Load::make(fieldRead, Literal::make(0));
       std::cerr << "   " << expr << "\n";
     }
     else {

@@ -89,9 +89,9 @@ class LLVMFunction : public backend::Function {
   // MCJIT does not allow module modification after code generation. Instead,
   // create all harness functions in the harness module first, then fetch
   // generated addresses using getHarnessFunctionAddress.
-  void createHarness(const std::string& name,
-                     const llvm::SmallVector<llvm::Value*,8>& args);
-  FuncType getHarnessFunctionAddress(const std::string& name);
+  llvm::Function* createHarness(const std::string& name,
+                                const llvm::SmallVector<llvm::Value*,8>& args,
+                                llvm::Function** harnessPrototype);
 
   llvm::Function* getInitFunc() const;
   llvm::Function* getDeinitFunc() const;
