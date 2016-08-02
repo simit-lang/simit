@@ -69,6 +69,7 @@ protected:
   // virtual void compile(const ir::Sub&);
   // virtual void compile(const ir::Mul&);
   // virtual void compile(const ir::Div&);
+  // virtual void compile(const ir::Rem&);
 
   // virtual void compile(const ir::Not&);
   // virtual void compile(const ir::Eq&);

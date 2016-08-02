@@ -41,6 +41,7 @@ private:
   virtual void visit(const Sub *op);
   virtual void visit(const Mul *op);
   virtual void visit(const Div *op);
+  virtual void visit(const Rem *op);
 
   virtual void visit(const Not *op);
   virtual void visit(const Eq *op);
@@ -70,6 +71,7 @@ private:
   virtual void visit(const Pass *op);
 
   virtual void visit(const TupleRead *op);
+  virtual void visit(const SetRead *op);
   virtual void visit(const TensorRead *op);
   virtual void visit(const TensorWrite *op);
   virtual void visit(const IndexedTensor *op);

@@ -9,6 +9,7 @@
 #include "sig.h"
 #include "path_expressions.h"
 #include "tensor_index.h"
+#include "stencils.h"
 
 using namespace std;
 
@@ -263,8 +264,10 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
       if (op == rstmt) {
         iassert(op->value.type().isTensor());
         ScalarType ctype = op->value.type().toTensor()->getComponentType();
-        string reductionVarName = getReductionTmpName(op);
-        reductionVar = Var(reductionVarName, TensorType::make(ctype));
+        if (!reductionVar.defined()) {
+          string reductionVarName = getReductionTmpName(op);
+          reductionVar = Var(reductionVarName, TensorType::make(ctype));
+        }
         stmt = compoundAssign(reductionVar, rop, op->value);
 
         if (isa<TensorRead>(op->tensor)) {
@@ -377,6 +380,12 @@ TensorIndex getTensorIndexOfStatement(Stmt stmt, const Storage& storage,
         const TensorStorage& tensorStorage = storage.getStorage(var);
         if (tensorStorage.getKind() == TensorStorage::Kind::Indexed) {
           iassert(tensorStorage.hasTensorIndex());
+          tensorIndex = tensorStorage.getTensorIndex();
+        }
+        else if (tensorStorage.getKind() == TensorStorage::Kind::Stencil) {
+          iassert(tensorStorage.hasTensorIndex());
+          iassert(tensorStorage.getTensorIndex().getKind() ==
+                  TensorIndex::Sten);
           tensorIndex = tensorStorage.getTensorIndex();
         }
       }
@@ -578,6 +587,15 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
   // Create loops (since we create the loops inside out, we must iterate over
   // the loop vars in reverse order)
   Stmt loopNest = kernel;
+  
+  // HACK: Extract loop vars corresponding to lattice loops
+  map<Var, const LoopVar*> latticeLoopVars;
+  for (auto loopVar=loopVars.begin(); loopVar!=loopVars.end(); ++loopVar) {
+    if (loopVar->getDomain().kind == ForDomain::Lattice) {
+      latticeLoopVars[loopVar->getDomain().var] = &(*loopVar);
+    }
+  }
+  
   for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
     if (loopVar->getDomain().kind == ForDomain::IndexSet) {
       // if this is a Single domain, don't generate a loop, just use an
@@ -588,8 +606,23 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         loopNest = Block::make(assign, loopNest);
       }
       else {
-      loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+        loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
       }
+    }
+    else if (loopVar->getDomain().kind == ForDomain::Lattice) {
+      int ndims = loopVar->getDomain().latticeVars.size();
+      // Add overall variable advancement
+      loopNest = Block::make(loopNest, AssignStmt::make(
+          loopVar->getDomain().var, 1, CompoundOperator::Add));
+      for (int i = 0; i < ndims; ++i) {
+        Expr dimSize = IndexRead::make(loopVar->getDomain().set,
+                                       IndexRead::LatticeDim, i);
+        loopNest = ForRange::make(loopVar->getDomain().latticeVars[i],
+                                  0, dimSize, loopNest);
+      }
+      // Zero out the overall variable
+      Stmt initVar = AssignStmt::make(loopVar->getDomain().var, 0);
+      loopNest = Block::make(initVar, loopNest);
     }
     else if (loopVar->getDomain().kind == ForDomain::Neighbors ||
              loopVar->getDomain().kind == ForDomain::NeighborsOf) {
@@ -600,33 +633,81 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
                                                           environment);
-      iassert(tensorIndex.getColidxArray().defined())
-          << "Empty tensor index returned from: " << stmt;
+      if (tensorIndex.getKind() == TensorIndex::PExpr) {
+        iassert(tensorIndex.getColidxArray().defined())
+            << "Empty tensor index returned from: " << stmt;
 
-      Expr jRead = Load::make(tensorIndex.getColidxArray(), ij);
+        Expr jRead = Load::make(tensorIndex.getColidxArray(), ij);
 
-      // for NeighborsOf, we need to check if this is the j we are looking for
-      if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
-        Expr jCond = Eq::make(j, loopVar->getDomain().indexSet.getSet());
-        loopNest = IfThenElse::make(jCond, loopNest, Pass::make());
+        // for NeighborsOf, we need to check if this is the j we are looking for
+        if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
+          Expr jCond = Eq::make(j, loopVar->getDomain().indexSet.getSet());
+          loopNest = IfThenElse::make(jCond, loopNest, Pass::make());
+        }
+
+        loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
+
+        Expr start = Load::make(tensorIndex.getRowptrArray(), i);
+        Expr stop = Load::make(tensorIndex.getRowptrArray(), i+1);
+
+        // Rewrite accesses to any SystemDiagonal tensors & lift out ops
+        DiagonalReadsRewriter drRewriter(storage, i, loopVars);
+        loopNest = drRewriter.doRewrite(loopNest);
+
+        if (drRewriter.liftedStmts.size() > 0) {
+          auto newBlock = Block::make(drRewriter.liftedStmts);
+          loopNest = Block::make(newBlock,
+                                 ForRange::make(ij, start, stop, loopNest));
+        }
+        else {
+          loopNest = ForRange::make(ij, start, stop, loopNest);
+        }
       }
+      else if (tensorIndex.getKind() == TensorIndex::Sten) {
+        const StencilLayout &stencil = tensorIndex.getStencilLayout();
+        iassert(stencil.defined())
+            << "Empty stencil tensor index returned from: " << stmt;
 
-      loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
+        // Flip stencil layout map
+        map<int, vector<int> > flipped;
+        for (auto &kv : stencil.getLayout()) {
+          flipped[kv.second] = kv.first;
+        }
 
-      Expr start = Load::make(tensorIndex.getRowptrArray(), i);
-      Expr stop = Load::make(tensorIndex.getRowptrArray(), i+1);
+        // Use canonical memory ordering to infer j from stencil offsets
+        Expr latticeSet = stencil.getLatticeSet();
+        iassert(latticeSet.type().isLatticeLinkSet());
+        unsigned dims = latticeSet.type().toLatticeLinkSet()->dimensions;
 
-      // Rewrite accesses to any SystemDiagonal tensors & lift out ops
-      DiagonalReadsRewriter drRewriter(storage, i, loopVars);
-      loopNest = drRewriter.doRewrite(loopNest);
+        // Fetch the full LoopVar corresponding to the i lattice loop
+        iassert(latticeLoopVars.count(i));
+        const LoopVar *latticeLoopVar = latticeLoopVars[i];
+        iassert(latticeLoopVar->getDomain().latticeVars.size() == dims);
+        const vector<Var> &latticeVars = latticeLoopVar->getDomain().latticeVars;
 
-      if (drRewriter.liftedStmts.size() > 0) {
-        auto newBlock = Block::make(drRewriter.liftedStmts);
-        loopNest = Block::make(newBlock,
-                               ForRange::make(ij, start, stop, loopNest));
+        // Use fixed stencil size to do an unrolled DIA-style loop for ij, j
+        int stencilSize = stencil.getLayout().size();
+        vector<Stmt> ijLoop;
+        for (int ijInd = 0; ijInd < stencilSize; ++ijInd) {
+          // Assign ij
+          ijLoop.push_back(AssignStmt::make(ij, stencilSize*i+ijInd));
+          // Compute and assign j
+          vector<int> offsets = flipped[ijInd];
+          Expr totalInd = Literal::make(0);
+          for (int d = dims-1; d >= 0; --d) {
+            Expr dimSize = IndexRead::make(latticeSet, IndexRead::LatticeDim, d);
+            // Periodic boundary conditions
+            Expr ind = ((latticeVars[d]+offsets[d])%dimSize+dimSize)%dimSize;
+            totalInd = totalInd * dimSize + ind;
+          }
+          ijLoop.push_back(AssignStmt::make(j, totalInd));
+          // Perform inner loop
+          ijLoop.push_back(loopNest);
+        }
+        loopNest = Block::make(ijLoop);
       }
       else {
-        loopNest = ForRange::make(ij, start, stop, loopNest);
+        unreachable;
       }
     }
     else if (loopVar->getDomain().kind == ForDomain::Diagonal) {
@@ -634,7 +715,8 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       Var j = loopVar->getVar();
       
       loopNest = Block::make(AssignStmt::make(j, i), loopNest);
-    } else {
+    }
+    else {
       not_supported_yet;
     }
 

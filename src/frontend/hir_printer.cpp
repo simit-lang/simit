@@ -40,7 +40,7 @@ void HIRPrinter::visit(Endpoint::Ptr end) {
   end->set->accept(this);
 }
 
-void HIRPrinter::visit(SetType::Ptr type) {
+void HIRPrinter::visit(UnstructuredSetType::Ptr type) {
   oss << "set{";
   type->element->accept(this);
   oss << "}";
@@ -60,6 +60,14 @@ void HIRPrinter::visit(SetType::Ptr type) {
     
     oss << ")";
   }
+}
+
+void HIRPrinter::visit(LatticeLinkSetType::Ptr type) {
+  oss << "lattice[" << type->dimensions << "]{";
+  type->element->accept(this);
+  oss << "}(";
+  type->latticePointSet->accept(this);
+  oss << ")";
 }
 
 void HIRPrinter::visit(TupleLength::Ptr length) {
@@ -513,6 +521,20 @@ void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
   oss << ")";
 }
 
+void HIRPrinter::visit(SetReadExpr::Ptr expr) {
+  expr->set->accept(this);
+  oss << "[";
+  bool printDelimiter = false;
+  for (auto param : expr->indices) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    param->accept(this);
+    printDelimiter = true;
+  }
+  oss << "]";
+}
+
 void HIRPrinter::visit(TupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
   oss << "(";
@@ -703,6 +725,11 @@ void HIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
 
   oss << " to ";
   expr->target->accept(this);
+
+  if (expr->through) {
+    oss << " through ";
+    expr->through->accept(this);
+  }
 
   if (expr->isReduced()) {
     oss << " reduce ";

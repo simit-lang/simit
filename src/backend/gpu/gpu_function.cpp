@@ -169,7 +169,8 @@ void GPUFunction::bind(const std::string& name, TensorData& data) {
   initialized = false;
 }
 
-GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setType) {
+GPUFunction::SetData GPUFunction::pushSetData(
+    Set* set, const ir::UnstructuredSetType* setType) {
   GPUFunction::SetData data;
   // Set size
   data.setSize = set->getSize();

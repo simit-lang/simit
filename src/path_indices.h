@@ -240,6 +240,7 @@ public:
   void bind(std::string name, const simit::Set* set);
 
   const simit::Set* getBinding(pe::Set pset) const;
+  const simit::Set* getBinding(ir::Var var) const;
 
 private:
   std::map<std::pair<PathExpression,unsigned>, PathIndex> pathIndices;
