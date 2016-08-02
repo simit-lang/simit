@@ -200,6 +200,11 @@ struct Endpoint : public FIRNode {
     visitor->visit(self<Endpoint>());
   }
 
+  virtual unsigned getLineBegin() { return set->getLineBegin(); }
+  virtual unsigned getColBegin() { return set->getColBegin(); }
+  virtual unsigned getLineEnd() { return set->getLineEnd(); }
+  virtual unsigned getColEnd() { return set->getColEnd(); }
+
 protected:
   virtual void copy(FIRNode::Ptr);
 
@@ -207,9 +212,11 @@ protected:
 };
 
 struct SetType : public Type {
-  ElementType::Ptr           element;
+  ElementType::Ptr element;
+
   typedef std::shared_ptr<SetType> Ptr;
-  static SetType::Ptr getUndefinedSetType();
+
+  static Ptr getUndefinedSetType();
 };
 
 struct UnstructuredSetType : public SetType {
@@ -229,7 +236,7 @@ protected:
 
 struct LatticeLinkSetType : public SetType {
   Endpoint::Ptr latticePointSet;
-  size_t dimensions;
+  size_t        dimensions;
   
   typedef std::shared_ptr<LatticeLinkSetType> Ptr;
   
@@ -1009,8 +1016,8 @@ protected:
 };
 
 struct SetReadExpr : public Expr {
-  Expr::Ptr set;
-  std::vector<ReadParam::Ptr> indices;
+  Expr::Ptr              set;
+  std::vector<Expr::Ptr> indices;
 
   typedef std::shared_ptr<SetReadExpr> Ptr;
 

@@ -174,23 +174,27 @@ void TypeChecker::visit(UnstructuredSetType::Ptr type) {
 }
 
 void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
-  retTypeChecked = typeCheck(type->element);
-  
-  retTypeChecked = typeCheck(type->latticePointSet) && retTypeChecked;
+  const bool elementTypeChecked = typeCheck(type->element);
+  const bool latticeSetTypeChecked = typeCheck(type->latticePointSet);
+
+  retTypeChecked = elementTypeChecked && latticeSetTypeChecked;
+ 
+  const auto latticeSetDef = type->latticePointSet->set->setDef;
+  const auto latticeSetName = type->latticePointSet->set->setName;
+
   // Check lattice point set is an unstructured set
-  if (!isa<UnstructuredSetType>(type->latticePointSet->set->setDef)) {
+  if (!isa<UnstructuredSetType>(latticeSetDef)) {
     std::stringstream errMsg;
-    errMsg << "expected lattice point set of Unstructured kind but got "
-           << type->latticePointSet->set->setName;
+    errMsg << "expected lattice point set of unstructured kind, but set '"
+           << latticeSetName << "' is not an unstructured set";
     reportError(errMsg.str(), type->latticePointSet);
   }
   // Check lattice point set is cardinality zero
-  else if (to<UnstructuredSetType>(type->latticePointSet->set->setDef)
-           ->endpoints.size() != 0) {
+  else if (!to<UnstructuredSetType>(latticeSetDef)->endpoints.empty()) {
     std::stringstream errMsg;
-    errMsg << "expected lattice point set of 0 cardinality, but got "
-           << to<UnstructuredSetType>(type->latticePointSet->set->setDef)
-        ->endpoints.size();
+    errMsg << "expected lattice point set of zero cardinality, but set '" 
+           << latticeSetName << "' has cardinality "
+           << to<UnstructuredSetType>(latticeSetDef)->endpoints.size();
     reportError(errMsg.str(), type->latticePointSet);
   }
 }
@@ -1154,7 +1158,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   // Check that left operand of tensor read is actually a tensor.
   if (!lhsType.isTensor()) {
     std::stringstream errMsg;
-    errMsg << "cannot access elements from objects of type " 
+    errMsg << "expected left operand of tensor access to be a tensor but got a "
            << toString(lhsType);
     reportError(errMsg.str(), expr->tensor);
     retType = ExprType(lhsType.access);
@@ -1259,15 +1263,27 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 void TypeChecker::visit(SetReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->set);
 
+  // Check that indices are all integral.
+  for (auto index : expr->indices) {
+    const ExprType indexType = inferType(index);
+
+    if (indexType.defined && !indexType.isScalarInt()) {
+      std::stringstream errMsg;
+      errMsg << "lattice set access expects an integral index but "
+             << "got an index of type " << toString(indexType);
+      reportError(errMsg.str(), index);
+    }
+  }
+
   if (!lhsType.defined) {
     retType = ExprType(lhsType.access);
     return;
   }
 
-  // Check that program does not attempt to read from multiple values
-  // simultaneously
+  // Check that program does not attempt to read from 
+  // multiple values simultaneously.
   if (lhsType.isVoid()) {
-    reportError("cannot access field of a void value", expr->set);
+    reportError("cannot access elements of a void value", expr->set);
     retType = ExprType(lhsType.access);
     return;
   }
@@ -1279,82 +1295,39 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
 
   const Type::Ptr type = lhsType.type[0];
 
-  if (isa<SetType>(type)) {
-    // Case 1: Node set, single tuple index, DONT know dims
-    if (isa<UnstructuredSetType>(type)) {
-      // TODO: No good way to check indices = #dims
-      for (auto index : expr->indices) {
-        if (index->isSlice()) {
-          reportError("lattice point access expects integral indices", index);
-        }
-      }
-
-      if (retTypeChecked) {
-        for (auto index : expr->indices) {
-          const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
-          const ExprType indexType = inferType(indexExpr);
-
-          if (indexType.defined && !indexType.isScalarInt()) {
-            std::stringstream errMsg;
-            errMsg << "lattice point access expects an integral index but got "
-                   << "an index of type " << toString(indexType);
-            reportError(errMsg.str(), index);
-          }
-        }
-      }
-      if (retTypeChecked &&
-          to<UnstructuredSetType>(type)->endpoints.size() != 0) {
-        reportError("lattice point set cannot have non-zero cardinality",
-                    expr->set);
-      }
-
-      retType = ExprType(to<SetType>(type)->element, lhsType.access);
-    }
-    // Case 2: Lattice edge set, double set of indices (#indices = 2*dim)
-    else if (isa<LatticeLinkSetType>(type)) {
-      // Check number of indices = 2*dim and all integral
-      unsigned dims = to<LatticeLinkSetType>(type)->dimensions;
-      if (expr->indices.size() != 2*dims) {
-        std::stringstream errMsg;
-        errMsg << "lattice edge set access expects number of indices to equal "
-               << "2*dimensions, but got " << expr->indices.size() << " vs "
-               << 2*dims;
-        reportError(errMsg.str(), expr->indices[0]);
-      }
-      else {
-        for (auto index : expr->indices) {
-          if (index->isSlice()) {
-            reportError("lattice edge set access expects integral indices", index);
-          }
-        }
-
-        if (retTypeChecked) {
-          for (auto index : expr->indices) {
-            const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
-            const ExprType indexType = inferType(indexExpr);
-
-            if (indexType.defined && !indexType.isScalarInt()) {
-              std::stringstream errMsg;
-              errMsg << "lattice point access expects an integral index but got "
-                     << "an index of type " << toString(indexType);
-              reportError(errMsg.str(), index);
-            }
-          }
-        }
-      }
-
-      retType = ExprType(to<SetType>(type)->element, lhsType.access);
-    }
-    else {
-      std::stringstream errMsg;
-      errMsg << "set type cannot be indexed: " << toString(lhsType);
-      reportError(errMsg.str(), expr->set);
-    }
-  } else {
+  if (!isa<SetType>(type)) {
     std::stringstream errMsg;
-    errMsg << "cannot access elements from objects of type "
+    errMsg << "expected left operand of set access to be a set but got a "
            << toString(lhsType);
     reportError(errMsg.str(), expr->set);
+    return;
+  }
+
+  retType = ExprType(to<SetType>(type)->element, lhsType.access);
+
+  // Case 1: Node set, single tuple index, DON'T know dims
+  if (isa<UnstructuredSetType>(type)) {
+    // TODO: No good way to check indices = #dims
+
+    if (!to<UnstructuredSetType>(type)->endpoints.empty()) {
+      const auto msg = "lattice point set cannot have non-zero cardinality";
+      reportError(msg, expr->set);
+    }
+  }
+  // Case 2: Lattice edge set, double set of indices (#indices = 2 * dims)
+  else if (isa<LatticeLinkSetType>(type)) {
+    const unsigned dims = to<LatticeLinkSetType>(type)->dimensions;
+    
+    // Check number of indices = 2 * dims.
+    if (expr->indices.size() != (2 * dims)) {
+      std::stringstream errMsg;
+      errMsg << "lattice edge set access expects 2 * dimensions = "  
+             << (2 * dims) << " indices but got " << expr->indices.size();
+      reportError(errMsg.str(), expr->indices[0]);
+    }
+  }
+  else {
+    not_supported_yet;
   }
 }
 
@@ -1390,7 +1363,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   // Check that program does not attempt to read from multiple values 
   // simultaneously (e.g. output of function call returning two tensors).
   if (lhsType.isVoid()) {
-    reportError("cannot access field of a void value", expr->setOrElem);
+    reportError("cannot access fields of a void value", expr->setOrElem);
     retType = ExprType(lhsType.access);
     return;
   } else if (!lhsType.isSingleValue()) {
@@ -1410,7 +1383,10 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
 
   // Check that program only reads fields from sets and elements.
   if (!elemType) {
-    reportError("can only access fields of sets or elements", expr->setOrElem);
+    std::stringstream errMsg;
+    errMsg << "expected left operand of field access to be a set or an element "
+           << "but got a " << toString(type);
+    reportError(errMsg.str(), expr->setOrElem);
     retType = ExprType(lhsType.access);
     return;
   }

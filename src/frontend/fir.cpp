@@ -661,7 +661,7 @@ void SetReadExpr::copy(FIRNode::Ptr node) {
   Expr::copy(setReadExpr);
   set = setReadExpr->set->clone<Expr>();
   for (const auto &index : setReadExpr->indices) {
-    indices.push_back(index->clone<ReadParam>());
+    indices.push_back(index->clone<Expr>());
   }
 }
 
