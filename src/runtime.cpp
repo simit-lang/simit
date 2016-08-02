@@ -150,26 +150,10 @@ template <typename Float>
 void solve(int n,  int m,  int* rowPtr, int* colIdx,
            int nn, int mm, Float* A, Float* x, Float* b) {
   using namespace Eigen;
-  int nnz = rowPtr[n/nn];
 
   auto xvec = new Eigen::Map<Eigen::Matrix<Float,Dynamic,1>>(x, m);
   auto cvec = new Eigen::Map<Eigen::Matrix<Float,Dynamic,1>>(b, n);
-
-  // Construct the matrix
-  std::vector<Triplet<Float>> tripletList;
-  tripletList.reserve(nnz*nn*mm);
-  for (int i=0; i<n/(nn); i++) {
-    for (int j=rowPtr[i]; j<rowPtr[i+1]; j++) {
-      for (int bi=0; bi<nn; bi++) {
-        for (int bj=0; bj<mm; bj++) {
-          tripletList.push_back(Triplet<Float>(i*nn+bi, colIdx[j]*mm+bj,
-                                               A[j*nn*mm+bi*nn+bj]));
-        }
-      }
-    }
-  }
-  SparseMatrix<Float> mat(n, m);
-  mat.setFromTriplets(tripletList.begin(), tripletList.end());
+  auto mat = csr2eigen<Float, Eigen::ColMajor>(n, m, rowPtr, colIdx, nn, mm, A);
 
   ConjugateGradient<SparseMatrix<Float>,Lower,IdentityPreconditioner> solver;
   solver.setMaxIterations(50);

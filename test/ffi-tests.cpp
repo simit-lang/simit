@@ -10,6 +10,7 @@
 #include "types.h"
 
 #include "ffi.h"
+#include "runtime.h"
 
 using namespace std;
 using namespace testing;
@@ -448,29 +449,12 @@ TEST(ffi, gemv_blocked_generics) {
 #include <Eigen/IterativeLinearSolvers>
 
 template<typename Float>
-Eigen::SparseMatrix<Float,Eigen::RowMajor>
-csr2eigen(int N, int M, int* rowPtr, int* colIdx, Float* vals) {
-  std::vector< Eigen::Triplet<double>> coords;
-  coords.reserve(rowPtr[N]);
-  for (int i=0; i<N; ++i) {
-    for (int ij=rowPtr[i]; ij<rowPtr[i+1]; ++ij) {
-      int j = colIdx[ij];
-      coords.push_back({i,j,vals[ij]});
-    }
-  }
-  Eigen::SparseMatrix<Float,Eigen::RowMajor> mat(N, M);
-  mat.setFromTriplets(coords.begin(), coords.end());
-  mat.makeCompressed();
-  return mat;
-}
-
-template<typename Float>
 void matrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
                 int Bnn, int Bmm, Float* B,
                 int An,  int Am,  int** Arowptr, int** Acolidx,
                 int Ann, int Amm, Float** A) {
   assert(Bn == An && Bm == Am);
-  auto mat = csr2eigen(Bn, Bm, Browptr, Bcolidx, B);
+  auto mat = csr2eigen(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B);
   mat = -mat;
   mat.makeCompressed();
 

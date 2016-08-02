@@ -47,19 +47,27 @@ void cMatSolve_f32(int n,  int m,  int* rowPtr, int* colIdx,
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
-template<typename Float>
-Eigen::SparseMatrix<Float,Eigen::RowMajor>
-csr2eigen(int N, int M, int* rowPtr, int* colIdx, Float* vals) {
-  std::vector< Eigen::Triplet<double>> coords;
-  coords.reserve(rowPtr[N]);
-  for (int i=0; i<N; ++i) {
+template<typename Float, int Major=Eigen::RowMajor>
+Eigen::SparseMatrix<Float,Major>
+csr2eigen(int n, int m, int* rowPtr, int* colIdx, int nn, int mm, Float* vals) {
+  int nnz = rowPtr[n/nn];
+
+  std::vector<Eigen::Triplet<Float>> tripletList;
+  tripletList.reserve(nnz*nn*mm);
+  for (int i=0; i<n/(nn); ++i) {
     for (int ij=rowPtr[i]; ij<rowPtr[i+1]; ++ij) {
       int j = colIdx[ij];
-      coords.push_back({i,j,vals[ij]});
+      for (int bi=0; bi<nn; bi++) {
+        for (int bj=0; bj<mm; bj++) {
+          tripletList.push_back(Eigen::Triplet<Float>(i*nn+bi, j*mm+bj,
+                                                      vals[ij*nn*mm+bi*nn+bj]));
+        }
+      }
     }
   }
-  Eigen::SparseMatrix<Float,Eigen::RowMajor> mat(N, M);
-  mat.setFromTriplets(coords.begin(), coords.end());
+  
+  Eigen::SparseMatrix<Float> mat(n, m);
+  mat.setFromTriplets(tripletList.begin(), tripletList.end());
   mat.makeCompressed();
   return mat;
 }
