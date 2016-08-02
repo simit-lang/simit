@@ -9,8 +9,10 @@ namespace ir {
 class Func;
 
 /// Intrinsic functions
+/// TODO: Factor intrinsics into standard libraries that must be imported
 namespace intrinsics {
 
+// Scalar math
 const Func& mod();
 const Func& sin();
 const Func& cos();
@@ -24,25 +26,37 @@ const Func& exp();
 const Func& pow();
 //const Func& ceil();  // TODO: Add
 //const Func& floor(); // TODO: Add
-const Func& norm();
-const Func& dot();
-const Func& det();
-const Func& inv();
-const Func& free();
-const Func& malloc();
-const Func& strcmp();
-const Func& strlen();
-const Func& strcpy();
-const Func& strcat();
+
+// Complex numbers
 const Func& createComplex();
 const Func& complexNorm();
 const Func& complexConj();
 const Func& complexGetReal();
 const Func& complexGetImag();
+
+// Vector/Matrix math
+const Func& norm();
+const Func& dot();
+const Func& det();
+
+// Solvers
+const Func& inv();
+const Func& solve();
+
+// String manipulation
+const Func& strcmp();
+const Func& strlen();
+const Func& strcpy();
+const Func& strcat();
+
+// Clock
 const Func& clock();
 const Func& storeTime();
+
+// Internal functions
+const Func& malloc();
+const Func& free();
 const Func& loc();
-const Func& solve();
 
 const Func& byName(const std::string& name);
 const std::map<std::string,Func> &byNames();
