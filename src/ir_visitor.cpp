@@ -67,6 +67,10 @@ void IRVisitor::visit(const Div *op) {
   visit(static_cast<const BinaryExpr*>(op));
 }
 
+void IRVisitor::visit(const Rem *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
 void IRVisitor::visit(const Not *op) {
   visit(static_cast<const UnaryExpr*>(op));
 }
@@ -186,6 +190,13 @@ void IRVisitor::visit(const Pass *op) {
 void IRVisitor::visit(const TupleRead *op) {
   op->tuple.accept(this);
   op->index.accept(this);
+}
+
+void IRVisitor::visit(const SetRead *op) {
+  op->set.accept(this);
+  for (auto &index : op->indices) {
+    index.accept(this);
+  }
 }
 
 void IRVisitor::visit(const TensorRead *op) {

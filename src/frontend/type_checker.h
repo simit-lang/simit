@@ -35,7 +35,8 @@ private:
   virtual void visit(GenericIndexSet::Ptr op) {}
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
-  virtual void visit(SetType::Ptr);
+  virtual void visit(UnstructuredSetType::Ptr);
+  virtual void visit(LatticeLinkSetType::Ptr);
   virtual void visit(TupleType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
@@ -71,6 +72,7 @@ private:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
+  virtual void visit(SetReadExpr::Ptr);
   virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(ParenExpr::Ptr);

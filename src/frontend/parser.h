@@ -84,7 +84,8 @@ private:
   std::vector<hir::Expr::Ptr>            parseCallParams();
   hir::Type::Ptr                         parseType();
   hir::ElementType::Ptr                  parseElementType();
-  hir::SetType::Ptr                      parseSetType();
+  hir::SetType::Ptr                      parseUnstructuredSetType();
+  hir::SetType::Ptr                      parseLatticeLinkSetType();
   std::vector<hir::Endpoint::Ptr>        parseEndpoints();
   hir::TupleLength::Ptr                  parseTupleLength();
   hir::TupleType::Ptr                    parseTupleType();

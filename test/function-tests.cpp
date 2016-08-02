@@ -10,7 +10,7 @@ using namespace simit::ir;
 
 TEST(Function, bindSet) {
   Type vertexType = ElementType::make("Vertex", {Field("field", Int)});
-  Type vertexSetType = SetType::make(vertexType, {});
+  Type vertexSetType = UnstructuredSetType::make(vertexType, {});
   Var V("V", vertexSetType);
   Var i("i", Int);
   Stmt neg =
@@ -92,7 +92,7 @@ TEST(Function, bindVector) {
 
 TEST(Function, bindSparseTensor) {
   Type vertexType = ElementType::make("Vertex", {});
-  Type vertexSetType = SetType::make(vertexType, {});
+  Type vertexSetType = UnstructuredSetType::make(vertexType, {});
   Var V("V", vertexSetType);
 
   IndexDomain dim({V});
