@@ -14,7 +14,7 @@ inline Expr getLatticeCoord(vector<Expr> indices, Expr latticeSet) {
   iassert(latticeSet.type().isLatticeLinkSet());
 
   const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
-  int ndims = setType->dimensions;
+  size_t ndims = setType->dimensions;
 
   iassert(indices.size() == ndims);
 
@@ -37,7 +37,7 @@ inline Expr getLatticeLinkCoord(vector<Expr> indices, Expr latticeSet) {
   int ndims = setType->dimensions;
 
   // ndims + 1 indices define a lattice link
-  iassert(indices.size() == ndims + 1);
+  iassert(static_cast<int>(indices.size()) == ndims + 1);
 
   // index = (... ((indices[d]) * sizes[d-1] + indices[d-1]) * sizes[d-2] ...)
   Expr totalInd = indices.back();
@@ -68,7 +68,7 @@ inline vector<Expr> getLatticeIndices(Expr coord, Expr latticeSet) {
     coord = coord / dimSize;
   }
   // Lattice point defined by ndims indices
-  iassert(indices.size() == ndims);
+  iassert(static_cast<int>(indices.size()) == ndims);
   return indices;
 }
 
@@ -89,7 +89,7 @@ inline vector<Expr> getLatticeLinkIndices(Expr coord, Expr latticeSet) {
     coord = coord / dimSize;
   }
   // Lattice point defined by ndims+1 indices
-  iassert(indices.size() == ndims+1);
+  iassert(static_cast<int>(indices.size()) == ndims+1);
   return indices;
 }
 
@@ -101,7 +101,7 @@ inline vector<Expr> getLatticeOffsetIndices(
 
   const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
-  iassert(base.size() == ndims);
+  iassert(static_cast<int>(base.size()) == ndims);
 
   vector<Expr> indices;
   for (int i = 0; i < ndims; ++i) {
@@ -113,7 +113,7 @@ inline vector<Expr> getLatticeOffsetIndices(
   }
 
   // Lattice points defined by ndims indices
-  iassert(indices.size() == ndims);
+  iassert(static_cast<int>(indices.size()) == ndims);
   return indices;
 }
 
@@ -125,7 +125,7 @@ inline vector<Expr> getLatticeLinkOffsetIndices(
 
   const LatticeLinkSetType *setType = latticeSet.type().toLatticeLinkSet();
   int ndims = setType->dimensions;
-  iassert(base.size() == ndims+1);
+  iassert(static_cast<int>(base.size()) == ndims+1);
 
   vector<Expr> indices;
   // Add directional index first
@@ -140,7 +140,7 @@ inline vector<Expr> getLatticeLinkOffsetIndices(
   }
 
   // Lattice links defined by ndims+1 indices
-  iassert(indices.size() == ndims+1);
+  iassert(static_cast<int>(indices.size()) == ndims+1);
   return indices;
 }
 
