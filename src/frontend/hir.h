@@ -201,16 +201,36 @@ struct Endpoint : public HIRNode {
 
 struct SetType : public Type {
   ElementType::Ptr           element;
-  std::vector<Endpoint::Ptr> endpoints;
-  
   typedef std::shared_ptr<SetType> Ptr;
+  static SetType::Ptr getUndefinedSetType();
+};
+
+struct UnstructuredSetType : public SetType {
+  std::vector<Endpoint::Ptr> endpoints;
+
+  typedef std::shared_ptr<UnstructuredSetType> Ptr;
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<UnstructuredSetType>());
+  }
+};
+
+struct LatticeLinkSetType : public SetType {
+  Endpoint::Ptr latticePointSet;
+  size_t dimensions;
+  
+  typedef std::shared_ptr<LatticeLinkSetType> Ptr;
   
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(self<SetType>());
+    visitor->visit(self<LatticeLinkSetType>());
   }
 };
 
@@ -640,7 +660,8 @@ struct ExprParam : public ReadParam {
 struct MapExpr : public Expr {
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
-  SetIndexSet::Ptr       target;
+  SetIndexSet::Ptr        target;
+  SetIndexSet::Ptr        through;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -847,7 +868,7 @@ struct LeftDivExpr : public BinaryExpr {
   virtual HIRNode::Ptr cloneImpl();
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<LeftDivExpr>(shared_from_this()));
+    visitor->visit(self<LeftDivExpr>());
   }
 };
 
@@ -926,6 +947,24 @@ struct TensorReadExpr : public Expr {
   
   virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
   virtual unsigned getColBegin() { return tensor->getColBegin(); }
+};
+
+struct SetReadExpr : public Expr {
+  Expr::Ptr set;
+  std::vector<ReadParam::Ptr> indices;
+
+  typedef std::shared_ptr<SetReadExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<SetReadExpr>());
+  }
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual unsigned getLineBegin() { return set->getLineBegin(); }
+  virtual unsigned getColBegin() { return set->getColBegin(); }
 };
 
 struct TupleReadExpr : public Expr {

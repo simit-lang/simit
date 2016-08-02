@@ -15,6 +15,7 @@ class PathExpression;
 namespace ir {
 class Expr;
 class TensorIndex;
+class StencilLayout;
 
 /// A VarMapping is a mapping from a Var to a vector of Vars that implement it.
 /// For example, a dense tensor Var may be implemented by an array, while a
@@ -95,6 +96,12 @@ public:
   /// Retrieve the tensor index of var.
   const TensorIndex& getTensorIndex(const Var& var) const;
 
+  /// True if the environment has a tensor index for the given stencil.
+  bool hasTensorIndex(const StencilLayout& stencil) const;
+
+  /// Retrieve the tensor index of the given stencil.
+  const TensorIndex& getTensorIndex(const StencilLayout& stencil) const;
+
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
 
@@ -117,6 +124,10 @@ public:
   /// Add a tensor index described by the given path expression to the
   /// environment, and associate it with var.
   void addTensorIndex(const pe::PathExpression& pexpr, const Var& var);
+
+  /// Add a tensor index described by the given stencil to the environment,
+  /// and associate it with var.
+  void addTensorIndex(const StencilLayout& stencil, const Var& var);
 
 private:
   struct Content;

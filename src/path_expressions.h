@@ -12,6 +12,7 @@
 #include "util/name_generator.h"
 #include "interfaces/printable.h"
 #include "interfaces/comparable.h"
+#include "stencils.h"
 
 /// \file
 /// Path Expressions describe a neighborhood of a vertex or edge in a graph.
@@ -206,26 +207,37 @@ inline const T* to(PathExpression e) {
 /// set elements is an endpoint of the other.
 class Link : public PathExpressionImpl {
 public:
-  enum Type {ev, ve};
+  enum Type {ev, ve, vv};
 
-  static PathExpression make(const Var &lhs, const Var &rhs, Type type);
+  static PathExpression make(const Var &lhs, const Var &rhs, Type type,
+                             ir::StencilLayout stencil=ir::StencilLayout());
 
   Type getType() const {return type;}
+  bool hasStencil() const {return stencil.defined();}
 
   const Var &getLhs() const {return lhs;}
   const Var &getRhs() const {return rhs;}
 
-  const Var &getVertexVar() const {return (type==ev) ? rhs : lhs;}
-  const Var &getEdgeVar() const   {return (type==ev) ? lhs : rhs;}
+  const Var &getVertexVar(int i=0) const {
+    iassert((type != vv && i < 1) || i < 2);
+    if (type != vv) return (type==ev) ? rhs : lhs;
+    else return (i==0) ? lhs : rhs;
+  }
+  const Var &getEdgeVar() const {
+    iassert(type != vv);
+    return (type==ev) ? lhs : rhs;
+  }
 
   const Var &getPathEndpoint(unsigned i) const;
+
+  const ir::StencilLayout &getStencil() const {return stencil;}
 
   void bind(Set lhsBinding, Set rhsBinding) const;
 
   Set getLhsSet() const;
   Set getRhsSet() const;
 
-  Set getVertexSet() const;
+  Set getVertexSet(int i=0) const;
   Set getEdgeSet() const;
 
   void accept(PathExpressionVisitor *visitor) const;
@@ -234,8 +246,9 @@ private:
   Type type;
   Var lhs;
   Var rhs;
+  ir::StencilLayout stencil;
 
-  Link(const Var &lhs, const Var &rhs, Type type);
+  Link(const Var &lhs, const Var &rhs, Type type, ir::StencilLayout stencil);
 
   bool eq(const PathExpressionImpl &o) const;
   bool lt(const PathExpressionImpl &o) const;
@@ -412,6 +425,7 @@ protected:
 
   void printConnective(const QuantifiedConnective *pe);
   void print(Set binding);
+  void print(const ir::StencilLayout &s);
 };
 
 std::ostream &operator<<(std::ostream&, const Set&);

@@ -24,6 +24,15 @@ bool contains(const std::map<K,V> &container, const K &key) {
   return container.find(key) != container.end();
 }
 
+/// Query whether a collection is all zeros
+template <class C>
+bool isAllZeros(const C offsets) {
+  for (auto off : offsets) {
+    if (off != 0) return false;
+  }
+  return true;
+}
+
 /// Retrieve the location in the collection of the given value
 template <class Collection, typename Value>
 size_t locate(const Collection &collection, const Value &value) {

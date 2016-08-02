@@ -91,12 +91,14 @@ private:
 // and can be passed as bound inputs to Simit programs.
 class Set {
 public:
-  Set(const std::string &name)
-      : name(name), numElements(0), endpoints(nullptr),
-        capacity(capacityIncrement), neighbors(nullptr) {}
+  enum Kind {Unstructured, LatticeLink};
+
+  /// UNSTRUCTURED constructors
+  Set(const std::string &name) : Set(name, Unstructured) {}
 
   template <typename ...Sets>
-  Set(const char *name, const Sets& ...sets) : Set(std::string(name)) {
+  Set(const char *name, const Sets& ...sets)
+      : Set(std::string(name), Unstructured) {
     static_assert(util::areSame<Set, Sets...>{},
         "Set constructor takes an optional name followed by zero or more Sets");
     this->endpointSets = {&sets...};
@@ -109,14 +111,135 @@ public:
   template <typename ...Sets>
   Set(const Sets& ...sets) : Set("", sets...) {}
 
+  /// LATTICE LINK constructors
+  Set(const char *name, Set& points, std::vector<int> dims)
+      : Set(std::string(name), LatticeLink) {
+    uassert(dims.size() > 0)
+        << "Lattice link Set constructor takes an optional name followed by "
+        << "the underlying point set and a vector of integer dimension sizes";
+    uassert(points.getSize() == 0)
+        << "Lattice link Set constructor must be passed an empty underlying "
+        << "point set, which it will then proceed to initialize.";
+    this->endpointSets = {&points, &points};
+    this->endpoints    = (int*)calloc(sizeof(int), capacity * getCardinality());
+    this->dimensions = dims;
+    this->latticePointSet = &points;
+
+    int totalPoints = 1;
+    std::vector<int> cumDims;
+    for (int d : dims) {
+      totalPoints *= d;
+      cumDims.push_back(totalPoints);
+    }
+
+    this->latticePoints = (ElementRef*)calloc(sizeof(ElementRef), totalPoints);
+    this->latticeLinks = (ElementRef*)calloc(
+        sizeof(ElementRef), totalPoints*dims.size());
+    
+    std::vector<int> indices(dims.size());
+    // Pad underlying set to have N_1 x N_2 x ... N_d elements, storing their
+    // references in latticePoints.
+    int count = 0;
+    util::variableLoop(dims.begin(), dims.end(),
+                       indices.begin(), indices.end(), [&](){
+        this->latticePoints[count] = points.add();
+        count++;
+      });
+
+    // Generate N_1 x N_2 x ... N_d x d elements for this set, linking the
+    // underlying points in a lattice structure, and store their references in
+    // the canonically ordered latticeLinks.
+    count = 0;
+    dims.push_back(dims.size()); // dimension index runs outermost
+    indices.push_back(0);
+    util::variableLoop(dims.begin(), dims.end(),
+                       indices.begin(), indices.end(), [&](){
+        int off = cumDims[indices.back()];
+        // Assumes periodic boundary conditions
+        this->latticeLinks[count] = add(
+            this->latticePoints[count%totalPoints],
+            this->latticePoints[(count+off)%totalPoints]);
+        count++;
+      });
+  }
+
+  Set(Set& points, std::vector<int> dims) : Set("", points, dims) {}
+
   ~Set();
+
   
   /// Return the number of elements in the Set
   inline int getSize() const { return numElements; }
 
+  /// Returns the dimensions for a lattice link set
+  inline const std::vector<int>& getDimensions() const {
+    uassert(kind == LatticeLink)
+        << "Can only retrieve dimensions for a lattice link set";
+    return dimensions;
+  }
+
+  /// Return the kind of the Set
+  inline Kind getKind() const { return kind; }
+
   /// Return the number of endpoints of the elements in the set.  Non-edge sets
   /// have cardinality 0.
   inline int getCardinality() const { return endpointSets.size(); }
+
+  /// Return the lattice point at the given location.
+  inline ElementRef getLatticePoint(std::vector<int> coords) const {
+    uassert(kind == LatticeLink)
+        << "Cannot retrieve lattice point of non-lattice set";
+    uassert(coords.size() == dimensions.size())
+        << "Must provide number of coords equal to the number of dimensions";
+    int index = 0;
+    int totalSize = 1;
+    for (int i = dimensions.size()-1; i >= 0; --i) {
+      index *= dimensions[i];
+      index += coords[i];
+      totalSize *= dimensions[i];
+    }
+    uassert(index >= 0 && index < totalSize)
+        << "Coordinates must not be negative and must fall within the "
+        << "lattice dimensions";
+    return latticePoints[index];
+  }
+
+  /// Return the lattice link at the given location and direction.
+  inline ElementRef getLatticeLink(std::vector<int> coords, int dir) const {
+    uassert(kind == LatticeLink)
+        << "Cannot retrieve lattice link of non-lattice set";
+    uassert(coords.size() == dimensions.size())
+        << "Must provide number of coords equal to dimensions";
+    int index = 0;
+    int totalSize = 1;
+    for (int i = dimensions.size()-1; i >= 0; --i) {
+      index *= dimensions[i];
+      index += coords[i];
+      totalSize *= dimensions[i];
+    }
+    // Add directional index innermost
+    index *= dimensions.size();
+    index += dir;
+    totalSize *= dimensions.size();
+    uassert(index >= 0 && index < totalSize)
+        << "Coordinates must not be negative and must fall within the "
+        << "lattice dimensions";
+    return latticeLinks[index];
+  }
+
+  inline std::vector<int> getLatticePointCoords(ElementRef elt) const {
+    uassert(kind == LatticeLink)
+        << "Cannot retrieve lattice point coords of non-lattice set";
+    int index = elt.getIdent();
+    std::vector<int> coords;
+    for (unsigned i = 0; i < dimensions.size(); ++i) {
+      int dimSize = dimensions[i];
+      coords.push_back(index % dimSize);
+      index /= dimSize;
+    }
+    iassert(coords.size() == dimensions.size());
+    return coords;
+  }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the
   /// component type and dimension sizes of the tensors.  For example, define a
@@ -177,6 +300,8 @@ public:
 
   /// Remove an element from the Set
   void remove(ElementRef element) {
+    uassert(kind != LatticeLink)
+        << "Element removal disallowed for lattice link edge sets";
     for (auto f : fields){
       switch (f->type->getComponentType()) {
         case ComponentType::Float: {
@@ -477,12 +602,25 @@ public:
 
 private:
 
+  // Private constructor for delegation
+  Set(const std::string &name, Kind kind)
+      : kind(kind), name(name), numElements(0), endpoints(nullptr),
+        latticePoints(nullptr), latticeLinks(nullptr),
+        capacity(capacityIncrement), neighbors(nullptr) {}
+
   // Set data
+  Kind kind;
   std::string name;
   std::string spatialFieldName;
   int numElements;                           // number of elements in the set
   std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
   int* endpoints;                            // the endpoints of edge elements
+
+  // Lattice link set data
+  std::vector<int> dimensions;               // the lattice dimensions
+  const Set* latticePointSet;                // the underlying point set
+  ElementRef* latticePoints;                 // ordered refs to lattice points
+  ElementRef* latticeLinks;                  // ordered refs to lattice links
 
   int capacity;                              // current capacity of the set
   static const int capacityIncrement = 1024; // increment for capacity increases

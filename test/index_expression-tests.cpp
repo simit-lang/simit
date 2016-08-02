@@ -63,7 +63,8 @@ struct TestParams {
 
 class IndexExpression : public ::testing::TestWithParam<TestParams> {};
 
-static const Type VType = SetType::make(ElementType::make("Vertex", {}), {});
+static const Type VType = UnstructuredSetType::make(
+    ElementType::make("Vertex", {}), {});
 static const Var V("V", VType);
 
 static const IndexDomain dim({V});
@@ -458,7 +459,7 @@ INSTANTIATE_TEST_CASE_P(Mixed, IndexExpression,
                         ));
 
 TEST(DISABLED_IndexExpression, vecadd) {
-  Type VType = SetType::make(ElementType::make("Vertex", {}), {});
+  Type VType = UnstructuredSetType::make(ElementType::make("Vertex", {}), {});
   Var V("V", VType);
   IndexDomain dim({V});
 
@@ -484,7 +485,7 @@ TEST(DISABLED_IndexExpression, vecadd) {
 }
 
 TEST(DISABLED_IndexExpression, gemv) {
-  Type VType = SetType::make(ElementType::make("Vertex", {}), {});
+  Type VType = UnstructuredSetType::make(ElementType::make("Vertex", {}), {});
   Var V("V", VType);
   IndexDomain dim({V});
 
