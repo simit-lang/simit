@@ -15,6 +15,12 @@ void modInit() {
                 {Var("r", Int)},
                 Func::Intrinsic);
 }
+const Func& mod() {
+  if (!modVar.defined()) {
+    modInit();
+  }
+  return modVar;
+}
 
 static Func sinVar;
 void sinInit() {
@@ -22,6 +28,12 @@ void sinInit() {
                 {Var("x", Float)},
                 {Var("r", Float)},
                 Func::Intrinsic);
+}
+const Func& sin() {
+  if (!sinVar.defined()) {
+    sinInit();
+  }
+  return sinVar;
 }
 
 static Func cosVar;
@@ -31,6 +43,12 @@ void cosInit() {
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
+const Func& cos() {
+  if (!cosVar.defined()) {
+    cosInit();
+  }
+  return cosVar;
+}
 
 static Func tanVar;
 void tanInit() {
@@ -38,6 +56,12 @@ void tanInit() {
                 {Var("x", Float)},
                 {Var("r", Float)},
                 Func::Intrinsic);
+}
+const Func& tan() {
+  if (!tanVar.defined()) {
+    tanInit();
+  }
+  return tanVar;
 }
 
 static Func asinVar;
@@ -47,6 +71,12 @@ void asinInit() {
                  {Var("r", Float)},
                  Func::Intrinsic);
 }
+const Func& asin() {
+  if (!asinVar.defined()) {
+    asinInit();
+  }
+  return asinVar;
+}
 
 static Func acosVar;
 void acosInit() {
@@ -54,6 +84,12 @@ void acosInit() {
                  {Var("x", Float)},
                  {Var("r", Float)},
                  Func::Intrinsic);
+}
+const Func& acos() {
+  if (!acosVar.defined()) {
+    acosInit();
+  }
+  return acosVar;
 }
 
 static Func atan2Var;
@@ -63,6 +99,12 @@ void atan2Init() {
                   {Var("r", Float)},
                   Func::Intrinsic);
 }
+const Func& atan2() {
+  if (!atan2Var.defined()) {
+    atan2Init();
+  }
+  return atan2Var;
+}
 
 static Func sqrtVar;
 void sqrtInit() {
@@ -70,6 +112,12 @@ void sqrtInit() {
                  {Var("x", Float)},
                  {Var("r", Float)},
                  Func::Intrinsic);
+}
+const Func& sqrt() {
+  if (!sqrtVar.defined()) {
+    sqrtInit();
+  }
+  return sqrtVar;
 }
 
 static Func logVar;
@@ -79,6 +127,12 @@ void logInit() {
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
+const Func& log() {
+  if (!logVar.defined()) {
+    logInit();
+  }
+  return logVar;
+}
 
 static Func expVar;
 void expInit() {
@@ -86,6 +140,12 @@ void expInit() {
                 {Var("x", Float)},
                 {Var("r", Float)},
                 Func::Intrinsic);
+}
+const Func& exp() {
+  if (!expVar.defined()) {
+    expInit();
+  }
+  return expVar;
 }
 
 static Func powVar;
@@ -95,6 +155,82 @@ void powInit() {
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
+const Func& pow() {
+  if (!powVar.defined()) {
+    powInit();
+  }
+  return powVar;
+}
+
+static Func createComplexVar;
+void createComplexInit() {
+  createComplexVar = Func("createComplex",
+                          {Var("real", Float), Var("imag", Float)},
+                          {Var("r", Complex)},
+                          Func::Intrinsic);
+}
+const Func& createComplex() {
+  if (!createComplexVar.defined()) {
+    createComplexInit();
+  }
+  return createComplexVar;
+}
+
+static Func complexNormVar;
+void complexNormInit() {
+  complexNormVar = Func("complexNorm",
+                        {Var("c", Complex)},
+                        {Var("r", Float)},
+                        Func::Intrinsic);
+}
+const Func& complexNorm() {
+  if (!complexNormVar.defined()) {
+    complexNormInit();
+  }
+  return complexNormVar;
+}
+
+static Func complexGetRealVar;
+void complexGetRealInit() {
+  complexGetRealVar = Func("complexGetReal",
+                           {Var("c", Complex)},
+                           {Var("r", Float)},
+                           Func::Intrinsic);
+}
+const Func& complexGetReal() {
+  if (!complexGetRealVar.defined()) {
+    complexGetRealInit();
+  }
+  return complexGetRealVar;
+}
+
+static Func complexGetImagVar;
+void complexGetImagInit() {
+  complexGetImagVar = Func("complexGetImag",
+                           {Var("c", Complex)},
+                           {Var("r", Float)},
+                           Func::Intrinsic);
+}
+const Func& complexGetImag() {
+  if (!complexGetImagVar.defined()) {
+    complexGetImagInit();
+  }
+  return complexGetImagVar;
+}
+
+static Func complexConjVar;
+void complexConjInit() {
+  complexConjVar = Func("complexConj",
+                        {Var("c", Complex)},
+                        {Var("r", Complex)},
+                        Func::Intrinsic);
+}
+const Func& complexConj() {
+  if (!complexConjVar.defined()) {
+    complexConjInit();
+  }
+  return complexConjVar;
+}
 
 static Func normVar;
 void normInit() {
@@ -102,6 +238,12 @@ void normInit() {
                  {Var()},
                  {Var("r", Float)},
                  Func::Intrinsic);
+}
+const Func& norm() {
+  if (!normVar.defined()) {
+    normInit();
+  }
+  return normVar;
 }
 
 static Func dotVar;
@@ -111,7 +253,12 @@ void dotInit() {
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
-
+const Func& dot() {
+  if (!dotVar.defined()) {
+    dotInit();
+  }
+  return dotVar;
+}
 
 static Func detVar;
 void detInit() {
@@ -120,6 +267,12 @@ void detInit() {
                                            {IndexDomain(3),IndexDomain(3)}))},
                 {Var("r", Float)},
                 Func::Intrinsic);
+}
+const Func& det() {
+  if (!detVar.defined()) {
+    detInit();
+  }
+  return detVar;
 }
 
 static Func invVar;
@@ -131,117 +284,11 @@ void invInit() {
                                            {IndexDomain(3),IndexDomain(3)}))},
                 Func::Intrinsic);
 }
-
-static Func freeVar;
-void freeInit() {
-  freeVar = Func("free",
-                 {Var("s", String)},
-                 {},
-                 Func::Intrinsic);
-}
-
-static Func mallocVar;
-void mallocInit() {
-  mallocVar = Func("malloc",
-                   {Var("s", Int)},
-                   {Var("r", String)},
-                   Func::Intrinsic);
-}
-
-static Func strcmpVar;
-void strcmpInit() {
-  strcmpVar = Func("strcmp",
-                   {Var("s", String), Var("t", String)},
-                   {Var("r", Int)},
-                   Func::Intrinsic);
-}
-
-static Func strlenVar;
-void strlenInit() {
-  strlenVar = Func("strlen",
-                   {Var("s", String)},
-                   {Var("r", Int)},
-                   Func::Intrinsic);
-}
-
-static Func strcpyVar;
-void strcpyInit() {
-  strcpyVar = Func("strcpy",
-                   {Var("s", String), Var("t", String)},
-                   {Var("r", String)},
-                   Func::Intrinsic);
-}
-
-static Func strcatVar;
-void strcatInit() {
-  strcatVar = Func("strcat",
-                   {Var("s", String), Var("t", String)},
-                   {Var("r", String)},
-                   Func::Intrinsic);
-}
-
-static Func createComplexVar;
-void createComplexInit() {
-  createComplexVar = Func("createComplex",
-                          {Var("real", Float), Var("imag", Float)},
-                          {Var("r", Complex)},
-                          Func::Intrinsic);
-}
-
-static Func complexNormVar;
-void complexNormInit() {
-  complexNormVar = Func("complexNorm",
-                        {Var("c", Complex)},
-                        {Var("r", Float)},
-                        Func::Intrinsic);
-}
-
-static Func complexGetRealVar;
-void complexGetRealInit() {
-  complexGetRealVar = Func("complexGetReal",
-                           {Var("c", Complex)},
-                           {Var("r", Float)},
-                           Func::Intrinsic);
-}
-
-static Func complexGetImagVar;
-void complexGetImagInit() {
-  complexGetImagVar = Func("complexGetImag",
-                           {Var("c", Complex)},
-                           {Var("r", Float)},
-                           Func::Intrinsic);
-}
-
-static Func complexConjVar;
-void complexConjInit() {
-  complexConjVar = Func("complexConj",
-                        {Var("c", Complex)},
-                        {Var("r", Complex)},
-                        Func::Intrinsic);
-}
-
-static Func clockVar;
-void clockInit() {
-  clockVar = Func("clock",
-                {},
-                {Var("r", Float)},
-                Func::Intrinsic);
-}
-
-static Func storeTimeVar;
-void storeTimeInit() {
-  storeTimeVar = Func("storeTime",
-                {Var("i", Int), Var("val", Float)},
-                {Var("r", Float)},
-                Func::Intrinsic);
-}
-
-static Func locVar;
-void locInit() {
-  locVar = Func("__loc",
-                {},
-                {Var("r", Int)},
-                Func::Intrinsic);
+const Func& inv() {
+  if (!invVar.defined()) {
+    invInit();
+  }
+  return invVar;
 }
 
 static Func solveVar;
@@ -251,115 +298,6 @@ void solveInit() {
                   {Var("r", Float)},
                   Func::Intrinsic);
 }
-
-// We lazily initialize all the intrinsics. No need to call all the constructors
-// unless we will use them.
-
-const Func& mod() {
-  if (!modVar.defined()) {
-    modInit();
-  }
-  return modVar;
-}
-
-const Func& sin() {
-  if (!sinVar.defined()) {
-    sinInit();
-  }
-  return sinVar;
-}
-
-const Func& cos() {
-  if (!cosVar.defined()) {
-    cosInit();
-  }
-  return cosVar;
-}
-
-const Func& tan() {
-  if (!tanVar.defined()) {
-    tanInit();
-  }
-  return tanVar;
-}
-
-const Func& asin() {
-  if (!asinVar.defined()) {
-    asinInit();
-  }
-  return asinVar;
-}
-
-const Func& acos() {
-  if (!acosVar.defined()) {
-    acosInit();
-  }
-  return acosVar;
-}
-
-const Func& atan2() {
-  if (!atan2Var.defined()) {
-    atan2Init();
-  }
-  return atan2Var;
-}
-const Func& sqrt() {
-  if (!sqrtVar.defined()) {
-    sqrtInit();
-  }
-  return sqrtVar;
-}
-
-const Func& log() {
-  if (!logVar.defined()) {
-    logInit();
-  }
-  return logVar;
-}
-
-const Func& exp() {
-  if (!expVar.defined()) {
-    expInit();
-  }
-  return expVar;
-}
-
-
-const Func& pow() {
-  if (!powVar.defined()) {
-    powInit();
-  }
-  return powVar;
-}
-
-const Func& norm() {
-  if (!normVar.defined()) {
-    normInit();
-  }
-  return normVar;
-}
-
-const Func& dot() {
-  if (!dotVar.defined()) {
-    dotInit();
-  }
-  return dotVar;
-}
-
-const Func& det() {
-  if (!detVar.defined()) {
-    detInit();
-  }
-  return detVar;
-}
-
-const Func& inv() {
-  if (!invVar.defined()) {
-    invInit();
-  }
-  return invVar;
-}
-
 const Func& solve() {
   if (!solveVar.defined()) {
     solveInit();
@@ -367,27 +305,13 @@ const Func& solve() {
   return solveVar;
 }
 
-const Func& loc() {
-  if (!locVar.defined()) {
-    locInit();
-  }
-  return locVar;
+static Func strcmpVar;
+void strcmpInit() {
+  strcmpVar = Func("strcmp",
+                   {Var("s", String), Var("t", String)},
+                   {Var("r", Int)},
+                   Func::Intrinsic);
 }
-
-const Func& free() {
-  if (!freeVar.defined()) {
-    freeInit();
-  }
-  return freeVar;
-}
-
-const Func& malloc() {
-  if (!mallocVar.defined()) {
-    mallocInit();
-  }
-  return mallocVar;
-}
-
 const Func& strcmp() {
   if (!strcmpVar.defined()) {
     strcmpInit();
@@ -395,6 +319,13 @@ const Func& strcmp() {
   return strcmpVar;
 }
 
+static Func strlenVar;
+void strlenInit() {
+  strlenVar = Func("strlen",
+                   {Var("s", String)},
+                   {Var("r", Int)},
+                   Func::Intrinsic);
+}
 const Func& strlen() {
   if (!strlenVar.defined()) {
     strlenInit();
@@ -402,6 +333,13 @@ const Func& strlen() {
   return strlenVar;
 }
 
+static Func strcpyVar;
+void strcpyInit() {
+  strcpyVar = Func("strcpy",
+                   {Var("s", String), Var("t", String)},
+                   {Var("r", String)},
+                   Func::Intrinsic);
+}
 const Func& strcpy() {
   if (!strcpyVar.defined()) {
     strcpyInit();
@@ -409,6 +347,13 @@ const Func& strcpy() {
   return strcpyVar;
 }
 
+static Func strcatVar;
+void strcatInit() {
+  strcatVar = Func("strcat",
+                   {Var("s", String), Var("t", String)},
+                   {Var("r", String)},
+                   Func::Intrinsic);
+}
 const Func& strcat() {
   if (!strcatVar.defined()) {
     strcatInit();
@@ -416,41 +361,13 @@ const Func& strcat() {
   return strcatVar;
 }
 
-const Func& createComplex() {
-  if (!createComplexVar.defined()) {
-    createComplexInit();
-  }
-  return createComplexVar;
+static Func clockVar;
+void clockInit() {
+  clockVar = Func("clock",
+                  {},
+                  {Var("r", Float)},
+                  Func::Intrinsic);
 }
-
-const Func& complexNorm() {
-  if (!complexNormVar.defined()) {
-    complexNormInit();
-  }
-  return complexNormVar;
-}
-
-const Func& complexGetReal() {
-  if (!complexGetRealVar.defined()) {
-    complexGetRealInit();
-  }
-  return complexGetRealVar;
-}
-
-const Func& complexGetImag() {
-  if (!complexGetImagVar.defined()) {
-    complexGetImagInit();
-  }
-  return complexGetImagVar;
-}
-
-const Func& complexConj() {
-  if (!complexConjVar.defined()) {
-    complexConjInit();
-  }
-  return complexConjVar;
-}
-
 const Func& clock() {
   if (!clockVar.defined()) {
     clockInit();
@@ -458,12 +375,62 @@ const Func& clock() {
   return clockVar;
 }
 
+static Func storeTimeVar;
+void storeTimeInit() {
+  storeTimeVar = Func("storeTime",
+                      {Var("i", Int), Var("val", Float)},
+                      {Var("r", Float)},
+                      Func::Intrinsic);
+}
 const Func& storeTime() {
   if (!storeTimeVar.defined()) {
     storeTimeInit();
   }
   return storeTimeVar;
 }
+
+static Func mallocVar;
+void mallocInit() {
+  mallocVar = Func("malloc",
+                   {Var("s", Int)},
+                   {Var("r", String)},
+                   Func::Intrinsic);
+}
+const Func& malloc() {
+  if (!mallocVar.defined()) {
+    mallocInit();
+  }
+  return mallocVar;
+}
+
+static Func freeVar;
+void freeInit() {
+  freeVar = Func("free",
+                 {Var("s", String)},
+                 {},
+                 Func::Intrinsic);
+}
+const Func& free() {
+  if (!freeVar.defined()) {
+    freeInit();
+  }
+  return freeVar;
+}
+
+static Func locVar;
+void locInit() {
+  locVar = Func("__loc",
+                {},
+                {Var("r", Int)},
+                Func::Intrinsic);
+}
+const Func& loc() {
+  if (!locVar.defined()) {
+    locInit();
+  }
+  return locVar;
+}
+
 
 const std::map<std::string,Func> &byNames() {
   static std::map<std::string,Func> byNameMap;
@@ -479,25 +446,25 @@ const std::map<std::string,Func> &byNames() {
     logInit();
     expInit();
     powInit();
-    normInit();
-    dotInit();
-    detInit();
-    invInit();
-    solveInit();
-    locInit();
-    freeInit();
-    mallocInit();
-    strcmpInit();
-    strlenInit();
-    strcpyInit();
-    strcatInit();
     createComplexInit();
     complexNormInit();
     complexGetRealInit();
     complexGetImagInit();
     complexConjInit();
+    normInit();
+    dotInit();
+    detInit();
+    invInit();
+    solveInit();
+    strcmpInit();
+    strlenInit();
+    strcpyInit();
+    strcatInit();
     clockInit();
     storeTimeInit();
+    mallocInit();
+    freeInit();
+    locInit();
     byNameMap.insert({{"mod",modVar},
                       {"sin",sinVar},
                       {"cos",cosVar},
@@ -509,25 +476,25 @@ const std::map<std::string,Func> &byNames() {
                       {"log",logVar},
                       {"exp",expVar},
                       {"pow",powVar},
-                      {"norm",normVar},
-                      {"dot",dotVar},
-                      {"det",detVar},
-                      {"inv",invVar},
-                      {"free", freeVar},
-                      {"malloc", mallocVar},
-                      {"strcmp", strcmpVar},
-                      {"strlen", strlenVar},
-                      {"strcpy", strcpyVar},
-                      {"strcat", strcatVar},
                       {"createComplex",createComplexVar},
                       {"complexNorm",complexNormVar},
                       {"complexGetReal",complexGetRealVar},
                       {"complexGetImag",complexGetImagVar},
                       {"complexConj",complexConjVar},
+                      {"norm",normVar},
+                      {"dot",dotVar},
+                      {"det",detVar},
+                      {"inv",invVar},
+                      {"__solve",solveVar},
+                      {"strcmp", strcmpVar},
+                      {"strlen", strlenVar},
+                      {"strcpy", strcpyVar},
+                      {"strcat", strcatVar},
                       {"clock",clockVar},
                       {"storeTime",storeTimeVar},
-                      {"__loc", locVar},
-                      {"__solve",solveVar}});
+                      {"malloc", mallocVar},
+                      {"free", freeVar},
+                      {"__loc", locVar}});
   }
   return byNameMap;
 }
