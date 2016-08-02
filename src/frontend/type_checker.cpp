@@ -164,12 +164,34 @@ void TypeChecker::visit(Endpoint::Ptr end) {
   }
 }
 
-void TypeChecker::visit(SetType::Ptr type) {
+void TypeChecker::visit(UnstructuredSetType::Ptr type) {
   retTypeChecked = typeCheck(type->element);
 
   for (auto end : type->endpoints) {
     const bool typeChecked = typeCheck(end);
     retTypeChecked = typeChecked && retTypeChecked;
+  }
+}
+
+void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
+  retTypeChecked = typeCheck(type->element);
+  
+  retTypeChecked = typeCheck(type->latticePointSet) && retTypeChecked;
+  // Check lattice point set is an unstructured set
+  if (!isa<UnstructuredSetType>(type->latticePointSet->set->setDef)) {
+    std::stringstream errMsg;
+    errMsg << "expected lattice point set of Unstructured kind but got "
+           << type->latticePointSet->set->setName;
+    reportError(errMsg.str(), type->latticePointSet);
+  }
+  // Check lattice point set is cardinality zero
+  else if (to<UnstructuredSetType>(type->latticePointSet->set->setDef)
+           ->endpoints.size() != 0) {
+    std::stringstream errMsg;
+    errMsg << "expected lattice point set of 0 cardinality, but got "
+           << to<UnstructuredSetType>(type->latticePointSet->set->setDef)
+        ->endpoints.size();
+    reportError(errMsg.str(), type->latticePointSet);
   }
 }
 
@@ -1234,6 +1256,108 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   }
 }
 
+void TypeChecker::visit(SetReadExpr::Ptr expr) {
+  const ExprType lhsType = inferType(expr->set);
+
+  if (!lhsType.defined) {
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  // Check that program does not attempt to read from multiple values
+  // simultaneously
+  if (lhsType.isVoid()) {
+    reportError("cannot access field of a void value", expr->set);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+  else if (!lhsType.isSingleValue()) {
+    reportError("can only access elements of a single set", expr->set);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  const Type::Ptr type = lhsType.type[0];
+
+  if (isa<SetType>(type)) {
+    // Case 1: Node set, single tuple index, DONT know dims
+    if (isa<UnstructuredSetType>(type)) {
+      // TODO: No good way to check indices = #dims
+      for (auto index : expr->indices) {
+        if (index->isSlice()) {
+          reportError("lattice point access expects integral indices", index);
+        }
+      }
+
+      if (retTypeChecked) {
+        for (auto index : expr->indices) {
+          const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
+          const ExprType indexType = inferType(indexExpr);
+
+          if (indexType.defined && !indexType.isScalarInt()) {
+            std::stringstream errMsg;
+            errMsg << "lattice point access expects an integral index but got "
+                   << "an index of type " << toString(indexType);
+            reportError(errMsg.str(), index);
+          }
+        }
+      }
+      if (retTypeChecked &&
+          to<UnstructuredSetType>(type)->endpoints.size() != 0) {
+        reportError("lattice point set cannot have non-zero cardinality",
+                    expr->set);
+      }
+
+      retType = ExprType(to<SetType>(type)->element, lhsType.access);
+    }
+    // Case 2: Lattice edge set, double set of indices (#indices = 2*dim)
+    else if (isa<LatticeLinkSetType>(type)) {
+      // Check number of indices = 2*dim and all integral
+      unsigned dims = to<LatticeLinkSetType>(type)->dimensions;
+      if (expr->indices.size() != 2*dims) {
+        std::stringstream errMsg;
+        errMsg << "lattice edge set access expects number of indices to equal "
+               << "2*dimensions, but got " << expr->indices.size() << " vs "
+               << 2*dims;
+        reportError(errMsg.str(), expr->indices[0]);
+      }
+      else {
+        for (auto index : expr->indices) {
+          if (index->isSlice()) {
+            reportError("lattice edge set access expects integral indices", index);
+          }
+        }
+
+        if (retTypeChecked) {
+          for (auto index : expr->indices) {
+            const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
+            const ExprType indexType = inferType(indexExpr);
+
+            if (indexType.defined && !indexType.isScalarInt()) {
+              std::stringstream errMsg;
+              errMsg << "lattice point access expects an integral index but got "
+                     << "an index of type " << toString(indexType);
+              reportError(errMsg.str(), index);
+            }
+          }
+        }
+      }
+
+      retType = ExprType(to<SetType>(type)->element, lhsType.access);
+    }
+    else {
+      std::stringstream errMsg;
+      errMsg << "set type cannot be indexed: " << toString(lhsType);
+      reportError(errMsg.str(), expr->set);
+    }
+  } else {
+    std::stringstream errMsg;
+    errMsg << "cannot access elements from objects of type "
+           << toString(lhsType);
+    reportError(errMsg.str(), expr->set);
+  }
+}
+
 void TypeChecker::visit(TupleReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->tuple);
   const ExprType indexType = inferType(expr->index);
@@ -1559,12 +1683,14 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
 
   FuncDecl::Ptr func;
   SetType::Ptr targetSetType;
+  SetType::Ptr throughSetType;
   
   std::string funcName = expr->func->ident;
   
   // Check that assembly function has been declared.
   if (!env.hasFunction(funcName)) {
     reportUndeclared("function", funcName, expr->func);
+    return;
   } else {
     func = env.getFunction(funcName);
   }
@@ -1578,6 +1704,35 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     reportError(errMsg.str(), expr->target);
   } else {
     targetSetType = env.getSetDefinition(expr->target);
+  }
+  
+  // If through is declared, check that it is a lattice link set.
+  if (expr->through) {
+    if (!typeCheck(expr->through)) {
+      retTypeChecked = false;
+    } else if (isa<GenericIndexSet>(expr->through)) {
+      std::stringstream errMsg;
+      errMsg << opString << " operation cannot be applied through generic sets";
+      reportError(errMsg.str(), expr->through);
+    } else {
+      throughSetType = env.getSetDefinition(expr->through);
+
+      if (!isa<LatticeLinkSetType>(throughSetType)) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation can only be applied through lattice "
+               << "link sets";
+        reportError(errMsg.str(), expr->through);
+      }
+      else if (to<LatticeLinkSetType>(throughSetType)
+               ->latticePointSet->set->setName !=
+               expr->target->setName) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation can only be mapped through lattice "
+               << "link set with target " << expr->target->setName
+               << " as an endpoint";
+        reportError(errMsg.str(), expr->through);
+      }
+    }
   }
 
   // If assembly function type signature could not be determined, 
@@ -1621,15 +1776,17 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   // Infer assembly function's required argument types.
   actualsType.push_back(ExprType(targetSetType->element, Access::READ_WRITE));
   
-  if (!targetSetType->endpoints.empty()) {
-    const auto endpoint = targetSetType->endpoints[0];
+  if (isa<UnstructuredSetType>(targetSetType) &&
+      !to<UnstructuredSetType>(targetSetType)->endpoints.empty()) {
+    UnstructuredSetType::Ptr utype = to<UnstructuredSetType>(targetSetType);
+    const auto endpoint = utype->endpoints[0];
     const auto neighborSet = endpoint->set->setName;
     
     // Check for heterogeneous edge sets, which are currently unsupported.
     // TODO: Should remove this once support for heterogeneous edge sets 
     //       has been added.
-    for (unsigned i = 1; i < targetSetType->endpoints.size(); ++i) {
-      if (targetSetType->endpoints[i]->set->setName != neighborSet) {
+    for (unsigned i = 1; i < utype->endpoints.size(); ++i) {
+      if (utype->endpoints[i]->set->setName != neighborSet) {
         std::stringstream errMsg;
         errMsg << opString << " operation is currently unsupported for "
                << "heterogeneous edge sets";
@@ -1640,7 +1797,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     
     if (actualsType.size() != func->args.size()) {
       const auto neighborsLength = std::make_shared<TupleLength>();
-      neighborsLength->val = targetSetType->endpoints.size();
+      neighborsLength->val = utype->endpoints.size();
 
       const auto neighborsType = std::make_shared<TupleType>();
       neighborsType->element = endpoint->element;
@@ -1649,6 +1806,11 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
   
+  // Through declaration adds link set as an argument.
+  if (throughSetType) {
+    actualsType.push_back(ExprType(throughSetType, Access::READ));
+  }
+ 
   // Check that assembly function accepts right number of arguments.
   if (actualsType.size() != func->args.size()) {
     std::stringstream errMsg;
@@ -2016,7 +2178,7 @@ void TypeChecker::ComputeSetDefinitions::visit(SetIndexSet::Ptr set) {
 
 void TypeChecker::ComputeSetDefinitions::visit(IdentDecl::Ptr decl) {
   HIRVisitor::visit(decl);
-  
+
   const auto type = isa<SetType>(decl->type) ? 
                     to<SetType>(decl->type) : SetType::Ptr();
   decls.insert(decl->name->ident, type);
@@ -2027,9 +2189,7 @@ void TypeChecker::ComputeSetDefinitions::visit(FuncDecl::Ptr decl) {
   decls.scope();
   
   for (const auto genericParam : decl->genericParams) {
-    const auto setType = std::make_shared<SetType>();
-    setType->element = std::make_shared<ElementType>();
-    
+    const auto setType = SetType::getUndefinedSetType();
     decls.insert(genericParam->name, setType);
     env.addSetDefinition(genericParam, setType);
   }
@@ -2270,8 +2430,31 @@ bool TypeChecker::Environment::compareIndexSets(IndexSet::Ptr l,
     const auto lSet = to<SetIndexSet>(l);
     const auto rSet = to<SetIndexSet>(r);
 
-    return hasSetDefinition(lSet) && hasSetDefinition(rSet) && 
-           (getSetDefinition(lSet) == getSetDefinition(rSet));
+    if (!hasSetDefinition(lSet) || !hasSetDefinition(rSet)) {
+      return false;
+    }
+    
+    SetType::Ptr lType = getSetDefinition(lSet);
+    SetType::Ptr rType = getSetDefinition(rSet);
+    if (isa<UnstructuredSetType>(lType)) {
+      return lType == rType;
+    }
+    else if (isa<LatticeLinkSetType>(lType)) {
+      // Pointers may not be identical if LatticeLinkSetType
+      if (!isa<LatticeLinkSetType>(rType)) {
+        return false;
+      }
+      auto lLatType = to<LatticeLinkSetType>(lType);
+      auto rLatType = to<LatticeLinkSetType>(rType);
+      if (lLatType->dimensions != rLatType->dimensions) {
+        return false;
+      }
+      return compareIndexSets(lLatType->latticePointSet->set,
+                              rLatType->latticePointSet->set);
+    }
+    else {
+      return false;
+    }
   } else if (isa<RangeIndexSet>(l)) {
     return isa<RangeIndexSet>(r) &&
            (to<RangeIndexSet>(l)->range == to<RangeIndexSet>(r)->range);
@@ -2326,23 +2509,63 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
       return false;
     }
 
-    const auto ltype = to<SetType>(l);
-    const auto rtype = to<SetType>(r);
+    const auto lgentype = to<SetType>(l);
+    const auto rgentype = to<SetType>(r);
 
-    if (ltype->endpoints.size() != rtype->endpoints.size()) {
+    if (!compareTypes(lgentype->element, rgentype->element)) {
       return false;
     }
 
-    for (unsigned i = 0; i < ltype->endpoints.size(); ++i) {
-      const auto lEndpointElem = ltype->endpoints[i]->element;
-      const auto rEndpointElem = rtype->endpoints[i]->element;
-      
-      if (!compareTypes(lEndpointElem, rEndpointElem)) {
+    if (isa<UnstructuredSetType>(lgentype)) {
+      if (!isa<UnstructuredSetType>(rgentype)) {
         return false;
       }
+
+      const auto ltype = to<UnstructuredSetType>(lgentype);
+      const auto rtype = to<UnstructuredSetType>(rgentype);
+      
+      if (ltype->endpoints.size() != rtype->endpoints.size()) {
+        return false;
+      }
+
+      for (unsigned i = 0; i < ltype->endpoints.size(); ++i) {
+        const auto lEndpointElem = ltype->endpoints[i]->element;
+        const auto rEndpointElem = rtype->endpoints[i]->element;
+      
+        if (!compareTypes(lEndpointElem, rEndpointElem)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+    else if (isa<LatticeLinkSetType>(lgentype)) {
+      if (!isa<LatticeLinkSetType>(rgentype)) {
+        return false;
+      }
+
+      const auto ltype = to<LatticeLinkSetType>(lgentype);
+      const auto rtype = to<LatticeLinkSetType>(rgentype);
+
+      if (ltype->dimensions != rtype->dimensions) {
+        return false;
+      }
+
+      if (!compareTypes(ltype->latticePointSet->element,
+                        rtype->latticePointSet->element)) {
+        return false;
+      }
+      
+      if (ltype->latticePointSet->set->setName !=
+          rtype->latticePointSet->set->setName) {
+        return false;
+      }
+
+      return compareTypes(ltype->latticePointSet->set->setDef,
+                          rtype->latticePointSet->set->setDef);
     }
 
-    return compareTypes(ltype->element, rtype->element);
+    return false;
   } else if (isa<TupleType>(l)) {
     if (!isa<TupleType>(r)) {
       return false;

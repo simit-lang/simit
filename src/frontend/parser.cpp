@@ -816,7 +816,7 @@ hir::Expr::Ptr Parser::parseExpr() {
 }
 
 // map_expr: 'map' ident ['<' endpoints '>'] ['(' [call_params] ')'] 
-//           'to' set_index_set ['reduce' '+']
+//           'to' set_index_set ['through' set_index_set] ['reduce' '+']
 hir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
   const hir::Identifier::Ptr func = parseIdent();
@@ -837,6 +837,13 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
   
   consume(Token::Type::TO);
   const hir::SetIndexSet::Ptr target = parseSetIndexSet();
+
+  hir::SetIndexSet::Ptr through;
+
+  if (peek().type == Token::Type::THROUGH) {
+    consume(Token::Type::THROUGH);
+    through = parseSetIndexSet();
+  }
  
   if (peek().type == Token::Type::REDUCE) {
     consume(Token::Type::REDUCE);
@@ -848,6 +855,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
     mapExpr->genericArgs = genericArgs;
     mapExpr->partialActuals = partialActuals;
     mapExpr->target = target;
+    mapExpr->through = through;
     mapExpr->op = hir::MapExpr::ReductionOp::SUM;
 
     const Token plusToken = consume(Token::Type::PLUS);
@@ -863,6 +871,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
   mapExpr->genericArgs = genericArgs;
   mapExpr->partialActuals = partialActuals;
   mapExpr->target = target;
+  mapExpr->through = through;
 
   return mapExpr;
 }
@@ -1096,7 +1105,8 @@ hir::Expr::Ptr Parser::parseTransposeExpr() {
   return expr;
 }
 
-// call_or_read_expr: factor {('(' [read_params] ')') | ('.' ident)}
+// call_or_read_expr: factor {('(' [read_params] ')') | ('[' [read_params] ']')
+//                            | ('.' ident)}
 hir::Expr::Ptr Parser::parseCallOrReadExpr() {
   hir::Expr::Ptr expr = parseFactor();
 
@@ -1116,6 +1126,28 @@ hir::Expr::Ptr Parser::parseCallOrReadExpr() {
         tensorRead->setEndLoc(rightParenToken);
 
         expr = tensorRead;
+        break;
+      }
+      case Token::Type::LB:
+      {
+        auto setRead = std::make_shared<hir::SetReadExpr>();
+
+        consume(Token::Type::LB);
+        setRead->set = expr;
+        if (peek().type != Token::Type::RB) {
+          setRead->indices = parseReadParams();
+        }
+        if (peek().type == Token::Type::SEMICOL) {
+          consume(Token::Type::SEMICOL);
+          auto sink = parseReadParams();
+          std::copy(sink.begin(), sink.end(),
+                    std::back_inserter(setRead->indices));
+        }
+
+        const Token rightBracketToken = consume(Token::Type::RB);
+        setRead->setEndLoc(rightBracketToken);
+
+        expr = setRead;
         break;
       }
       case Token::Type::PERIOD:
@@ -1304,7 +1336,8 @@ std::vector<hir::Expr::Ptr> Parser::parseCallParams() {
   return callParams;
 }
 
-// type: element_type | set_type | tuple_type | tensor_type
+// type: element_type | unstructured_set_type | lattice_link_set_type
+//     | tuple_type | tensor_type
 hir::Type::Ptr Parser::parseType() {
   hir::Type::Ptr type;
   switch (peek().type) {
@@ -1312,7 +1345,10 @@ hir::Type::Ptr Parser::parseType() {
       type = parseElementType();
       break;
     case Token::Type::SET:
-      type = parseSetType();
+      type = parseUnstructuredSetType();
+      break;
+    case Token::Type::LATTICE:
+      type = parseLatticeLinkSetType();
       break;
     case Token::Type::LP:
       type = parseTupleType();
@@ -1347,9 +1383,9 @@ hir::ElementType::Ptr Parser::parseElementType() {
   return elementType;
 }
 
-// set_type: 'set' '{' element_type '}' ['(' endpoints ')']
-hir::SetType::Ptr Parser::parseSetType() {
-  auto setType = std::make_shared<hir::SetType>();
+// unstructured_set_type: 'set' '{' element_type '}' ['(' endpoints ')']
+hir::SetType::Ptr Parser::parseUnstructuredSetType() {
+  auto setType = std::make_shared<hir::UnstructuredSetType>();
 
   const Token setToken = consume(Token::Type::SET);
   setType->setBeginLoc(setToken);
@@ -1366,6 +1402,31 @@ hir::SetType::Ptr Parser::parseSetType() {
     const Token rightParenToken = consume(Token::Type::RP);
     setType->setEndLoc(rightParenToken);
   }
+
+  return setType;
+}
+
+// lattice_link_set_type: 'lattice' '[' INT_LITERAL ']' '{' element_type '}' '(' IDENT ')'
+hir::SetType::Ptr Parser::parseLatticeLinkSetType() {
+  auto setType = std::make_shared<hir::LatticeLinkSetType>();
+
+  const Token latticeToken = consume(Token::Type::LATTICE);
+  setType->setBeginLoc(latticeToken);
+
+  consume(Token::Type::LB);
+  const Token dimsToken = consume(Token::Type::INT_LITERAL);
+  setType->dimensions = dimsToken.num;
+  consume(Token::Type::RB);
+
+  consume(Token::Type::LC);
+  setType->element = parseElementType();
+  consume(Token::Type::RC);
+
+  consume(Token::Type::LP);
+  auto latticePointSet = std::make_shared<hir::Endpoint>();
+  latticePointSet->set = parseSetIndexSet();
+  setType->latticePointSet = latticePointSet;
+  consume(Token::Type::RP);
 
   return setType;
 }

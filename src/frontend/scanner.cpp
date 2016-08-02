@@ -20,6 +20,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "vector") return Token::Type::VECTOR;
   if (token == "element") return Token::Type::ELEMENT;
   if (token == "set") return Token::Type::SET;
+  if (token == "lattice") return Token::Type::LATTICE;
   if (token == "var") return Token::Type::VAR;
   if (token == "const") return Token::Type::CONST;
   if (token == "extern") return Token::Type::EXTERN;
@@ -32,6 +33,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "to") return Token::Type::TO;
   if (token == "with") return Token::Type::WITH;
   if (token == "reduce") return Token::Type::REDUCE;
+  if (token == "through") return Token::Type::THROUGH;
   if (token == "while") return Token::Type::WHILE;
   if (token == "do") return Token::Type::DO;
   if (token == "if") return Token::Type::IF;

@@ -208,12 +208,33 @@ protected:
 
 struct SetType : public Type {
   ElementType::Ptr           element;
-  std::vector<Endpoint::Ptr> endpoints;
-  
   typedef std::shared_ptr<SetType> Ptr;
+  static SetType::Ptr getUndefinedSetType();
+};
+
+struct UnstructuredSetType : public SetType {
+  std::vector<Endpoint::Ptr> endpoints;
+
+  typedef std::shared_ptr<UnstructuredSetType> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<UnstructuredSetType>());
+  }
+
+protected:
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneNode();
+};
+
+struct LatticeLinkSetType : public SetType {
+  Endpoint::Ptr latticePointSet;
+  size_t dimensions;
+  
+  typedef std::shared_ptr<LatticeLinkSetType> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(self<SetType>());
+    visitor->visit(self<LatticeLinkSetType>());
   }
 
 protected:
@@ -678,6 +699,7 @@ struct MapExpr : public Expr {
   std::vector<IndexSet::Ptr> genericArgs;
   std::vector<Expr::Ptr>     partialActuals;
   SetIndexSet::Ptr           target;
+  SetIndexSet::Ptr           through;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -897,7 +919,7 @@ struct LeftDivExpr : public BinaryExpr {
   typedef std::shared_ptr<LeftDivExpr> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<LeftDivExpr>(shared_from_this()));
+    visitor->visit(self<LeftDivExpr>());
   }
 
 protected:
@@ -984,6 +1006,25 @@ protected:
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneNode(); 
+};
+
+struct SetReadExpr : public Expr {
+  Expr::Ptr set;
+  std::vector<ReadParam::Ptr> indices;
+
+  typedef std::shared_ptr<SetReadExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<SetReadExpr>());
+  }
+
+  virtual unsigned getLineBegin() { return set->getLineBegin(); }
+  virtual unsigned getColBegin() { return set->getColBegin(); }
+
+protected:
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneNode();
 };
 
 struct TupleReadExpr : public Expr {

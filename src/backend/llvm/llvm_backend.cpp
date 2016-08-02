@@ -25,14 +25,19 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 
-#include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#if LLVM_MAJOR_VERSION <=3 && LLVM_MINOR_VERSION <= 6
+#include "llvm/PassManager.h"
+#else
+#include "llvm/IR/LegacyPassManager.h"
+#endif
 
 #include "llvm_types.h"
 #include "llvm_codegen.h"
 #include "llvm_util.h"
+#include "llvm_data_layouts.h"
 
 #include "macros.h"
 #include "types.h"
@@ -65,7 +70,12 @@ const std::string LEN_SUFFIX(".len");
 bool LLVMBackend::llvmInitialized = false;
 
 shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
   shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(module));
+#else
+  shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(
+      unique_ptr<llvm::Module>(module)));
+#endif
   return engineBuilder;
 }
 
@@ -229,8 +239,13 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
   llvm::FunctionPassManager fpm(module);
   llvm::PassManager mpm;
+#else
+  llvm::legacy::FunctionPassManager fpm(module);
+  llvm::legacy::PassManager mpm;
+#endif
   llvm::PassManagerBuilder pmBuilder;
   
   pmBuilder.OptLevel = 3;
@@ -241,10 +256,12 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   pmBuilder.SLPVectorize = 1;
 
   llvm::DataLayout dataLayout(module);
-#if LLVM_MAJOR_VERSION >= 3 && LLVM_MINOR_VERSION >= 5
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
+  fpm.add(new llvm::DataLayout(dataLayout));
+#elif LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
   fpm.add(new llvm::DataLayoutPass(dataLayout));
 #else
-  fpm.add(new llvm::DataLayout(dataLayout));
+  module->setDataLayout(dataLayout);
 #endif
 
   pmBuilder.populateFunctionPassManager(fpm);
@@ -363,14 +380,27 @@ void LLVMBackend::compile(const ir::Length& length) {
 }
 
 void LLVMBackend::compile(const ir::IndexRead& indexRead) {
-  // TODO: Add support for different indices (contained in the Set type).
-  unsigned int indexLoc = 1 + indexRead.kind;
-
   iassert(indexRead.edgeSet.type().isSet());
-  iassert(indexRead.edgeSet.type().toSet()->endpointSets.size() > 0);
-
   llvm::Value *edgesValue = compile(indexRead.edgeSet);
-  val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
+  std::shared_ptr<SetLayout> layout =
+      getSetLayout(indexRead.edgeSet, edgesValue, builder.get());
+  switch (indexRead.kind) {
+    case ir::IndexRead::Endpoints:
+      val = layout->getEpsArray();
+      break;
+    case ir::IndexRead::NeighborsStart:
+      val = layout->getNbrsStartArray();
+      break;
+    case ir::IndexRead::Neighbors:
+      val = layout->getNbrsArray();
+      break;
+    case ir::IndexRead::LatticeDim:
+      iassert(indexRead.edgeSet.type().isLatticeLinkSet());
+      val = layout->getSize(indexRead.index);
+      break;
+    default:
+      unreachable;
+  }
 }
 
 void LLVMBackend::compile(const ir::Neg& negExpr) {
@@ -531,6 +561,19 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
       ierror << "Cannot divide boolean or string values.";
       break;
   }
+}
+
+void LLVMBackend::compile(const ir::Rem& remExpr) {
+  iassert(isScalar(remExpr.type));
+  iassert(isInt(remExpr.type));
+  iassert(isInt(remExpr.a.type()));
+  iassert(isInt(remExpr.b.type()));
+
+  llvm::Value *a = compile(remExpr.a);
+  llvm::Value *b = compile(remExpr.b);
+
+  // Use SRem to match the truncated semantics
+  val = builder->CreateSRem(a, b);
 }
 
 void LLVMBackend::compile(const ir::Not& notExpr) {
@@ -1219,6 +1262,9 @@ void LLVMBackend::compile(const ir::For& forLoop) {
     case ForDomain::Edges:
       not_supported_yet;
       break;
+    case ForDomain::Lattice:
+      not_supported_yet;
+      break;
     case ForDomain::NeighborsOf:
     case ForDomain::Neighbors:
       not_supported_yet;
@@ -1349,6 +1395,7 @@ llvm::Function *LLVMBackend::getBuiltIn(std::string name,
 llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                         std::string fieldName) {
   assert(elemOrSet.type().isElement() || elemOrSet.type().isSet());
+  llvm::Value *setOrElemValue = compile(elemOrSet);
   const ElementType *elemType = nullptr;
   int fieldsOffset = -1;
   if (elemOrSet.type().isElement()) {
@@ -1358,15 +1405,12 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
   else {
     const SetType *setType = elemOrSet.type().toSet();
     elemType = setType->elementType.toElement();
-    fieldsOffset = 1; // jump over set size
-    if (setType->endpointSets.size() > 0) {
-      fieldsOffset += NUM_EDGE_INDEX_ELEMENTS; // jump over index pointers
-    }
+    std::shared_ptr<SetLayout> layout =
+        getSetLayout(elemOrSet, setOrElemValue, builder.get());
+    fieldsOffset = layout->getFieldsOffset();
   }
   assert(fieldsOffset >= 0);
-
-  llvm::Value *setOrElemValue = compile(elemOrSet);
-
+  
   assert(elemType->hasField(fieldName));
   unsigned fieldLoc = fieldsOffset + elemType->fieldNames.at(fieldName);
   return builder->CreateExtractValue(setOrElemValue, {fieldLoc},
@@ -1436,6 +1480,9 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
     }
     case TensorStorage::Undefined:
       ierror << "Can't compute the size of tensor with undefined storage";
+      break;
+    default:
+      unreachable;
       break;
   }
   iassert(len != nullptr);
@@ -1513,7 +1560,11 @@ llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
   std::vector<llvm::Constant*> idx;
   idx.push_back(zero);
   idx.push_back(zero);
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
   return llvm::ConstantExpr::getGetElementPtr(strGlobal, idx);
+#else
+  return llvm::ConstantExpr::getGetElementPtr(nullptr, strGlobal, idx);
+#endif
 }
 
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
@@ -1612,19 +1663,21 @@ void LLVMBackend::emitGlobals(const ir::Environment& env) {
 
   // Emit global tensor indices
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
-    const Var& rowptr = tensorIndex.getRowptrArray();
-    llvm::GlobalVariable* rowptrPtr =
-        createGlobal(module, rowptr, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(rowptr, rowptrPtr);
-    this->globals.insert(rowptr);
+    if (tensorIndex.getKind() == TensorIndex::PExpr) {
+      const Var& rowptr = tensorIndex.getRowptrArray();
+      llvm::GlobalVariable* rowptrPtr =
+          createGlobal(module, rowptr, llvm::GlobalValue::ExternalLinkage,
+                       globalAddrspace());
+      this->symtable.insert(rowptr, rowptrPtr);
+      this->globals.insert(rowptr);
 
-    const Var& colidx  = tensorIndex.getColidxArray();
-    llvm::GlobalVariable* colidxPtr =
-        createGlobal(module, colidx, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(colidx, colidxPtr);
-    this->globals.insert(colidx);
+      const Var& colidx  = tensorIndex.getColidxArray();
+      llvm::GlobalVariable* colidxPtr =
+          createGlobal(module, colidx, llvm::GlobalValue::ExternalLinkage,
+                       globalAddrspace());
+      this->symtable.insert(colidx, colidxPtr);
+      this->globals.insert(colidx);
+    }
   }
 }
 

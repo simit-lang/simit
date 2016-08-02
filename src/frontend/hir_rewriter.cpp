@@ -25,11 +25,17 @@ void HIRRewriter::visit(Endpoint::Ptr end) {
   node = end;
 }
 
-void HIRRewriter::visit(SetType::Ptr type) {
+void HIRRewriter::visit(UnstructuredSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   for (auto &endpoint : type->endpoints) {
     endpoint = rewrite<Endpoint>(endpoint);
   }
+  node = type;
+}
+
+void HIRRewriter::visit(LatticeLinkSetType::Ptr type) {
+  type->element = rewrite<ElementType>(type->element);
+  type->latticePointSet = rewrite<Endpoint>(type->latticePointSet);
   node = type;
 }
 
@@ -156,6 +162,9 @@ void HIRRewriter::visit(MapExpr::Ptr expr) {
     arg = rewrite<Expr>(arg);
   }
   expr->target = rewrite<SetIndexSet>(expr->target);
+  if (expr->through) {
+    expr->through = rewrite<SetIndexSet>(expr->through);
+  }
   node = expr;
 }
 
@@ -232,6 +241,14 @@ void HIRRewriter::visit(CallExpr::Ptr expr) {
 
 void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
   expr->tensor = rewrite<Expr>(expr->tensor);
+  for (auto &index : expr->indices) {
+    index = rewrite<ReadParam>(index);
+  }
+  node = expr;
+}
+
+void HIRRewriter::visit(SetReadExpr::Ptr expr) {
+  expr->set = rewrite<Expr>(expr->set);
   for (auto &index : expr->indices) {
     index = rewrite<ReadParam>(index);
   }

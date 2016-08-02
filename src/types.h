@@ -25,6 +25,8 @@ struct ScalarType;
 struct TensorType;
 struct ElementType;
 struct SetType;
+struct UnstructuredSetType;
+struct LatticeLinkSetType;
 struct TupleType;
 struct ArrayType;
 
@@ -45,14 +47,20 @@ public:
   bool isTensor()  const { return _kind==Tensor; }
   bool isElement() const { return _kind==Element; }
   bool isSet()     const { return _kind==Set; }
+  bool isUnstructuredSet() const;
+  bool isLatticeLinkSet() const;
   bool isTuple()   const { return _kind==Tuple; }
   bool isArray()   const { return _kind==Array; }
+
 
   const TensorType*  toTensor()  const {iassert(isTensor());  return tensor;}
   const ElementType* toElement() const {iassert(isElement()); return element;}
   const SetType*     toSet()     const {iassert(isSet());     return set;}
+  const UnstructuredSetType* toUnstructuredSet() const;
+  const LatticeLinkSetType* toLatticeLinkSet() const;
   const TupleType*   toTuple()   const {iassert(isTuple());   return tuple;}
   const ArrayType*   toArray()   const {iassert(isArray());   return array;}
+
 
 private:
   Kind _kind;
@@ -233,17 +241,38 @@ struct ElementType : TypeNode {
 /// endpointSets contains the sets each endpoint of an edge comes from.
 struct SetType : TypeNode {
   Type elementType;
+  // TODO: Add method to retrieve a set field (compute from elementType fields)
 
+  // Ensure SetType is abstract
+  virtual ~SetType() = 0;
+};
+
+struct UnstructuredSetType : SetType {
   /// Endpoint sets.  These are stored as pointers to break an include cycle
   /// between this file and ir.h.
   std::vector<Expr*> endpointSets;
-
+  /// Cardinality of unstructured edges.
   size_t getCardinality() const {return endpointSets.size();}
 
-  // TODO: Add method to retrieve a set field (compute from elementType fields)
-
   static Type make(Type elementType, const std::vector<Expr>& endpointSets);
-  ~SetType();
+  
+  ~UnstructuredSetType();
+};
+
+struct LatticeLinkSetType : SetType {
+  /// Dimensionality of the lattice. This set must be of size d_1 x d_2 x ...
+  /// d_Nd x d. This type of set forces a LATTICE structure, such that the point
+  /// in the underlying set at coordinate (... i_j, ...) neighbors points as
+  /// coordinates (... i_j-1, ...) and (... i_j+1 ...), for all possible j. The
+  /// determination of boundary conditions is also delegated to the lattice link
+  /// set definition, though we assume periodic for now.
+  size_t dimensions;
+  /// Underlying point set of the lattice. Elements of this edge set connect
+  /// neighboring grid points in the lattice.
+  IndexSet latticePointSet;
+
+  static Type make(Type elementType, IndexSet latticePointSet,
+                   size_t dimensions);
 };
 
 struct TupleType : TypeNode {
@@ -333,14 +362,16 @@ bool operator!=(const Type&, const Type&);
 bool operator==(const ScalarType&, const ScalarType&);
 bool operator==(const TensorType&, const TensorType&);
 bool operator==(const ElementType&, const ElementType&);
-bool operator==(const SetType&, const SetType&);
+bool operator==(const UnstructuredSetType&, const UnstructuredSetType&);
+bool operator==(const LatticeLinkSetType&, const LatticeLinkSetType&);
 bool operator==(const TupleType&, const TupleType&);
 bool operator==(const ArrayType&, const ArrayType&);
 
 bool operator!=(const ScalarType&, const ScalarType&);
 bool operator!=(const TensorType&, const TensorType&);
 bool operator!=(const ElementType&, const ElementType&);
-bool operator!=(const SetType&, const SetType&);
+bool operator!=(const UnstructuredSetType&, const UnstructuredSetType&);
+bool operator!=(const LatticeLinkSetType&, const LatticeLinkSetType&);
 bool operator!=(const TupleType&, const TupleType&);
 bool operator!=(const ArrayType&, const ArrayType&);
 
@@ -348,7 +379,8 @@ std::ostream& operator<<(std::ostream&, const Type&);
 std::ostream& operator<<(std::ostream&, const ScalarType&);
 std::ostream& operator<<(std::ostream&, const TensorType&);
 std::ostream& operator<<(std::ostream&, const ElementType&);
-std::ostream& operator<<(std::ostream&, const SetType&);
+std::ostream& operator<<(std::ostream&, const UnstructuredSetType&);
+std::ostream& operator<<(std::ostream&, const LatticeLinkSetType&);
 std::ostream& operator<<(std::ostream&, const TupleType&);
 std::ostream& operator<<(std::ostream&, const ArrayType&);
 

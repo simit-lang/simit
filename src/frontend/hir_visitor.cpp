@@ -27,11 +27,16 @@ void HIRVisitor::visit(Endpoint::Ptr end) {
   }
 }
 
-void HIRVisitor::visit(SetType::Ptr type) {
+void HIRVisitor::visit(UnstructuredSetType::Ptr type) {
   type->element->accept(this);
   for (auto endpoint : type->endpoints) {
     endpoint->accept(this);
   }
+}
+
+void HIRVisitor::visit(LatticeLinkSetType::Ptr type) {
+  type->element->accept(this);
+  type->latticePointSet->accept(this);
 }
 
 void HIRVisitor::visit(TupleType::Ptr type) {
@@ -166,6 +171,9 @@ void HIRVisitor::visit(MapExpr::Ptr expr) {
     arg->accept(this);
   }
   expr->target->accept(this);
+  if (expr->through) {
+    expr->through->accept(this);
+  }
 }
 
 void HIRVisitor::visit(ReducedMapExpr::Ptr expr) {
@@ -248,6 +256,13 @@ void HIRVisitor::visit(CallExpr::Ptr expr) {
 
 void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
   expr->tensor->accept(this);
+  for (auto param : expr->indices) {
+    param->accept(this);
+  }
+}
+
+void HIRVisitor::visit(SetReadExpr::Ptr expr) {
+  expr->set->accept(this);
   for (auto param : expr->indices) {
     param->accept(this);
   }
