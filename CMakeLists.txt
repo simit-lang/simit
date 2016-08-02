@@ -82,7 +82,7 @@ if ($ENV{SIMIT_CUDA_ENABLE})
 endif ()
 
 # EIGEN
-if (NOT DEFINED ENV{EIGEN3_INCLUDE_DIR})
+if (DEFINED ENV{EIGEN3_INCLUDE_DIR})
   message("-- Found Eigen")
   add_definitions(-DEIGEN)
   include_directories($ENV{EIGEN3_INCLUDE_DIR})
