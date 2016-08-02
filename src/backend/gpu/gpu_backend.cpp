@@ -65,8 +65,10 @@ void cleanVars(const ir::Environment &env) {
     cleaner.clean(v);
   }
   for (auto &ti : env.getTensorIndices()) {
-    cleaner.clean(ti.getRowptrArray());
-    cleaner.clean(ti.getColidxArray());
+    if (!ti.isComputed()) {
+      cleaner.clean(ti.getRowptrArray());
+      cleaner.clean(ti.getColidxArray());
+    }
   }
 }
 
@@ -899,12 +901,14 @@ void GPUBackend::emitGlobals(const ir::Environment& env) {
     addNVVMAnnotation(global, "managed", llvmInt(1), module);
   }
   for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
-    const ir::Var& rowptrArray = tensorIndex.getRowptrArray();
-    llvm::Value *global = symtable.get(rowptrArray);
-    addNVVMAnnotation(global, "managed", llvmInt(1), module);
-    const ir::Var& colidxArray = tensorIndex.getColidxArray();
-    global = symtable.get(colidxArray);
-    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+    if (!tensorIndex.isComputed()) {
+      const ir::Var& rowptrArray = tensorIndex.getRowptrArray();
+      llvm::Value *global = symtable.get(rowptrArray);
+      addNVVMAnnotation(global, "managed", llvmInt(1), module);
+      const ir::Var& colidxArray = tensorIndex.getColidxArray();
+      global = symtable.get(colidxArray);
+      addNVVMAnnotation(global, "managed", llvmInt(1), module);
+    }
   }
 
   // We must add externs and temporaries to the list of globally

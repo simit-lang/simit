@@ -21,6 +21,7 @@
 #include "graph.h"
 #include "graph_indices.h"
 #include "ir.h"
+#include "stencils.h"
 #include "tensor_index.h"
 #include "tensor_data.h"
 #include "path_indices.h"
@@ -335,6 +336,11 @@ GPUFunction::pushGlobalTensor(
           }
           break;
         }
+        case ir::TensorStorage::Kind::Diagonal: {
+          // Just grab first outer dimension
+          bufSize *= size(ttype->getOuterDimensions()[0]);
+          break;
+        }
         case ir::TensorStorage::Kind::Indexed: {
           if (env.hasTensorIndex(bufVar)) {
             const pe::PathExpression& pexpr =
@@ -354,9 +360,25 @@ GPUFunction::pushGlobalTensor(
           }
           break;
         }
-        case ir::TensorStorage::Kind::Diagonal: {
-          // Just grab first outer dimension
-          bufSize *= size(ttype->getOuterDimensions()[0]);
+        case ir::TensorStorage::Stencil: {
+          if (env.hasTensorIndex(bufVar)) {
+            iassert(env.getTensorIndex(bufVar).getKind()
+                    == ir::TensorIndex::Sten);
+            const ir::StencilLayout& stencil =
+                env.getTensorIndex(bufVar).getStencilLayout();
+            // Size of stencil-base matrix is stencil size * dim[0]
+            bufSize *= stencil.getLayout().size();
+            bufSize *= size(ttype->getOuterDimensions()[0]);
+          }
+          else {
+            iassert(ts.hasTensorIndex());
+            iassert(ts.getTensorIndex().getKind() == ir::TensorIndex::Sten);
+            const ir::StencilLayout& stencil =
+                ts.getTensorIndex().getStencilLayout();
+            // Size of stencil-base matrix is stencil size * dim[0]
+            bufSize *= stencil.getLayout().size();
+            bufSize *= size(ttype->getOuterDimensions()[0]);
+          }
           break;
         }
         default: {
