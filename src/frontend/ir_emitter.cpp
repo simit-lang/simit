@@ -7,7 +7,7 @@
 #include "ir.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 void IREmitter::visit(StmtBlock::Ptr stmtBlock) {
   for (auto stmt : stmtBlock->stmts) {

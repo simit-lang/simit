@@ -2,12 +2,12 @@
 #include <string>
 
 #include "infer_element_sources.h"
-#include "hir.h"
-#include "hir_rewriter.h"
+#include "fir.h"
+#include "fir_rewriter.h"
 #include "util/scopedmap.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 void InferElementSources::visit(IdentDecl::Ptr decl) {
   decls.insert(decl->name->ident, decl->type);
@@ -20,7 +20,7 @@ void InferElementSources::visit(FuncDecl::Ptr decl) {
     decls.insert(genericParam->name, Type::Ptr());
   }
   
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
   decls.unscope();
 }
 
@@ -77,7 +77,7 @@ void InferElementSources::visit(AssignStmt::Ptr stmt) {
 }
 
 void InferElementSources::visit(TensorReadExpr::Ptr expr) {
-  HIRVisitor::visit(expr);
+  FIRVisitor::visit(expr);
 
   // TODO: For now, we don't consider nested tensor reads as sparse inner 
   // blocks are not currently supported. When support for sparse inner blocks 

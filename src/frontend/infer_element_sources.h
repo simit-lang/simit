@@ -1,14 +1,14 @@
 #ifndef SIMIT_INFER_ELEMENT_SOURCES_H
 #define SIMIT_INFER_ELEMENT_SOURCES_H
 
-#include "hir.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_visitor.h"
 #include "util/scopedmap.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-class InferElementSources : public HIRVisitor {
+class InferElementSources : public FIRVisitor {
 public:
   void infer(Program::Ptr program) { program->accept(this); }
 
@@ -24,7 +24,7 @@ private:
   virtual void visit(AssignStmt::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
   
-  void reportError(std::string, HIRNode::Ptr);
+  void reportError(std::string, FIRNode::Ptr);
 
 private:
   typedef util::ScopedMap<std::string, Type::Ptr> SymbolTable;

@@ -5,13 +5,13 @@
 #include <exception>
 
 #include "error.h"
-#include "hir.h"
+#include "fir.h"
 #include "intrinsics.h"
 #include "type_checker.h"
 #include "util/util.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
   
 TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
     retTypeChecked(true),
@@ -2177,7 +2177,7 @@ void TypeChecker::ComputeSetDefinitions::visit(SetIndexSet::Ptr set) {
 }
 
 void TypeChecker::ComputeSetDefinitions::visit(IdentDecl::Ptr decl) {
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
 
   const auto type = isa<SetType>(decl->type) ? 
                     to<SetType>(decl->type) : SetType::Ptr();
@@ -2194,12 +2194,12 @@ void TypeChecker::ComputeSetDefinitions::visit(FuncDecl::Ptr decl) {
     env.addSetDefinition(genericParam, setType);
   }
   
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
   decls.unscope();
 }
 
 void TypeChecker::ComputeSetDefinitions::visit(VarDecl::Ptr decl) {
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
 
   const auto type = isa<SetType>(decl->type) ? 
                     to<SetType>(decl->type) : SetType::Ptr();
@@ -2326,9 +2326,9 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
 }
 
 std::string TypeChecker::getConcretizedTypeSignatureString(FuncDecl::Ptr decl) {
-  class FuncTypeSignaturePrinter : public HIRPrinter {
+  class FuncTypeSignaturePrinter : public FIRPrinter {
     public:
-      FuncTypeSignaturePrinter(std::ostream &oss) : HIRPrinter(oss) {}
+      FuncTypeSignaturePrinter(std::ostream &oss) : FIRPrinter(oss) {}
 
     private:
       virtual void visit(SetIndexSet::Ptr set) {
@@ -2379,7 +2379,7 @@ void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
 }
 
 void TypeChecker::ReplaceTypeParams::visit(IndexSetDomain::Ptr domain) {
-  HIRRewriter::visit(domain);
+  FIRRewriter::visit(domain);
 
   if (isa<RangeIndexSet>(domain->set)) {
     const auto lowerBound = std::make_shared<IntLiteral>();
@@ -2592,7 +2592,7 @@ TypeChecker::ExprType TypeChecker::inferType(Expr::Ptr ptr) {
   return ret;
 }
 
-bool TypeChecker::typeCheck(HIRNode::Ptr ptr) {
+bool TypeChecker::typeCheck(FIRNode::Ptr ptr) {
   iassert(!isa<Expr>(ptr));
   
   const bool tmp = retTypeChecked;
@@ -2798,7 +2798,7 @@ std::string TypeChecker::toString(ScalarType::Type type) {
   }
 }
 
-void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
+void TypeChecker::reportError(const std::string &msg, FIRNode::Ptr loc) {
   const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                               loc->getLineEnd(), loc->getColEnd(), msg);
   errors->push_back(err);
@@ -2807,7 +2807,7 @@ void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
 
 void TypeChecker::reportUndeclared(const std::string &type, 
                                    const std::string &ident,
-                                   HIRNode::Ptr loc) {
+                                   FIRNode::Ptr loc) {
   std::stringstream errMsg;
   errMsg << "undeclared " << type << " '" << ident << "'";
   reportError(errMsg.str(), loc);
@@ -2815,7 +2815,7 @@ void TypeChecker::reportUndeclared(const std::string &type,
 
 void TypeChecker::reportMultipleDefs(const std::string &type, 
                                      const std::string &ident, 
-                                     HIRNode::Ptr loc) {
+                                     FIRNode::Ptr loc) {
   std::stringstream errMsg;
   errMsg << "multiple definitions of " << type << " '" << ident << "'";
   reportError(errMsg.str(), loc);

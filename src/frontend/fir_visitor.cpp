@@ -1,85 +1,85 @@
-#include "hir_visitor.h"
-#include "hir.h"
+#include "fir_visitor.h"
+#include "fir.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-void HIRVisitor::visit(Program::Ptr program) {
+void FIRVisitor::visit(Program::Ptr program) {
   for (auto elem : program->elems) {
     elem->accept(this);
   }
 }
 
-void HIRVisitor::visit(StmtBlock::Ptr stmtBlock) {
+void FIRVisitor::visit(StmtBlock::Ptr stmtBlock) {
   for (auto stmt : stmtBlock->stmts) {
     stmt->accept(this);
   }
 }
 
-void HIRVisitor::visit(GenericIndexSet::Ptr set) {
+void FIRVisitor::visit(GenericIndexSet::Ptr set) {
   visit(to<SetIndexSet>(set));
 }
 
-void HIRVisitor::visit(Endpoint::Ptr end) {
+void FIRVisitor::visit(Endpoint::Ptr end) {
   end->set->accept(this);
   if (end->element) {
     end->element->accept(this);
   }
 }
 
-void HIRVisitor::visit(UnstructuredSetType::Ptr type) {
+void FIRVisitor::visit(UnstructuredSetType::Ptr type) {
   type->element->accept(this);
   for (auto endpoint : type->endpoints) {
     endpoint->accept(this);
   }
 }
 
-void HIRVisitor::visit(LatticeLinkSetType::Ptr type) {
+void FIRVisitor::visit(LatticeLinkSetType::Ptr type) {
   type->element->accept(this);
   type->latticePointSet->accept(this);
 }
 
-void HIRVisitor::visit(TupleType::Ptr type) {
+void FIRVisitor::visit(TupleType::Ptr type) {
   type->element->accept(this);
   type->length->accept(this);
 }
 
-void HIRVisitor::visit(NDTensorType::Ptr type) {
+void FIRVisitor::visit(NDTensorType::Ptr type) {
   for (auto indexSet : type->indexSets) {
     indexSet->accept(this);
   }
   type->blockType->accept(this);
 }
 
-void HIRVisitor::visit(IdentDecl::Ptr decl) {
+void FIRVisitor::visit(IdentDecl::Ptr decl) {
   decl->name->accept(this);
   decl->type->accept(this);
 }
 
-void HIRVisitor::visit(FieldDecl::Ptr decl) {
+void FIRVisitor::visit(FieldDecl::Ptr decl) {
   visit(to<IdentDecl>(decl));
 }
 
-void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
+void FIRVisitor::visit(ElementTypeDecl::Ptr decl) {
   decl->name->accept(this);
   for (auto field : decl->fields) {
     field->accept(this);
   }
 }
 
-void HIRVisitor::visit(Argument::Ptr arg) {
+void FIRVisitor::visit(Argument::Ptr arg) {
   visit(to<IdentDecl>(arg));
 }
 
-void HIRVisitor::visit(InOutArgument::Ptr arg) {
+void FIRVisitor::visit(InOutArgument::Ptr arg) {
   visit(to<Argument>(arg)); 
 }
 
-void HIRVisitor::visit(ExternDecl::Ptr decl) {
+void FIRVisitor::visit(ExternDecl::Ptr decl) {
   visit(to<IdentDecl>(decl));
 }
 
-void HIRVisitor::visit(FuncDecl::Ptr decl) {
+void FIRVisitor::visit(FuncDecl::Ptr decl) {
   decl->name->accept(this);
   for (auto genericParam : decl->genericParams) {
     genericParam->accept(this);
@@ -95,7 +95,7 @@ void HIRVisitor::visit(FuncDecl::Ptr decl) {
   }
 }
 
-void HIRVisitor::visit(VarDecl::Ptr decl) {
+void FIRVisitor::visit(VarDecl::Ptr decl) {
   decl->name->accept(this);
   if (decl->type) {
     decl->type->accept(this);
@@ -105,20 +105,20 @@ void HIRVisitor::visit(VarDecl::Ptr decl) {
   }
 }
 
-void HIRVisitor::visit(ConstDecl::Ptr decl) {
+void FIRVisitor::visit(ConstDecl::Ptr decl) {
   visit(to<VarDecl>(decl));
 }
 
-void HIRVisitor::visit(WhileStmt::Ptr stmt) {
+void FIRVisitor::visit(WhileStmt::Ptr stmt) {
   stmt->cond->accept(this);
   stmt->body->accept(this);
 }
 
-void HIRVisitor::visit(DoWhileStmt::Ptr stmt) {
+void FIRVisitor::visit(DoWhileStmt::Ptr stmt) {
   visit(to<WhileStmt>(stmt));
 }
 
-void HIRVisitor::visit(IfStmt::Ptr stmt) {
+void FIRVisitor::visit(IfStmt::Ptr stmt) {
   stmt->cond->accept(this);
   stmt->ifBody->accept(this);
   if (stmt->elseBody) {
@@ -126,43 +126,43 @@ void HIRVisitor::visit(IfStmt::Ptr stmt) {
   }
 }
 
-void HIRVisitor::visit(IndexSetDomain::Ptr domain) {
+void FIRVisitor::visit(IndexSetDomain::Ptr domain) {
   domain->set->accept(this);
 }
 
-void HIRVisitor::visit(RangeDomain::Ptr domain) {
+void FIRVisitor::visit(RangeDomain::Ptr domain) {
   domain->lower->accept(this);
   domain->upper->accept(this);
 }
 
-void HIRVisitor::visit(ForStmt::Ptr stmt) {
+void FIRVisitor::visit(ForStmt::Ptr stmt) {
   stmt->loopVar->accept(this);
   stmt->domain->accept(this);
   stmt->body->accept(this);
 }
 
-void HIRVisitor::visit(PrintStmt::Ptr stmt) {
+void FIRVisitor::visit(PrintStmt::Ptr stmt) {
   for (auto arg : stmt->args) {
     arg->accept(this);
   }
 }
 
-void HIRVisitor::visit(ExprStmt::Ptr stmt) {
+void FIRVisitor::visit(ExprStmt::Ptr stmt) {
   stmt->expr->accept(this);
 }
 
-void HIRVisitor::visit(AssignStmt::Ptr stmt) {
+void FIRVisitor::visit(AssignStmt::Ptr stmt) {
   for (auto lhs : stmt->lhs) {
     lhs->accept(this);
   }
   stmt->expr->accept(this);
 }
 
-void HIRVisitor::visit(ExprParam::Ptr param) {
+void FIRVisitor::visit(ExprParam::Ptr param) {
   param->expr->accept(this);
 }
 
-void HIRVisitor::visit(MapExpr::Ptr expr) {
+void FIRVisitor::visit(MapExpr::Ptr expr) {
   expr->func->accept(this);
   for (auto genericArg : expr->genericArgs) {
     genericArg->accept(this);
@@ -176,75 +176,75 @@ void HIRVisitor::visit(MapExpr::Ptr expr) {
   }
 }
 
-void HIRVisitor::visit(ReducedMapExpr::Ptr expr) {
+void FIRVisitor::visit(ReducedMapExpr::Ptr expr) {
   visit(to<MapExpr>(expr));
 }
 
-void HIRVisitor::visit(UnreducedMapExpr::Ptr expr) {
+void FIRVisitor::visit(UnreducedMapExpr::Ptr expr) {
   visit(to<MapExpr>(expr));
 }
 
-void HIRVisitor::visit(OrExpr::Ptr expr) {
+void FIRVisitor::visit(OrExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(AndExpr::Ptr expr) {
+void FIRVisitor::visit(AndExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(XorExpr::Ptr expr) {
+void FIRVisitor::visit(XorExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(EqExpr::Ptr expr) {
+void FIRVisitor::visit(EqExpr::Ptr expr) {
   visitNaryExpr(expr);
 }
 
-void HIRVisitor::visit(NotExpr::Ptr expr) {
+void FIRVisitor::visit(NotExpr::Ptr expr) {
   visitUnaryExpr(expr);
 }
 
-void HIRVisitor::visit(AddExpr::Ptr expr) {
+void FIRVisitor::visit(AddExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(SubExpr::Ptr expr) {
+void FIRVisitor::visit(SubExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(MulExpr::Ptr expr) {
+void FIRVisitor::visit(MulExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(DivExpr::Ptr expr) {
+void FIRVisitor::visit(DivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(LeftDivExpr::Ptr expr) {
+void FIRVisitor::visit(LeftDivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(ElwiseMulExpr::Ptr expr) {
+void FIRVisitor::visit(ElwiseMulExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(ElwiseDivExpr::Ptr expr) {
+void FIRVisitor::visit(ElwiseDivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(NegExpr::Ptr expr) {
+void FIRVisitor::visit(NegExpr::Ptr expr) {
   visitUnaryExpr(expr);
 }
 
-void HIRVisitor::visit(ExpExpr::Ptr expr) {
+void FIRVisitor::visit(ExpExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRVisitor::visit(TransposeExpr::Ptr expr) {
+void FIRVisitor::visit(TransposeExpr::Ptr expr) {
   visitUnaryExpr(expr);
 }
 
-void HIRVisitor::visit(CallExpr::Ptr expr) {
+void FIRVisitor::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
   for (auto genericArg : expr->genericArgs) {
     genericArg->accept(this);
@@ -254,49 +254,49 @@ void HIRVisitor::visit(CallExpr::Ptr expr) {
   }
 }
 
-void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
+void FIRVisitor::visit(TensorReadExpr::Ptr expr) {
   expr->tensor->accept(this);
   for (auto param : expr->indices) {
     param->accept(this);
   }
 }
 
-void HIRVisitor::visit(SetReadExpr::Ptr expr) {
+void FIRVisitor::visit(SetReadExpr::Ptr expr) {
   expr->set->accept(this);
   for (auto param : expr->indices) {
     param->accept(this);
   }
 }
 
-void HIRVisitor::visit(TupleReadExpr::Ptr expr) {
+void FIRVisitor::visit(TupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
   expr->index->accept(this);
 }
 
-void HIRVisitor::visit(FieldReadExpr::Ptr expr) {
+void FIRVisitor::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem->accept(this);
   expr->field->accept(this);
 }
 
-void HIRVisitor::visit(ParenExpr::Ptr expr) {
+void FIRVisitor::visit(ParenExpr::Ptr expr) {
   expr->expr->accept(this);
 }
 
-void HIRVisitor::visit(RangeConst::Ptr expr) {
+void FIRVisitor::visit(RangeConst::Ptr expr) {
   visit(to<VarExpr>(expr));
 }
 
-void HIRVisitor::visit(NDTensorLiteral::Ptr lit) {
+void FIRVisitor::visit(NDTensorLiteral::Ptr lit) {
   for (auto elem : lit->elems) {
     elem->accept(this);
   }
 }
 
-void HIRVisitor::visit(ApplyStmt::Ptr stmt) {
+void FIRVisitor::visit(ApplyStmt::Ptr stmt) {
   stmt->map->accept(this);
 }
 
-void HIRVisitor::visit(Test::Ptr test) {
+void FIRVisitor::visit(Test::Ptr test) {
   test->func->accept(this);
   for (auto arg : test->args) {
     arg->accept(this);
@@ -304,16 +304,16 @@ void HIRVisitor::visit(Test::Ptr test) {
   test->expected->accept(this);
 }
 
-void HIRVisitor::visitUnaryExpr(UnaryExpr::Ptr expr) {
+void FIRVisitor::visitUnaryExpr(UnaryExpr::Ptr expr) {
   expr->operand->accept(this);
 }
 
-void HIRVisitor::visitBinaryExpr(BinaryExpr::Ptr expr) {
+void FIRVisitor::visitBinaryExpr(BinaryExpr::Ptr expr) {
   expr->lhs->accept(this);
   expr->rhs->accept(this);
 }
 
-void HIRVisitor::visitNaryExpr(NaryExpr::Ptr expr) {
+void FIRVisitor::visitNaryExpr(NaryExpr::Ptr expr) {
   for (auto operand : expr->operands) {
     operand->accept(this);
   }

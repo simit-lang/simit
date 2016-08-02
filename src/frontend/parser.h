@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include "error.h"
-#include "hir.h"
+#include "fir.h"
 #include "token.h"
 #include "util/scopedmap.h"
 
@@ -19,7 +19,7 @@ class Parser {
 public:
   Parser(std::vector<ParseError> *errors) : errors(errors) {}
 
-  hir::Program::Ptr parse(const TokenStream &);
+  fir::Program::Ptr parse(const TokenStream &);
 
 private:
   class SyntaxError : public std::exception {};
@@ -30,86 +30,86 @@ private:
   typedef util::ScopedMap<std::string, IdentType> SymbolTable;
 
 private:
-  hir::Program::Ptr                      parseProgram();
-  hir::HIRNode::Ptr                      parseProgramElement();
-  hir::ElementTypeDecl::Ptr              parseElementTypeDecl();
-  std::vector<hir::FieldDecl::Ptr>       parseFieldDeclList();
-  hir::FieldDecl::Ptr                    parseFieldDecl();
-  hir::HIRNode::Ptr                      parseExternFuncOrDecl();
-  hir::ExternDecl::Ptr                   parseExternDecl();
-  hir::FuncDecl::Ptr                     parseExternFuncDecl();
-  hir::FuncDecl::Ptr                     parseFuncDecl();
-  hir::FuncDecl::Ptr                     parseProcDecl();
-  std::vector<hir::GenericParam::Ptr>    parseGenericParams();
-  hir::GenericParam::Ptr                 parseGenericParam();
-  std::vector<hir::Argument::Ptr>        parseArguments();
-  hir::Argument::Ptr                     parseArgumentDecl();
-  std::vector<hir::IdentDecl::Ptr>       parseResults();
-  hir::StmtBlock::Ptr                    parseStmtBlock();
-  hir::Stmt::Ptr                         parseStmt();
-  hir::VarDecl::Ptr                      parseVarDecl();
-  hir::ConstDecl::Ptr                    parseConstDecl();
-  hir::IdentDecl::Ptr                    parseIdentDecl();
-  hir::IdentDecl::Ptr                    parseTensorDecl();
-  hir::WhileStmt::Ptr                    parseWhileStmt();
-  hir::DoWhileStmt::Ptr                  parseDoWhileStmt();
-  hir::IfStmt::Ptr                       parseIfStmt();
-  hir::Stmt::Ptr                         parseElseClause();
-  hir::ForStmt::Ptr                      parseForStmt();
-  hir::ForDomain::Ptr                    parseForDomain();
-  hir::PrintStmt::Ptr                    parsePrintStmt();
-  hir::ApplyStmt::Ptr                    parseApplyStmt();
-  hir::ExprStmt::Ptr                     parseExprOrAssignStmt();
-  hir::Expr::Ptr                         parseExpr();
-  hir::MapExpr::Ptr                      parseMapExpr();
-  hir::Expr::Ptr                         parseOrExpr();
-  hir::Expr::Ptr                         parseAndExpr();
-  hir::Expr::Ptr                         parseXorExpr();
-  hir::Expr::Ptr                         parseEqExpr();
-  hir::Expr::Ptr                         parseTerm();
-  hir::Expr::Ptr                         parseAddExpr();
-  hir::Expr::Ptr                         parseMulExpr();
-  hir::Expr::Ptr                         parseNegExpr();
-  hir::Expr::Ptr                         parseExpExpr();
-  hir::Expr::Ptr                         parseTransposeExpr();
-  hir::Expr::Ptr                         parseCallOrReadExpr();
-  hir::Expr::Ptr                         parseFactor();
-  hir::VarExpr::Ptr                      parseVarExpr();
-  hir::RangeConst::Ptr                   parseRangeConst();
-  hir::CallExpr::Ptr                     parseCallExpr();
-  hir::TupleReadExpr::Ptr                parseTupleReadExpr();
-  hir::Identifier::Ptr                   parseIdent();
-  std::vector<hir::ReadParam::Ptr>       parseReadParams();
-  hir::ReadParam::Ptr                    parseReadParam();
-  std::vector<hir::Expr::Ptr>            parseCallParams();
-  hir::Type::Ptr                         parseType();
-  hir::ElementType::Ptr                  parseElementType();
-  hir::SetType::Ptr                      parseUnstructuredSetType();
-  hir::SetType::Ptr                      parseLatticeLinkSetType();
-  std::vector<hir::Endpoint::Ptr>        parseEndpoints();
-  hir::TupleLength::Ptr                  parseTupleLength();
-  hir::TupleType::Ptr                    parseTupleType();
-  hir::TensorType::Ptr                   parseTensorType();
-  hir::NDTensorType::Ptr                 parseVectorBlockType();
-  hir::NDTensorType::Ptr                 parseMatrixBlockType();
-  hir::NDTensorType::Ptr                 parseTensorBlockType();
-  hir::ScalarType::Ptr                   parseTensorComponentType();
-  hir::ScalarType::Ptr                   parseScalarType();
-  std::vector<hir::IndexSet::Ptr>        parseIndexSets();
-  hir::IndexSet::Ptr                     parseIndexSet();
-  hir::SetIndexSet::Ptr                  parseSetIndexSet();
-  hir::Expr::Ptr                         parseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr           parseDenseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr           parseDenseTensorLiteralInner();
-  hir::DenseTensorLiteral::Ptr           parseDenseMatrixLiteral();
-  hir::DenseTensorLiteral::Ptr           parseDenseVectorLiteral();
-  hir::IntVectorLiteral::Ptr             parseDenseIntVectorLiteral();
-  hir::FloatVectorLiteral::Ptr           parseDenseFloatVectorLiteral();
-  hir::ComplexVectorLiteral::Ptr         parseDenseComplexVectorLiteral();
+  fir::Program::Ptr                      parseProgram();
+  fir::FIRNode::Ptr                      parseProgramElement();
+  fir::ElementTypeDecl::Ptr              parseElementTypeDecl();
+  std::vector<fir::FieldDecl::Ptr>       parseFieldDeclList();
+  fir::FieldDecl::Ptr                    parseFieldDecl();
+  fir::FIRNode::Ptr                      parseExternFuncOrDecl();
+  fir::ExternDecl::Ptr                   parseExternDecl();
+  fir::FuncDecl::Ptr                     parseExternFuncDecl();
+  fir::FuncDecl::Ptr                     parseFuncDecl();
+  fir::FuncDecl::Ptr                     parseProcDecl();
+  std::vector<fir::GenericParam::Ptr>    parseGenericParams();
+  fir::GenericParam::Ptr                 parseGenericParam();
+  std::vector<fir::Argument::Ptr>        parseArguments();
+  fir::Argument::Ptr                     parseArgumentDecl();
+  std::vector<fir::IdentDecl::Ptr>       parseResults();
+  fir::StmtBlock::Ptr                    parseStmtBlock();
+  fir::Stmt::Ptr                         parseStmt();
+  fir::VarDecl::Ptr                      parseVarDecl();
+  fir::ConstDecl::Ptr                    parseConstDecl();
+  fir::IdentDecl::Ptr                    parseIdentDecl();
+  fir::IdentDecl::Ptr                    parseTensorDecl();
+  fir::WhileStmt::Ptr                    parseWhileStmt();
+  fir::DoWhileStmt::Ptr                  parseDoWhileStmt();
+  fir::IfStmt::Ptr                       parseIfStmt();
+  fir::Stmt::Ptr                         parseElseClause();
+  fir::ForStmt::Ptr                      parseForStmt();
+  fir::ForDomain::Ptr                    parseForDomain();
+  fir::PrintStmt::Ptr                    parsePrintStmt();
+  fir::ApplyStmt::Ptr                    parseApplyStmt();
+  fir::ExprStmt::Ptr                     parseExprOrAssignStmt();
+  fir::Expr::Ptr                         parseExpr();
+  fir::MapExpr::Ptr                      parseMapExpr();
+  fir::Expr::Ptr                         parseOrExpr();
+  fir::Expr::Ptr                         parseAndExpr();
+  fir::Expr::Ptr                         parseXorExpr();
+  fir::Expr::Ptr                         parseEqExpr();
+  fir::Expr::Ptr                         parseTerm();
+  fir::Expr::Ptr                         parseAddExpr();
+  fir::Expr::Ptr                         parseMulExpr();
+  fir::Expr::Ptr                         parseNegExpr();
+  fir::Expr::Ptr                         parseExpExpr();
+  fir::Expr::Ptr                         parseTransposeExpr();
+  fir::Expr::Ptr                         parseCallOrReadExpr();
+  fir::Expr::Ptr                         parseFactor();
+  fir::VarExpr::Ptr                      parseVarExpr();
+  fir::RangeConst::Ptr                   parseRangeConst();
+  fir::CallExpr::Ptr                     parseCallExpr();
+  fir::TupleReadExpr::Ptr                parseTupleReadExpr();
+  fir::Identifier::Ptr                   parseIdent();
+  std::vector<fir::ReadParam::Ptr>       parseReadParams();
+  fir::ReadParam::Ptr                    parseReadParam();
+  std::vector<fir::Expr::Ptr>            parseCallParams();
+  fir::Type::Ptr                         parseType();
+  fir::ElementType::Ptr                  parseElementType();
+  fir::SetType::Ptr                      parseUnstructuredSetType();
+  fir::SetType::Ptr                      parseLatticeLinkSetType();
+  std::vector<fir::Endpoint::Ptr>        parseEndpoints();
+  fir::TupleLength::Ptr                  parseTupleLength();
+  fir::TupleType::Ptr                    parseTupleType();
+  fir::TensorType::Ptr                   parseTensorType();
+  fir::NDTensorType::Ptr                 parseVectorBlockType();
+  fir::NDTensorType::Ptr                 parseMatrixBlockType();
+  fir::NDTensorType::Ptr                 parseTensorBlockType();
+  fir::ScalarType::Ptr                   parseTensorComponentType();
+  fir::ScalarType::Ptr                   parseScalarType();
+  std::vector<fir::IndexSet::Ptr>        parseIndexSets();
+  fir::IndexSet::Ptr                     parseIndexSet();
+  fir::SetIndexSet::Ptr                  parseSetIndexSet();
+  fir::Expr::Ptr                         parseTensorLiteral();
+  fir::DenseTensorLiteral::Ptr           parseDenseTensorLiteral();
+  fir::DenseTensorLiteral::Ptr           parseDenseTensorLiteralInner();
+  fir::DenseTensorLiteral::Ptr           parseDenseMatrixLiteral();
+  fir::DenseTensorLiteral::Ptr           parseDenseVectorLiteral();
+  fir::IntVectorLiteral::Ptr             parseDenseIntVectorLiteral();
+  fir::FloatVectorLiteral::Ptr           parseDenseFloatVectorLiteral();
+  fir::ComplexVectorLiteral::Ptr         parseDenseComplexVectorLiteral();
   int                                    parseSignedIntLiteral();
   double                                 parseSignedFloatLiteral();
   double_complex                         parseComplexLiteral();
-  hir::Test::Ptr                         parseTest();
+  fir::Test::Ptr                         parseTest();
 
   void reportError(const Token &, std::string);
 

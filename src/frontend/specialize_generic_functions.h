@@ -5,13 +5,13 @@
 #include <string>
 #include <unordered_map>
 
-#include "hir.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_visitor.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-class SpecializeGenericFunctions : public HIRVisitor {
+class SpecializeGenericFunctions : public FIRVisitor {
 public:
   SpecializeGenericFunctions() : count(0) {}
 
@@ -29,7 +29,7 @@ private:
   typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
   typedef std::unordered_map<std::string, std::list<FuncDecl::Ptr>> FuncListMap;
 
-  struct FindGenericFuncs : public HIRVisitor {
+  struct FindGenericFuncs : public FIRVisitor {
     FindGenericFuncs(FuncMap &genericFuncs) : genericFuncs(genericFuncs) {}
 
     void find(Program::Ptr program) { program->accept(this); }

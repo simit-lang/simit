@@ -1,15 +1,15 @@
-#ifndef SIMIT_HIR_REWRITER_H
-#define SIMIT_HIR_REWRITER_H
+#ifndef SIMIT_FIR_REWRITER_H
+#define SIMIT_FIR_REWRITER_H
 
 #include <memory>
 
-#include "hir.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_visitor.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-struct HIRRewriter : public HIRVisitor {
+struct FIRRewriter : public FIRVisitor {
   virtual void visit(Program::Ptr);
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr op) { node = op; }
@@ -89,7 +89,7 @@ private:
   virtual void visitNaryExpr(NaryExpr::Ptr);
 
 protected:
-  HIRNode::Ptr node;  
+  FIRNode::Ptr node;  
 };
 
 }
