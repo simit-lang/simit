@@ -9,8 +9,7 @@
 namespace simit {
 namespace hir {
 
-class HIRRewriter : public HIRVisitor {
-public:
+struct HIRRewriter : public HIRVisitor {
   virtual void visit(Program::Ptr);
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr op) { node = op; }

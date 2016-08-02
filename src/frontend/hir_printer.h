@@ -9,10 +9,10 @@
 namespace simit {
 namespace hir {
 
-class HIRPrinter : public HIRVisitor {
-public:
+struct HIRPrinter : public HIRVisitor {
   HIRPrinter(std::ostream &oss) : oss(oss), indentLevel(0) {}
 
+protected:
   virtual void visit(Program::Ptr);
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr);
@@ -78,7 +78,6 @@ public:
   virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
-protected:
   void indent() { ++indentLevel; }
   void dedent() { --indentLevel; }
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }

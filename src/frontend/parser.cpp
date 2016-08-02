@@ -848,7 +848,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
     mapExpr->genericArgs = genericArgs;
     mapExpr->partialActuals = partialActuals;
     mapExpr->target = target;
-    mapExpr->op = hir::ReducedMapExpr::ReductionOp::SUM;
+    mapExpr->op = hir::MapExpr::ReductionOp::SUM;
 
     const Token plusToken = consume(Token::Type::PLUS);
     mapExpr->setEndLoc(plusToken);

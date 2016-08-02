@@ -81,8 +81,7 @@ struct NDTensorLiteral;
 struct ApplyStmt;
 struct Test;
 
-class HIRVisitor {
-public:
+struct HIRVisitor {
   virtual void visit(std::shared_ptr<Program>);
   virtual void visit(std::shared_ptr<StmtBlock>);
   virtual void visit(std::shared_ptr<RangeIndexSet> op) {}

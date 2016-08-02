@@ -7,6 +7,13 @@
 namespace simit {
 namespace hir {
 
+void HIRNode::copy(HIRNode::Ptr node) {
+  lineBegin = node->lineBegin;
+  colBegin = node->colBegin;
+  lineEnd = node->lineEnd;
+  colEnd = node->colEnd;
+}
+
 void HIRNode::setBeginLoc(const internal::Token &token) {
   lineBegin = token.lineBegin;
   colBegin = token.colBegin;
@@ -22,13 +29,6 @@ void HIRNode::setLoc(const internal::Token &token) {
   setEndLoc(token);
 }
 
-void HIRNode::setLoc(HIRNode::Ptr node) {
-  lineBegin = node->lineBegin;
-  colBegin = node->colBegin;
-  lineEnd = node->lineEnd;
-  colEnd = node->colEnd;
-}
-
 void Program::copy(HIRNode::Ptr node) {
   const auto program = to<Program>(node);
   HIRNode::copy(program);
@@ -37,7 +37,7 @@ void Program::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr Program::cloneImpl() {
+HIRNode::Ptr Program::cloneNode() {
   const auto node = std::make_shared<Program>();
   node->copy(shared_from_this());
   return node;
@@ -51,7 +51,7 @@ void StmtBlock::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr StmtBlock::cloneImpl() {
+HIRNode::Ptr StmtBlock::cloneNode() {
   const auto node = std::make_shared<StmtBlock>();
   node->copy(shared_from_this());
   return node;
@@ -63,7 +63,7 @@ void RangeIndexSet::copy(HIRNode::Ptr node) {
   range = indexSet->range;
 }
 
-HIRNode::Ptr RangeIndexSet::cloneImpl() {
+HIRNode::Ptr RangeIndexSet::cloneNode() {
   const auto node = std::make_shared<RangeIndexSet>();
   node->copy(shared_from_this());
   return node;
@@ -75,7 +75,7 @@ void SetIndexSet::copy(HIRNode::Ptr node) {
   setName = indexSet->setName;
 }
 
-HIRNode::Ptr SetIndexSet::cloneImpl() {
+HIRNode::Ptr SetIndexSet::cloneNode() {
   const auto node = std::make_shared<SetIndexSet>();
   node->copy(shared_from_this());
   return node;
@@ -87,13 +87,13 @@ void GenericIndexSet::copy(HIRNode::Ptr node) {
   type = indexSet->type;
 }
 
-HIRNode::Ptr GenericIndexSet::cloneImpl() {
+HIRNode::Ptr GenericIndexSet::cloneNode() {
   const auto node = std::make_shared<GenericIndexSet>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr DynamicIndexSet::cloneImpl() {
+HIRNode::Ptr DynamicIndexSet::cloneNode() {
   const auto node = std::make_shared<DynamicIndexSet>();
   node->copy(shared_from_this());
   return node;
@@ -105,7 +105,7 @@ void ElementType::copy(HIRNode::Ptr node) {
   ident = elementType->ident;
 }
 
-HIRNode::Ptr ElementType::cloneImpl() {
+HIRNode::Ptr ElementType::cloneNode() {
   const auto node = std::make_shared<ElementType>();
   node->copy(shared_from_this());
   return node;
@@ -118,7 +118,7 @@ void Endpoint::copy(HIRNode::Ptr node) {
   element = endpoint->element->clone<ElementType>();
 }
 
-HIRNode::Ptr Endpoint::cloneImpl() {
+HIRNode::Ptr Endpoint::cloneNode() {
   const auto node = std::make_shared<Endpoint>();
   node->copy(shared_from_this());
   return node;
@@ -133,7 +133,7 @@ void SetType::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr SetType::cloneImpl() {
+HIRNode::Ptr SetType::cloneNode() {
   const auto node = std::make_shared<SetType>();
   node->copy(shared_from_this());
   return node;
@@ -145,7 +145,7 @@ void TupleLength::copy(HIRNode::Ptr node) {
   val = length->val;
 }
 
-HIRNode::Ptr TupleLength::cloneImpl() {
+HIRNode::Ptr TupleLength::cloneNode() {
   const auto node = std::make_shared<TupleLength>();
   node->copy(shared_from_this());
   return node;
@@ -158,7 +158,7 @@ void TupleType::copy(HIRNode::Ptr node) {
   length = tupleType->length->clone<TupleLength>();
 }
 
-HIRNode::Ptr TupleType::cloneImpl() {
+HIRNode::Ptr TupleType::cloneNode() {
   const auto node = std::make_shared<TupleType>();
   node->copy(shared_from_this());
   return node;
@@ -170,7 +170,7 @@ void ScalarType::copy(HIRNode::Ptr node) {
   type = scalarType->type;
 }
 
-HIRNode::Ptr ScalarType::cloneImpl() {
+HIRNode::Ptr ScalarType::cloneNode() {
   const auto node = std::make_shared<ScalarType>();
   node->copy(shared_from_this());
   return node;
@@ -186,7 +186,7 @@ void NDTensorType::copy(HIRNode::Ptr node) {
   transposed = ndTensorType->transposed;
 }
 
-HIRNode::Ptr NDTensorType::cloneImpl() {
+HIRNode::Ptr NDTensorType::cloneNode() {
   const auto node = std::make_shared<NDTensorType>();
   node->copy(shared_from_this());
   return node;
@@ -198,7 +198,7 @@ void Identifier::copy(HIRNode::Ptr node) {
   ident = identifier->ident;
 }
 
-HIRNode::Ptr Identifier::cloneImpl() {
+HIRNode::Ptr Identifier::cloneNode() {
   const auto node = std::make_shared<Identifier>();
   node->copy(shared_from_this());
   return node;
@@ -211,13 +211,13 @@ void IdentDecl::copy(HIRNode::Ptr node) {
   type = identDecl->type->clone<Type>();
 }
 
-HIRNode::Ptr IdentDecl::cloneImpl() {
+HIRNode::Ptr IdentDecl::cloneNode() {
   const auto node = std::make_shared<IdentDecl>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr FieldDecl::cloneImpl() {
+HIRNode::Ptr FieldDecl::cloneNode() {
   const auto node = std::make_shared<FieldDecl>();
   node->copy(shared_from_this());
   return node;
@@ -232,25 +232,25 @@ void ElementTypeDecl::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr ElementTypeDecl::cloneImpl() {
+HIRNode::Ptr ElementTypeDecl::cloneNode() {
   const auto node = std::make_shared<ElementTypeDecl>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr Argument::cloneImpl() {
+HIRNode::Ptr Argument::cloneNode() {
   const auto node = std::make_shared<Argument>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr InOutArgument::cloneImpl() {
+HIRNode::Ptr InOutArgument::cloneNode() {
   const auto node = std::make_shared<InOutArgument>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr ExternDecl::cloneImpl() {
+HIRNode::Ptr ExternDecl::cloneNode() {
   const auto node = std::make_shared<ExternDecl>();
   node->copy(shared_from_this());
   return node;
@@ -263,7 +263,7 @@ void GenericParam::copy(HIRNode::Ptr node) {
   type = genericParam->type;
 }
 
-HIRNode::Ptr GenericParam::cloneImpl() {
+HIRNode::Ptr GenericParam::cloneNode() {
   const auto node = std::make_shared<GenericParam>();
   node->copy(shared_from_this());
   return node;
@@ -289,7 +289,7 @@ void FuncDecl::copy(HIRNode::Ptr node) {
   originalName = funcDecl->originalName;
 }
 
-HIRNode::Ptr FuncDecl::cloneImpl() {
+HIRNode::Ptr FuncDecl::cloneNode() {
   const auto node = std::make_shared<FuncDecl>();
   node->copy(shared_from_this());
   return node;
@@ -307,13 +307,13 @@ void VarDecl::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr VarDecl::cloneImpl() {
+HIRNode::Ptr VarDecl::cloneNode() {
   const auto node = std::make_shared<VarDecl>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr ConstDecl::cloneImpl() {
+HIRNode::Ptr ConstDecl::cloneNode() {
   const auto node = std::make_shared<ConstDecl>();
   node->copy(shared_from_this());
   return node;
@@ -326,13 +326,13 @@ void WhileStmt::copy(HIRNode::Ptr node) {
   body = whileStmt->body->clone<StmtBlock>();
 }
 
-HIRNode::Ptr WhileStmt::cloneImpl() {
+HIRNode::Ptr WhileStmt::cloneNode() {
   const auto node = std::make_shared<WhileStmt>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr DoWhileStmt::cloneImpl() {
+HIRNode::Ptr DoWhileStmt::cloneNode() {
   const auto node = std::make_shared<DoWhileStmt>();
   node->copy(shared_from_this());
   return node;
@@ -348,7 +348,7 @@ void IfStmt::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr IfStmt::cloneImpl() {
+HIRNode::Ptr IfStmt::cloneNode() {
   const auto node = std::make_shared<IfStmt>();
   node->copy(shared_from_this());
   return node;
@@ -360,7 +360,7 @@ void IndexSetDomain::copy(HIRNode::Ptr node) {
   set = indexSetDomain->set->clone<SetIndexSet>();
 }
 
-HIRNode::Ptr IndexSetDomain::cloneImpl() {
+HIRNode::Ptr IndexSetDomain::cloneNode() {
   const auto node = std::make_shared<IndexSetDomain>();
   node->copy(shared_from_this());
   return node;
@@ -373,7 +373,7 @@ void RangeDomain::copy(HIRNode::Ptr node) {
   upper = rangeDomain->upper->clone<Expr>();
 }
 
-HIRNode::Ptr RangeDomain::cloneImpl() {
+HIRNode::Ptr RangeDomain::cloneNode() {
   const auto node = std::make_shared<RangeDomain>();
   node->copy(shared_from_this());
   return node;
@@ -387,7 +387,7 @@ void ForStmt::copy(HIRNode::Ptr node) {
   body = forStmt->body->clone<StmtBlock>();
 }
 
-HIRNode::Ptr ForStmt::cloneImpl() {
+HIRNode::Ptr ForStmt::cloneNode() {
   const auto node = std::make_shared<ForStmt>();
   node->copy(shared_from_this());
   return node;
@@ -402,7 +402,7 @@ void PrintStmt::copy(HIRNode::Ptr node) {
   printNewline = printStmt->printNewline;
 }
 
-HIRNode::Ptr PrintStmt::cloneImpl() {
+HIRNode::Ptr PrintStmt::cloneNode() {
   const auto node = std::make_shared<PrintStmt>();
   node->copy(shared_from_this());
   return node;
@@ -414,7 +414,7 @@ void ExprStmt::copy(HIRNode::Ptr node) {
   expr = exprStmt->expr->clone<Expr>();
 }
 
-HIRNode::Ptr ExprStmt::cloneImpl() {
+HIRNode::Ptr ExprStmt::cloneNode() {
   const auto node = std::make_shared<ExprStmt>();
   node->copy(shared_from_this());
   return node;
@@ -428,13 +428,13 @@ void AssignStmt::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr AssignStmt::cloneImpl() {
+HIRNode::Ptr AssignStmt::cloneNode() {
   const auto node = std::make_shared<AssignStmt>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr Slice::cloneImpl() {
+HIRNode::Ptr Slice::cloneNode() {
   const auto node = std::make_shared<Slice>();
   node->copy(shared_from_this());
   return node;
@@ -446,7 +446,7 @@ void ExprParam::copy(HIRNode::Ptr node) {
   expr = exprParam->expr->clone<Expr>();
 }
 
-HIRNode::Ptr ExprParam::cloneImpl() {
+HIRNode::Ptr ExprParam::cloneNode() {
   const auto node = std::make_shared<ExprParam>();
   node->copy(shared_from_this());
   return node;
@@ -468,13 +468,13 @@ void ReducedMapExpr::copy(HIRNode::Ptr node) {
   op = reducedMapExpr->op;
 }
 
-HIRNode::Ptr ReducedMapExpr::cloneImpl() {
+HIRNode::Ptr ReducedMapExpr::cloneNode() {
   const auto node = std::make_shared<ReducedMapExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr UnreducedMapExpr::cloneImpl() {
+HIRNode::Ptr UnreducedMapExpr::cloneNode() {
   const auto node = std::make_shared<UnreducedMapExpr>();
   node->copy(shared_from_this());
   return node;
@@ -501,19 +501,19 @@ void NaryExpr::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr OrExpr::cloneImpl() {
+HIRNode::Ptr OrExpr::cloneNode() {
   const auto node = std::make_shared<OrExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr AndExpr::cloneImpl() {
+HIRNode::Ptr AndExpr::cloneNode() {
   const auto node = std::make_shared<AndExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr XorExpr::cloneImpl() {
+HIRNode::Ptr XorExpr::cloneNode() {
   const auto node = std::make_shared<XorExpr>();
   node->copy(shared_from_this());
   return node;
@@ -525,55 +525,55 @@ void EqExpr::copy(HIRNode::Ptr node) {
   ops = eqExpr->ops;
 }
 
-HIRNode::Ptr EqExpr::cloneImpl() {
+HIRNode::Ptr EqExpr::cloneNode() {
   const auto node = std::make_shared<EqExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr NotExpr::cloneImpl() {
+HIRNode::Ptr NotExpr::cloneNode() {
   const auto node = std::make_shared<NotExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr AddExpr::cloneImpl() {
+HIRNode::Ptr AddExpr::cloneNode() {
   const auto node = std::make_shared<AddExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr SubExpr::cloneImpl() {
+HIRNode::Ptr SubExpr::cloneNode() {
   const auto node = std::make_shared<SubExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr MulExpr::cloneImpl() {
+HIRNode::Ptr MulExpr::cloneNode() {
   const auto node = std::make_shared<MulExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr DivExpr::cloneImpl() {
+HIRNode::Ptr DivExpr::cloneNode() {
   const auto node = std::make_shared<DivExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr ElwiseMulExpr::cloneImpl() {
+HIRNode::Ptr ElwiseMulExpr::cloneNode() {
   const auto node = std::make_shared<ElwiseMulExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr ElwiseDivExpr::cloneImpl() {
+HIRNode::Ptr ElwiseDivExpr::cloneNode() {
   const auto node = std::make_shared<ElwiseDivExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr LeftDivExpr::cloneImpl() {
+HIRNode::Ptr LeftDivExpr::cloneNode() {
   const auto node = std::make_shared<LeftDivExpr>();
   node->copy(shared_from_this());
   return node;
@@ -585,19 +585,19 @@ void NegExpr::copy(HIRNode::Ptr node) {
   negate = negExpr->negate;
 }
 
-HIRNode::Ptr NegExpr::cloneImpl() {
+HIRNode::Ptr NegExpr::cloneNode() {
   const auto node = std::make_shared<NegExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr ExpExpr::cloneImpl() {
+HIRNode::Ptr ExpExpr::cloneNode() {
   const auto node = std::make_shared<ExpExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr TransposeExpr::cloneImpl() {
+HIRNode::Ptr TransposeExpr::cloneNode() {
   const auto node = std::make_shared<TransposeExpr>();
   node->copy(shared_from_this());
   return node;
@@ -615,7 +615,7 @@ void CallExpr::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr CallExpr::cloneImpl() {
+HIRNode::Ptr CallExpr::cloneNode() {
   const auto node = std::make_shared<CallExpr>();
   node->copy(shared_from_this());
   return node;
@@ -630,7 +630,7 @@ void TensorReadExpr::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr TensorReadExpr::cloneImpl() {
+HIRNode::Ptr TensorReadExpr::cloneNode() {
   const auto node = std::make_shared<TensorReadExpr>();
   node->copy(shared_from_this());
   return node;
@@ -645,7 +645,7 @@ void TupleReadExpr::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr TupleReadExpr::cloneImpl() {
+HIRNode::Ptr TupleReadExpr::cloneNode() {
   const auto node = std::make_shared<TupleReadExpr>();
   node->copy(shared_from_this());
   return node;
@@ -658,7 +658,7 @@ void FieldReadExpr::copy(HIRNode::Ptr node) {
   field = fieldReadExpr->field->clone<Identifier>();
 }
 
-HIRNode::Ptr FieldReadExpr::cloneImpl() {
+HIRNode::Ptr FieldReadExpr::cloneNode() {
   const auto node = std::make_shared<FieldReadExpr>();
   node->copy(shared_from_this());
   return node;
@@ -670,7 +670,7 @@ void ParenExpr::copy(HIRNode::Ptr node) {
   expr = parenExpr->expr->clone<Expr>();
 }
 
-HIRNode::Ptr ParenExpr::cloneImpl() {
+HIRNode::Ptr ParenExpr::cloneNode() {
   const auto node = std::make_shared<ParenExpr>();
   node->copy(shared_from_this());
   return node;
@@ -682,13 +682,13 @@ void VarExpr::copy(HIRNode::Ptr node) {
   ident = varExpr->ident;
 }
 
-HIRNode::Ptr VarExpr::cloneImpl() {
+HIRNode::Ptr VarExpr::cloneNode() {
   const auto node = std::make_shared<VarExpr>();
   node->copy(shared_from_this());
   return node;
 }
 
-HIRNode::Ptr RangeConst::cloneImpl() {
+HIRNode::Ptr RangeConst::cloneNode() {
   const auto node = std::make_shared<RangeConst>();
   node->copy(shared_from_this());
   return node;
@@ -700,7 +700,7 @@ void IntLiteral::copy(HIRNode::Ptr node) {
   val = intLiteral->val;
 }
 
-HIRNode::Ptr IntLiteral::cloneImpl() {
+HIRNode::Ptr IntLiteral::cloneNode() {
   const auto node = std::make_shared<IntLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -712,7 +712,7 @@ void FloatLiteral::copy(HIRNode::Ptr node) {
   val = floatLiteral->val;
 }
 
-HIRNode::Ptr FloatLiteral::cloneImpl() {
+HIRNode::Ptr FloatLiteral::cloneNode() {
   const auto node = std::make_shared<FloatLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -724,7 +724,7 @@ void BoolLiteral::copy(HIRNode::Ptr node) {
   val = boolLiteral->val;
 }
 
-HIRNode::Ptr BoolLiteral::cloneImpl() {
+HIRNode::Ptr BoolLiteral::cloneNode() {
   const auto node = std::make_shared<BoolLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -736,7 +736,7 @@ void ComplexLiteral::copy(HIRNode::Ptr node) {
   val = complexLiteral->val;
 }
 
-HIRNode::Ptr ComplexLiteral::cloneImpl() {
+HIRNode::Ptr ComplexLiteral::cloneNode() {
   const auto node = std::make_shared<ComplexLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -748,7 +748,7 @@ void StringLiteral::copy(HIRNode::Ptr node) {
   val = stringLiteral->val;
 }
 
-HIRNode::Ptr StringLiteral::cloneImpl() {
+HIRNode::Ptr StringLiteral::cloneNode() {
   const auto node = std::make_shared<StringLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -766,7 +766,7 @@ void IntVectorLiteral::copy(HIRNode::Ptr node) {
   vals = intVectorLiteral->vals;
 }
 
-HIRNode::Ptr IntVectorLiteral::cloneImpl() {
+HIRNode::Ptr IntVectorLiteral::cloneNode() {
   const auto node = std::make_shared<IntVectorLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -778,7 +778,7 @@ void FloatVectorLiteral::copy(HIRNode::Ptr node) {
   vals = floatVectorLiteral->vals;
 }
 
-HIRNode::Ptr FloatVectorLiteral::cloneImpl() {
+HIRNode::Ptr FloatVectorLiteral::cloneNode() {
   const auto node = std::make_shared<FloatVectorLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -790,7 +790,7 @@ void ComplexVectorLiteral::copy(HIRNode::Ptr node) {
   vals = complexVectorLiteral->vals;
 }
 
-HIRNode::Ptr ComplexVectorLiteral::cloneImpl() {
+HIRNode::Ptr ComplexVectorLiteral::cloneNode() {
   const auto node = std::make_shared<ComplexVectorLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -804,7 +804,7 @@ void NDTensorLiteral::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr NDTensorLiteral::cloneImpl() {
+HIRNode::Ptr NDTensorLiteral::cloneNode() {
   const auto node = std::make_shared<NDTensorLiteral>();
   node->copy(shared_from_this());
   return node;
@@ -816,7 +816,7 @@ void ApplyStmt::copy(HIRNode::Ptr node) {
   map = applyStmt->map->clone<UnreducedMapExpr>();
 }
 
-HIRNode::Ptr ApplyStmt::cloneImpl() {
+HIRNode::Ptr ApplyStmt::cloneNode() {
   const auto node = std::make_shared<ApplyStmt>();
   node->copy(shared_from_this());
   return node;
@@ -832,7 +832,7 @@ void Test::copy(HIRNode::Ptr node) {
   expected = test->expected->clone<Expr>();
 }
 
-HIRNode::Ptr Test::cloneImpl() {
+HIRNode::Ptr Test::cloneNode() {
   const auto node = std::make_shared<Test>();
   node->copy(shared_from_this());
   return node;
