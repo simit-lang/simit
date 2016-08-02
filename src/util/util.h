@@ -66,7 +66,7 @@ std::vector<std::string> split(const std::string &str, const std::string &delim,
 /// Load text from file, returning 0 if succesfull, false otherwise.
 int loadText(const std::string &file, std::string *text);
 
-// /Trim whitespace from string
+/// Trim whitespace from string
 std::string trim(const std::string &str, const std::string &ws = " \t\n");
 
 template <typename T>
@@ -76,6 +76,14 @@ template <typename T>
 size_t getVectorSize(std::vector<T> vec) {
   return sizeof(T)*vec.size();
 }
+
+/// Iterate over a variable-sized vector of ranges, executing the inner method
+/// per inner loop.
+void variableLoop(std::vector<int>::const_iterator rangesBegin,
+                  std::vector<int>::const_iterator rangesEnd,
+                  std::vector<int>::iterator indicesBegin,
+                  std::vector<int>::iterator indicesEnd,
+                  std::function<void()> inner);
 
 }}
 #endif

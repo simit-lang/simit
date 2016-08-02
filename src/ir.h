@@ -83,6 +83,7 @@ Expr operator+(Expr, Expr);
 Expr operator-(Expr, Expr);
 Expr operator*(Expr, Expr);
 Expr operator/(Expr, Expr);
+Expr operator%(Expr, Expr);
 
 template <typename E>
 inline bool isa(Expr e) {
@@ -150,8 +151,10 @@ struct Literal : public ExprNode {
   size_t size;
 
   void cast(Type type);
+  int getIntVal(int index) const;
   double getFloatVal(int index) const;
   double_complex getComplexVal(int index) const;
+  bool isAllZeros() const;
 
   static Expr make(Type type);
   static Expr make(int val);
@@ -160,6 +163,7 @@ struct Literal : public ExprNode {
   static Expr make(std::string val);
   static Expr make(double_complex val);
   static Expr make(Type type, void* values, size_t bufSize);
+  static Expr make(Type type, std::vector<int> values);
   static Expr make(Type type, std::vector<double> values);
   static Expr make(Type type, std::vector<double_complex> values);
   ~Literal();
@@ -202,10 +206,13 @@ struct Length : public ExprNode {
 /// is the endpoints of the edges in the set.
 /// TODO DEPRECATED: This node has been deprecated with the old lowering pass
 struct IndexRead : public ExprNode {
-  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
+  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2, LatticeDim=3 };
   Expr edgeSet;
   Kind kind;
+  unsigned int index;
   static Expr make(Expr edgeSet, Kind kind);
+  // Read the index'th lattice dimensions. kind must be LatticeDim.
+  static Expr make(Expr edgeSet, Kind kind, int index);
   void accept(IRVisitorStrict *v) const {v->visit((const IndexRead*)this);}
 };
 
@@ -240,6 +247,17 @@ struct Mul : public BinaryExpr {
 struct Div : public BinaryExpr {
   static Expr make(Expr a, Expr b);
   void accept(IRVisitorStrict *v) const {v->visit((const Div*)this);}
+};
+
+// Remainder op with truncated semantics: the sign of the output matches
+// the sign of the dividend (not divisor). For example:
+// Rem(-3, 2) = -1
+// Rem(3, 2) = 1
+// Rem(3, -2) = 1
+// Rem (-3, -2) = -1
+struct Rem : public BinaryExpr {
+  static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Rem*)this);}
 };
 
 struct Not : public UnaryExpr {
@@ -363,7 +381,8 @@ struct ForRange : public StmtNode {
 };
 
 struct ForDomain {
-  enum Kind { IndexSet, Endpoints, Edges, Neighbors, NeighborsOf, Diagonal };
+  enum Kind { IndexSet, Endpoints, Edges, Neighbors, NeighborsOf,
+              Diagonal, Lattice };
   Kind kind;
 
   /// An index set
@@ -373,6 +392,10 @@ struct ForDomain {
   Expr set;
   Var var;
 
+  /// The list of lattice index vars for Lattice domains
+  vector<Var> latticeVars;
+  
+
   ForDomain() {}
   ForDomain(class IndexSet indexSet) : kind(IndexSet), indexSet(indexSet) {}
   ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
@@ -381,6 +404,12 @@ struct ForDomain {
   ForDomain(Expr set, Var var, Kind kind, class IndexSet indexSet) : kind(kind),
       indexSet(indexSet), set(set), var(var)  {
     iassert(kind == NeighborsOf);
+  }
+  ForDomain(Expr set, Var var, int dims, string varName="")
+      : kind(Lattice), set(set), var(var) {
+    for (int i = 0; i < dims; ++i) {
+      latticeVars.push_back(Var(varName+"_d"+to_string(i), Int));
+    }
   }
 };
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
@@ -448,6 +477,16 @@ struct TupleRead : public ExprNode {
   void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
 };
 
+/// Expression that reads a set element, used by lattice graphs for stencil
+/// assembly using lattice offsets for element indexing.
+struct SetRead : public ExprNode {
+  Expr set;
+  std::vector<Expr> indices;
+
+  static Expr make(Expr set, std::vector<Expr> indices);
+  void accept(IRVisitorStrict *v) const {v->visit((const SetRead*)this);}
+};
+
 /// Expression that reads a tensor from an n-dimensional tensor location.
 struct TensorRead : public ExprNode {
   Expr tensor;
@@ -495,12 +534,13 @@ struct Map : public StmtNode {
   Func function;
   Expr target;
   Expr neighbors;
+  Expr through;
   std::vector<Expr> partial_actuals;
   ReductionOperator reduction;
 
   static Stmt make(std::vector<Var> vars,
                    Func function, std::vector<Expr> partial_actuals,
-                   Expr target, Expr neighbors=Expr(),
+                   Expr target, Expr neighbors=Expr(), Expr through=Expr(),
                    ReductionOperator reduction=ReductionOperator());
   void accept(IRVisitorStrict *v) const {v->visit((const Map*)this);}
 };

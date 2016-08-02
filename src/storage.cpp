@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "init.h"
 #include "ir.h"
 #include "ir_visitor.h"
 #include "path_expressions.h"
@@ -42,7 +43,20 @@ bool TensorStorage::hasTensorIndex() const {
 }
 
 const TensorIndex& TensorStorage::getTensorIndex() const {
-  iassert(getKind() == TensorStorage::Indexed)
+  iassert((content->index.getKind() == TensorIndex::PExpr &&
+           getKind() == TensorStorage::Indexed) ||
+          (content->index.getKind() == TensorIndex::Sten &&
+           getKind() == TensorStorage::Stencil))
+      << "Expected Indexed tensor, but was " << *this;
+  iassert(content->index.defined());
+  return content->index;
+}
+
+TensorIndex& TensorStorage::getTensorIndex() {
+  iassert((content->index.getKind() == TensorIndex::PExpr &&
+           getKind() == TensorStorage::Indexed) ||
+          (content->index.getKind() == TensorIndex::Sten &&
+           getKind() == TensorStorage::Stencil))
       << "Expected Indexed tensor, but was " << *this;
   iassert(content->index.defined());
   return content->index;
@@ -60,15 +74,20 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::Dense:
       os << "Dense";
       break;
-    case TensorStorage::Diagonal:
-      os << "Diagonal";
-      break;
     case TensorStorage::Indexed:
       os << "Indexed";
       if (ts.hasTensorIndex()) {
         os << " (" << ts.getTensorIndex().getPathExpression() << ")";
       }
       break;
+    case TensorStorage::Stencil:
+      os << "Stencil";
+      break;
+    case TensorStorage::Diagonal:
+      os << "Diagonal";
+      break;
+    default:
+      unreachable;
   }
   return os;
 }
@@ -206,6 +225,17 @@ private:
     return env->getTensorIndex(pexpr);
   }
 
+  TensorIndex setStencilTensorIndex(const Var& var, std::string assemblyFunc,
+                                    std::string targetVar) {
+    iassert(!env->hasTensorIndex(var));
+    StencilContent *content = new StencilContent;
+    content->assemblyFunc = assemblyFunc;
+    content->targetVar = targetVar;
+    auto stencil = StencilLayout(content);
+    env->addTensorIndex(stencil, var);
+    return env->getTensorIndex(stencil);
+  }
+
   using IRVisitor::visit;
 
   void visit(const VarDecl *op) {
@@ -273,19 +303,38 @@ private:
   }
 
   void visit(const Map *op) {
-    // If the map target set is not an edge set, then matrices are diagonal.
-    // Otherwise, the matrices are indexed with a path expression
+    // If the map target set is not an edge set, then matrices are dense,
+    // stencil, or diagonal. Otherwise, the matrices are indexed with a path
+    // expression
     Type targetType = op->target.type();
     iassert(targetType.isSet());
-    if (targetType.toSet()->getCardinality() == 0) {
+    if (targetType.isLatticeLinkSet() ||
+        (targetType.isUnstructuredSet() &&
+         targetType.toUnstructuredSet()->getCardinality() == 0)) {
       for (const Var& var : op->vars) {
         iassert(var.getType().isTensor());
         const TensorType* type = var.getType().toTensor();
 
         if (type->order() < 2) {
+          // Dense
           storage->add(var, TensorStorage(TensorStorage::Dense));
         }
+        else if (op->through.defined()) {
+          if (kIndexlessStencils) {
+            // Indexless Stencil
+            auto index = setStencilTensorIndex(
+                var, op->function.getName(), var.getName());
+            storage->add(var, TensorStorage(TensorStorage::Stencil, index));
+          }
+          else {
+            peBuilder.computePathExpression(op);
+            // Indexed Stencil
+            auto index = getTensorIndex(var);
+            storage->add(var, TensorStorage(TensorStorage::Indexed, index));
+          }
+        }
         else {
+          // Diagonal
           storage->add(var, TensorStorage(TensorStorage::Diagonal));
         }
       }
@@ -386,12 +435,19 @@ private:
               tensorStorage = TensorStorage(TensorStorage::Indexed, index);
               break;
             }
+            case TensorStorage::Stencil: {
+              auto index = getTensorIndex(var);
+              tensorStorage = TensorStorage(TensorStorage::Stencil, index);
+              break;
+            }
             case TensorStorage::Diagonal:
               tensorStorage = TensorStorage(TensorStorage::Diagonal);
               break;
             case TensorStorage::Undefined:
               unreachable;
               break;
+            default:
+              unreachable;
           }
         }
       }

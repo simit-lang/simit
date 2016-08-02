@@ -42,7 +42,7 @@ void IREmitter::visit(Endpoint::Ptr end) {
   retExpr = setExprs[end->set->setDef];
 }
 
-void IREmitter::visit(SetType::Ptr type) {
+void IREmitter::visit(UnstructuredSetType::Ptr type) {
   const ir::Type elementType = emitType(type->element);
 
   std::vector<ir::Expr> endpoints;
@@ -51,7 +51,14 @@ void IREmitter::visit(SetType::Ptr type) {
     endpoints.push_back(endpoint);
   }
 
-  retType = ir::SetType::make(elementType, endpoints);
+  retType = ir::UnstructuredSetType::make(elementType, endpoints);
+}
+
+void IREmitter::visit(LatticeLinkSetType::Ptr type) {
+  const ir::Type elementType = emitType(type->element);
+  const ir::Expr latticePointSet = emitExpr(type->latticePointSet);
+  retType = ir::LatticeLinkSetType::make(
+      elementType, latticePointSet, type->dimensions);
 }
 
 void IREmitter::visit(TupleType::Ptr type) {
@@ -354,6 +361,10 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const std::vector<ir::Var> results = func.getResults();
 
   const ir::Expr target = ctx->getSymbol(expr->target->setName).getExpr();
+  ir::Expr through;
+  if (expr->through) {
+    through = ctx->getSymbol(expr->through->setName).getExpr();
+  }
  
   std::vector<ir::Expr> partialActuals;
   for (auto actual : expr->partialActuals) {
@@ -374,8 +385,11 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   }
   
   std::vector<ir::Expr> endpoints;
-  for (const ir::Expr *endpoint : target.type().toSet()->endpointSets) {
-    endpoints.push_back(*endpoint);
+  if (target.type().isUnstructuredSet()) {
+    for (const ir::Expr *endpoint :
+             target.type().toUnstructuredSet()->endpointSets) {
+      endpoints.push_back(*endpoint);
+    }
   }
 
   // Map expressions are translated to map statements whose values are stored 
@@ -388,7 +402,7 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   // TODO: Should eventually support heterogeneous edge sets.
   const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   const ir::Stmt mapStmt = ir::Map::make({tmp}, func, partialActuals, target,
-                                         endpoint, reduction);
+                                         endpoint, through, reduction);
   calls.push_back(mapStmt);
 }
 
@@ -673,6 +687,19 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
   } else {
     retExpr = ir::TensorRead::make(tensor, indices);
   }
+}
+
+void IREmitter::visit(SetReadExpr::Ptr expr) {
+  const ir::Expr set = emitExpr(expr->set);
+  iassert(set.type().isSet());
+
+  std::vector<ir::Expr> indices;
+  for (auto param : expr->indices) {
+    const ir::Expr arg = emitExpr(param);
+    indices.push_back(arg);
+  }
+
+  retExpr = ir::SetRead::make(set, indices);
 }
 
 void IREmitter::visit(TupleReadExpr::Ptr expr) {

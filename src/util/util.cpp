@@ -64,4 +64,20 @@ std::string trim(const std::string &str, const std::string &ws) {
   return str.substr(strBegin, strRange);
 }
 
+void variableLoop(std::vector<int>::const_iterator rangesBegin,
+                  std::vector<int>::const_iterator rangesEnd,
+                  std::vector<int>::iterator indicesBegin,
+                  std::vector<int>::iterator indicesEnd,
+                  std::function<void()> inner) {
+  if (rangesBegin == rangesEnd) {
+    inner();
+  }
+  else {
+    int thisRange = *rangesBegin;
+    for (*indicesBegin = 0; *indicesBegin < thisRange; ++(*indicesBegin)) {
+      variableLoop(rangesBegin+1, rangesEnd, indicesBegin+1, indicesEnd, inner);
+    }
+  }
+}
+
 }} // namespace simit::util

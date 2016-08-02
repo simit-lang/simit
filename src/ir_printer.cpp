@@ -198,6 +198,12 @@ void IRPrinter::visit(const IndexRead *op) {
     case IndexRead::Neighbors:
       os << "neighbors";
       break;
+    case IndexRead::LatticeDim:
+      os << "latticedim[" << op->index << "]";
+      break;
+    default:
+      not_supported_yet;
+      break;
   }
 }
 
@@ -219,6 +225,7 @@ PRINT_VISIT_BINARY_OP(Add, +, op)
 PRINT_VISIT_BINARY_OP(Sub, -, op)
 PRINT_VISIT_BINARY_OP(Mul, *, op)
 PRINT_VISIT_BINARY_OP(Div, /, op)
+PRINT_VISIT_BINARY_OP(Rem, %, op)
 
 void IRPrinter::visit(const Not *op) {
   auto p = paren();
@@ -268,6 +275,21 @@ void IRPrinter::visit(const TupleRead *op) {
   os << "(";
   print(op->index);
   os << ")";
+}
+
+void IRPrinter::visit(const SetRead *op) {
+  clearSkipParen();
+  print(op->set);
+  os << "[";
+  auto indices = op->indices;
+  if (indices.size() > 0) {
+    print(indices[0]);
+  }
+  for (size_t i=1; i < indices.size(); ++i) {
+    os << ",";
+    print(indices[i]);
+  }
+  os << "]";
 }
 
 void IRPrinter::visit(const TensorRead *op) {
@@ -324,6 +346,10 @@ void IRPrinter::visit(const Map *op) {
   }
   if (op->reduction.getKind() != ReductionOperator::Undefined) {
     os << " reduce " << op->reduction;
+  }
+  if (op->through.defined()) {
+    os << " through ";
+    print(op->through);
   }
   os << ";";
 }

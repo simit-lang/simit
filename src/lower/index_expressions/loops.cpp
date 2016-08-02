@@ -68,11 +68,21 @@ TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
 
 Expr TensorIndexVar::loadCoord(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
-  return Load::make(getTensorIndex().getRowptrArray(), sourceExpr);
+  if (getTensorIndex().isComputed()) {
+    return getTensorIndex().computeRowptr(sourceExpr);
+  }
+  else {
+    return Load::make(getTensorIndex().getRowptrArray(), sourceExpr);
+  }
 }
 
 Expr TensorIndexVar::loadSink() const {
-  return Load::make(getTensorIndex().getColidxArray(), getCoordVar());
+  if (getTensorIndex().isComputed()) {
+    return getTensorIndex().computeColidx(getCoordVar());
+  }
+  else {
+    return Load::make(getTensorIndex().getColidxArray(), getCoordVar());
+  }
 }
 
 Stmt TensorIndexVar::initCoordVar() const {
@@ -253,6 +263,10 @@ private:
 
   void visit(const Div *op) {
     visitBinaryIntersectionOperator(op);
+  }
+
+  void visit(const Rem *op) {
+    not_supported_yet;
   }
 
   void visit(const IndexedTensor *indexedTensor) {

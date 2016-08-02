@@ -14,7 +14,8 @@ struct GenericIndexSet;
 struct DynamicIndexSet;
 struct ElementType;
 struct Endpoint;
-struct SetType;
+struct UnstructuredSetType;
+struct LatticeLinkSetType;
 struct TupleLength;
 struct TupleType;
 struct ScalarType;
@@ -64,6 +65,7 @@ struct ExpExpr;
 struct TransposeExpr;
 struct CallExpr;
 struct TensorReadExpr;
+struct SetReadExpr;
 struct TupleReadExpr;
 struct FieldReadExpr;
 struct ParenExpr;
@@ -91,7 +93,8 @@ public:
   virtual void visit(std::shared_ptr<DynamicIndexSet> op) {}
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint>);
-  virtual void visit(std::shared_ptr<SetType>);
+  virtual void visit(std::shared_ptr<UnstructuredSetType>);
+  virtual void visit(std::shared_ptr<LatticeLinkSetType>);
   virtual void visit(std::shared_ptr<TupleLength> op) {}
   virtual void visit(std::shared_ptr<TupleType>);
   virtual void visit(std::shared_ptr<ScalarType> op) {}
@@ -138,6 +141,7 @@ public:
   virtual void visit(std::shared_ptr<TransposeExpr>);
   virtual void visit(std::shared_ptr<CallExpr>);
   virtual void visit(std::shared_ptr<TensorReadExpr>);
+  virtual void visit(std::shared_ptr<SetReadExpr>);
   virtual void visit(std::shared_ptr<TupleReadExpr>);
   virtual void visit(std::shared_ptr<FieldReadExpr>);
   virtual void visit(std::shared_ptr<ParenExpr>);

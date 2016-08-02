@@ -99,8 +99,11 @@ void IRRewriter::visit(const IndexRead *op) {
   if (edgeSet == op->edgeSet) {
     expr = op;
   }
-  else {
+  else if (op->kind != IndexRead::LatticeDim) {
     expr = IndexRead::make(edgeSet, op->kind);
+  }
+  else {
+    expr = IndexRead::make(edgeSet, op->kind, op->index);
   }
 }
 
@@ -139,6 +142,10 @@ void IRRewriter::visit(const Mul *op) {
 }
 
 void IRRewriter::visit(const Div *op) {
+  expr = visitBinaryOp(op, this);
+}
+
+void IRRewriter::visit(const Rem *op) {
   expr = visitBinaryOp(op, this);
 }
 
@@ -405,6 +412,24 @@ void IRRewriter::visit(const TupleRead *op) {
   }
 }
 
+void IRRewriter::visit(const SetRead *op) {
+  Expr set = rewrite(op->set);
+  std::vector<Expr> indices(op->indices.size());
+  bool indicesSame = true;
+  for (size_t i=0; i < op->indices.size(); ++i) {
+    indices[i] = rewrite(op->indices[i]);
+    if (indices[i] != op->indices[i]) {
+      indicesSame = false;
+    }
+  }
+  if (set == op->set && indicesSame) {
+    expr = op;
+  }
+  else {
+    expr = SetRead::make(set, indices);
+  }
+}
+
 void IRRewriter::visit(const TensorRead *op) {
   Expr tensor = rewrite(op->tensor);
   std::vector<Expr> indices(op->indices.size());
@@ -447,6 +472,11 @@ void IRRewriter::visit(const IndexExpr *op) {
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
   Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
+
+  Expr through;
+  if (op->through.defined()) {
+    through = rewrite(op->through);
+  }
   
   std::vector<Expr> partial_actuals(op->partial_actuals.size());
   bool actualsSame = true;
@@ -457,12 +487,13 @@ void IRRewriter::visit(const Map *op) {
     }
   }
 
-  if (target == op->target && neighbors == op->neighbors && actualsSame) {
+  if (target == op->target && neighbors == op->neighbors &&
+      through == op->through && actualsSame) {
     stmt = op;
   }
   else {
-    stmt = Map::make(op->vars, op->function, partial_actuals, target, neighbors,
-      op->reduction);
+    stmt = Map::make(op->vars, op->function, partial_actuals, target,
+                     neighbors, through, op->reduction);
   }
 }
 
@@ -539,7 +570,7 @@ void IRRewriterCallGraph::visit(const Map *op) {
 
   stmt = (function != op->function)
       ? Map::make(op->vars, function, op->partial_actuals,
-                  op->target, op->neighbors, op->reduction)
+                  op->target, op->neighbors, op->through, op->reduction)
       : op;
 }
 }} // namespace simit::ir

@@ -3,6 +3,10 @@
 
 #include <map>
 #include <memory>
+#include <string>
+
+#include "intrusive_ptr.h"
+#include "stencils.h"
 
 namespace simit {
 namespace pe {
@@ -34,7 +38,14 @@ public:
 
     /// A sparse matrix whose non-zero components are accessible through a
     /// tensor index.
-    Indexed
+    Indexed,
+
+    /// A sparse matrix, whose non-zeros components are accessible through a
+    /// *computable* tensor index (i.e. no memory-based structures).
+    /// Stencil-assembled matrices can be stored this way, since all
+    /// non-zeros appear on a fixed number of diagonals determined when
+    /// compiling the assembly function.
+    Stencil,
   };
 
   /// Create an undefined tensor storage.
@@ -55,6 +66,7 @@ public:
   /// Return the storage descriptor's tensor index.  Assumes the tensor is an
   /// indexed tensor.
   const TensorIndex& getTensorIndex() const;
+  TensorIndex& getTensorIndex();
 
   /// Set the storage descriptor's tensor index.
   void setTensorIndex(Var tensor);
