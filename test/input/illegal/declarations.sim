@@ -99,6 +99,10 @@ end
 func foo<1:N>()
 end
 
+%%% bad-decl-4
+export func foo<N>()
+end
+
 %%% undeclared-var
 proc main
   z * z - 2;

@@ -46,23 +46,17 @@ fir::FIRNode::Ptr Parser::parseProgramElement() {
     switch (peek().type) {
       case Token::Type::TEST:
         return parseTest();
-        break;
       case Token::Type::EXPORT:
       case Token::Type::FUNC:
         return parseFuncDecl();
-        break;
       case Token::Type::PROC:
         return parseProcDecl();
-        break;
       case Token::Type::ELEMENT:
         return parseElementTypeDecl();
-        break;
       case Token::Type::EXTERN:
         return parseExternFuncOrDecl();
-        break;
       case Token::Type::CONST:
         return parseConstDecl();
-        break;
       default:
         reportError(peek(), "a program element");
         throw SyntaxError();
@@ -156,8 +150,8 @@ fir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
     
     const Token externToken = consume(Token::Type::EXTERN);
     externFuncDecl->setBeginLoc(externToken);
-    consume(Token::Type::FUNC);
     
+    consume(Token::Type::FUNC);
     externFuncDecl->name = parseIdent();
     
     decls.insert(externFuncDecl->name->ident, IdentType::FUNCTION);
@@ -227,7 +221,7 @@ fir::FuncDecl::Ptr Parser::parseFuncDecl() {
   }
 }
 
-// proc_decl: 'proc' ident [type_params arguments results] stmt_block 'end'
+// proc_decl: 'proc' ident [arguments results] stmt_block 'end'
 fir::FuncDecl::Ptr Parser::parseProcDecl() {
   const unsigned originalLevel = decls.levels();
 
@@ -1655,7 +1649,7 @@ std::vector<fir::IndexSet::Ptr> Parser::parseIndexSets() {
   return indexSets;
 }
 
-// index_set: INT_LITERAL | set_index_set | '*'
+// index_set: INT_LITERAL | set_index_set
 fir::IndexSet::Ptr Parser::parseIndexSet() {
   fir::IndexSet::Ptr indexSet;
   switch (peek().type) {
@@ -1673,14 +1667,6 @@ fir::IndexSet::Ptr Parser::parseIndexSet() {
     case Token::Type::IDENT:
       indexSet = parseSetIndexSet();
       break;
-    case Token::Type::STAR:
-    {
-      indexSet = std::make_shared<fir::DynamicIndexSet>();
-      
-      const Token starToken = consume(Token::Type::STAR);
-      indexSet->setLoc(starToken);
-      break;
-    }
     default:
       reportError(peek(), "an index set");
       throw SyntaxError();
