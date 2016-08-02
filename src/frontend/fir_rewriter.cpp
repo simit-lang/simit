@@ -250,7 +250,7 @@ void FIRRewriter::visit(TensorReadExpr::Ptr expr) {
 void FIRRewriter::visit(SetReadExpr::Ptr expr) {
   expr->set = rewrite<Expr>(expr->set);
   for (auto &index : expr->indices) {
-    index = rewrite<ReadParam>(index);
+    index = rewrite<Expr>(index);
   }
   node = expr;
 }

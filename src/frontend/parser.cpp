@@ -708,7 +708,7 @@ fir::PrintStmt::Ptr Parser::parsePrintStmt() {
   }
 }
 
-// apply_stmt: apply ident ['<' endpoints '>'] ['(' [call_params] ')'] 
+// apply_stmt: apply ident ['<' endpoints '>'] ['(' [expr_params] ')'] 
 //             'to' set_index_set ';'
 fir::ApplyStmt::Ptr Parser::parseApplyStmt() {
   try {
@@ -727,7 +727,7 @@ fir::ApplyStmt::Ptr Parser::parseApplyStmt() {
 
     if (tryconsume(Token::Type::LP)) {
       if (!tryconsume(Token::Type::RP)) {
-        applyStmt->map->partialActuals = parseCallParams();
+        applyStmt->map->partialActuals = parseExprParams();
         consume(Token::Type::RP);
       }
     }
@@ -809,7 +809,7 @@ fir::Expr::Ptr Parser::parseExpr() {
   return (peek().type == Token::Type::MAP) ? parseMapExpr() : parseOrExpr();
 }
 
-// map_expr: 'map' ident ['<' endpoints '>'] ['(' [call_params] ')'] 
+// map_expr: 'map' ident ['<' endpoints '>'] ['(' [expr_params] ')'] 
 //           'to' set_index_set ['through' set_index_set] ['reduce' '+']
 fir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
@@ -824,7 +824,7 @@ fir::MapExpr::Ptr Parser::parseMapExpr() {
   std::vector<fir::Expr::Ptr> partialActuals;
   if (tryconsume(Token::Type::LP)) {
     if (!tryconsume(Token::Type::RP)) {
-      partialActuals = parseCallParams();
+      partialActuals = parseExprParams();
       consume(Token::Type::RP);
     }
   }
@@ -1099,7 +1099,7 @@ fir::Expr::Ptr Parser::parseTransposeExpr() {
   return expr;
 }
 
-// call_or_read_expr: factor {('(' [read_params] ')') | ('[' [read_params] ']')
+// call_or_read_expr: factor {('(' [read_params] ')') | ('[' [expr_params] ']')
 //                            | ('.' ident)}
 fir::Expr::Ptr Parser::parseCallOrReadExpr() {
   fir::Expr::Ptr expr = parseFactor();
@@ -1109,9 +1109,9 @@ fir::Expr::Ptr Parser::parseCallOrReadExpr() {
       case Token::Type::LP:
       {
         auto tensorRead = std::make_shared<fir::TensorReadExpr>();
+        tensorRead->tensor = expr;
         
         consume(Token::Type::LP);
-        tensorRead->tensor = expr;
         if (peek().type != Token::Type::RP) {
           tensorRead->indices = parseReadParams();
         }
@@ -1125,15 +1125,14 @@ fir::Expr::Ptr Parser::parseCallOrReadExpr() {
       case Token::Type::LB:
       {
         auto setRead = std::make_shared<fir::SetReadExpr>();
+        setRead->set = expr;
 
         consume(Token::Type::LB);
-        setRead->set = expr;
         if (peek().type != Token::Type::RB) {
-          setRead->indices = parseReadParams();
+          setRead->indices = parseExprParams();
         }
-        if (peek().type == Token::Type::SEMICOL) {
-          consume(Token::Type::SEMICOL);
-          auto sink = parseReadParams();
+        if (tryconsume(Token::Type::SEMICOL)) {
+          auto sink = parseExprParams();
           std::copy(sink.begin(), sink.end(),
                     std::back_inserter(setRead->indices));
         }
@@ -1147,9 +1146,9 @@ fir::Expr::Ptr Parser::parseCallOrReadExpr() {
       case Token::Type::PERIOD:
       {
         auto fieldRead = std::make_shared<fir::FieldReadExpr>();
+        fieldRead->setOrElem = expr;
         
         consume(Token::Type::PERIOD);
-        fieldRead->setOrElem = expr;
         fieldRead->field = parseIdent();
         
         expr = fieldRead;
@@ -1240,7 +1239,7 @@ fir::RangeConst::Ptr Parser::parseRangeConst() {
   return rangeConst;
 }
 
-// call_expr: ident ['<' endpoints '>'] '(' [call_params] ')'
+// call_expr: ident ['<' endpoints '>'] '(' [expr_params] ')'
 fir::CallExpr::Ptr Parser::parseCallExpr() {
   auto call = std::make_shared<fir::CallExpr>();
   
@@ -1254,7 +1253,7 @@ fir::CallExpr::Ptr Parser::parseCallExpr() {
   consume(Token::Type::LP);
 
   if (peek().type != Token::Type::RP) {
-    call->args = parseCallParams();
+    call->args = parseExprParams();
   }
   
   const Token endToken = consume(Token::Type::RP);
@@ -1318,16 +1317,16 @@ fir::ReadParam::Ptr Parser::parseReadParam() {
   return param;
 }
 
-// call_params: expr {',' expr}
-std::vector<fir::Expr::Ptr> Parser::parseCallParams() {
-  std::vector<fir::Expr::Ptr> callParams;
+// expr_params: expr {',' expr}
+std::vector<fir::Expr::Ptr> Parser::parseExprParams() {
+  std::vector<fir::Expr::Ptr> exprParams;
 
   do {
     const fir::Expr::Ptr param = parseExpr();
-    callParams.push_back(param);
+    exprParams.push_back(param);
   } while (tryconsume(Token::Type::COMMA));
 
-  return callParams;
+  return exprParams;
 }
 
 // type: element_type | unstructured_set_type | lattice_link_set_type
@@ -1400,7 +1399,8 @@ fir::SetType::Ptr Parser::parseUnstructuredSetType() {
   return setType;
 }
 
-// lattice_link_set_type: 'lattice' '[' INT_LITERAL ']' '{' element_type '}' '(' IDENT ')'
+// lattice_link_set_type: 'lattice' '[' INT_LITERAL ']' 
+//                        '{' element_type '}' '(' IDENT ')'
 fir::SetType::Ptr Parser::parseLatticeLinkSetType() {
   auto setType = std::make_shared<fir::LatticeLinkSetType>();
 
@@ -1420,7 +1420,9 @@ fir::SetType::Ptr Parser::parseLatticeLinkSetType() {
   auto latticePointSet = std::make_shared<fir::Endpoint>();
   latticePointSet->set = parseSetIndexSet();
   setType->latticePointSet = latticePointSet;
-  consume(Token::Type::RP);
+  
+  const Token endToken = consume(Token::Type::RP);
+  setType->setEndLoc(endToken);
 
   return setType;
 }
@@ -2009,7 +2011,7 @@ double_complex Parser::parseComplexLiteral() {
   return double_complex(real, imag);
 }
 
-// '%!' ident '(' [call_params] ')' '==' expr ';'
+// '%!' ident '(' [expr_params] ')' '==' expr ';'
 fir::Test::Ptr Parser::parseTest() {
   auto test = std::make_shared<fir::Test>();
 
@@ -2023,7 +2025,7 @@ fir::Test::Ptr Parser::parseTest() {
       consume(Token::Type::LP);
 
       if (!tryconsume(Token::Type::RP)) {
-        test->args = parseCallParams();
+        test->args = parseExprParams();
         consume(Token::Type::RP);
       }
 

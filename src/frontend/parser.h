@@ -81,7 +81,7 @@ private:
   fir::Identifier::Ptr                   parseIdent();
   std::vector<fir::ReadParam::Ptr>       parseReadParams();
   fir::ReadParam::Ptr                    parseReadParam();
-  std::vector<fir::Expr::Ptr>            parseCallParams();
+  std::vector<fir::Expr::Ptr>            parseExprParams();
   fir::Type::Ptr                         parseType();
   fir::ElementType::Ptr                  parseElementType();
   fir::SetType::Ptr                      parseUnstructuredSetType();
