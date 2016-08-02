@@ -1,5 +1,7 @@
 #include "runtime.h"
 
+#include <cmath>
+
 #include "timers.h"
 #include "stdio.h"
 #include <chrono>
@@ -145,10 +147,16 @@ double simitClock() {
 }
 } // extern "C"
 
-#ifdef EIGEN
+// Solvers
+#define SOLVER_ERROR                                            \
+do {                                                            \
+  ierror << "Solvers require that Simit was built with Eigen."; \
+} while (false)
+
 template <typename Float>
 void solve(int n,  int m,  int* rowPtr, int* colIdx,
            int nn, int mm, Float* A, Float* x, Float* b) {
+#ifdef EIGEN
   using namespace Eigen;
 
   auto xvec = new Eigen::Map<Eigen::Matrix<Float,Dynamic,1>>(x, m);
@@ -159,7 +167,11 @@ void solve(int n,  int m,  int* rowPtr, int* colIdx,
   solver.setMaxIterations(50);
   solver.compute(mat);
   *cvec = solver.solve(*xvec);
+#else
+  SOLVER_ERROR;
+#endif
 }
+
 extern "C" {
 void cMatSolve_f64(int n,  int m,  int* rowPtr, int* colIdx,
                    int nn, int mm, double* A, double* x, double* b) {
@@ -169,18 +181,4 @@ void cMatSolve_f32(int n,  int m,  int* rowPtr, int* colIdx,
                    int nn, int mm, float* A, float* x, float* b) {
   return solve(n, m, rowPtr, colIdx, nn, mm, A, x, b);
 }
-
-} // extern "C"
-#else  // If Eigen is not provided then solves are noops.
-void cMatSolve_f64(int n,  int m,  int* rowPtr, int* colIdx,
-                   int nn, int mm, double* A,
-                   double* x, double* b) {
-  return;
 }
-
-void cMatSolve_f32(int n, int m, int* rowPtr, int* colIdx,
-                   int nn, int mm, float* A,
-                   float* x, float* b) {
-  return;
-}
-#endif // ifdef EIGEN
