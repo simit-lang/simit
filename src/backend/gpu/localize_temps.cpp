@@ -12,7 +12,7 @@ namespace ir {
 class LocalizeTempsRewriter : public IRRewriter {
 public:
   LocalizeTempsRewriter(Environment& env, Storage& storage) :
-      env(env), storage(storage) {}
+      env(env), storage(storage), inKernel(false) {}
 
   using IRRewriter::visit;
 
