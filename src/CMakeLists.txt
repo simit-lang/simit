@@ -89,16 +89,3 @@ string(REPLACE "-l" ";" EXTRA_LIBS "${EXTRA_LIBS}")
 string(REPLACE "\n" "" EXTRA_LIBS "${EXTRA_LIBS}")
 string(REPLACE " " "" EXTRA_LIBS "${EXTRA_LIBS}")
 target_link_libraries(${PROJECT_NAME} PUBLIC ${EXTRA_LIBS})
-
-
-# EIGEN
-if (DEFINED ENV{EIGEN3_INCLUDE_DIR})
-  include_directories($ENV{EIGEN3_INCLUDE_DIR})
-else ()
-  find_package(Eigen3)
-  if (EIGEN3_FOUND)
-    add_definitions(-DEIGEN)
-    include_directories( ${EIGEN3_INCLUDE_DIR} )
-  endif()
-endif()
-
