@@ -35,7 +35,7 @@ namespace backend {
 
 class GPUBackend : public LLVMBackend {
 public:
-  GPUBackend() {}
+  GPUBackend();
   ~GPUBackend() {}
 
 protected:
@@ -59,7 +59,6 @@ protected:
   virtual void compile(const ir::VarExpr&);
   virtual void compile(const ir::Load&);
   virtual void compile(const ir::FieldRead&);
-  virtual void compile(const ir::Call&);
   virtual void compile(const ir::Length&);
   virtual void compile(const ir::IndexRead&);
 
@@ -127,8 +126,10 @@ protected:
 
   virtual void emitMemSet(llvm::Value *dst, llvm::Value *val,
                           llvm::Value *size, unsigned align);
+
   void emitShardedMemSet(ir::Type targetType, llvm::Value *target,
                          llvm::Value *size);
+
   void emitShardedDot(ir::Type vec1Type, ir::Type vec2Type, ir::Type resType,
                       llvm::Value *vec1, llvm::Value *vec2,
                       llvm::Value *size, llvm::Value *result);

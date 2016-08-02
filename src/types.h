@@ -246,6 +246,17 @@ struct SetType : TypeNode {
   Type elementType;
   // TODO: Add method to retrieve a set field (compute from elementType fields)
 
+  // RTTI methods
+  template <typename T>
+  bool isa() const {
+    return dynamic_cast<const T*>(this) != nullptr;
+  }
+
+  template <typename T>
+  const T* to() const {
+    return dynamic_cast<const T*>(this);
+  }
+
   // Ensure SetType is abstract
   virtual ~SetType() = 0;
 };

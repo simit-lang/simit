@@ -70,7 +70,7 @@ llvm::Function* createPrototype(const std::string& name,
 
 llvm::GlobalVariable* createGlobal(llvm::Module *module, const ir::Var& var,
                                    llvm::GlobalValue::LinkageTypes linkage,
-                                   unsigned addrspace);
+                                   unsigned addrspace, bool packed);
 
 }}
 #endif

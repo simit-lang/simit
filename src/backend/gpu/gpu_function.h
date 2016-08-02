@@ -45,6 +45,7 @@ class GPUFunction : public LLVMFunction {
    public:
     CUdeviceptr *devBuffer;
     void *hostBuffer;
+    const void *hostBufferConst;
     size_t size;
     bool devDirty;
     // TODO: Potentially support dirtying specific host buffers and
@@ -54,7 +55,15 @@ class GPUFunction : public LLVMFunction {
     static size_t total_allocations;
 
     DeviceDataHandle(void *hostBuffer, CUdeviceptr *devBuffer, size_t size)
-        : devBuffer(devBuffer), hostBuffer(hostBuffer), size(size),
+        : devBuffer(devBuffer), hostBuffer(hostBuffer),
+          hostBufferConst((const void*)nullptr), size(size),
+          devDirty(false) {
+      total_allocations += size;
+    }
+
+    DeviceDataHandle(const void *hostBuffer, CUdeviceptr *devBuffer, size_t size)
+        : devBuffer(devBuffer), hostBuffer(nullptr),
+          hostBufferConst(hostBuffer), size(size),
           devDirty(false) {
       total_allocations += size;
     }
@@ -64,7 +73,9 @@ class GPUFunction : public LLVMFunction {
    private:
     friend std::ostream& operator<<(std::ostream& os,
                                     const DeviceDataHandle& handle) {
-      return os << handle.hostBuffer << " <-> " << (void*)(*handle.devBuffer)
+      return os << ((handle.hostBuffer != nullptr) ?
+                    handle.hostBuffer : handle.hostBufferConst)
+                << " <-> " << (void*)(*handle.devBuffer)
                 << " (" << handle.size << ")";
     }
   };
@@ -72,7 +83,10 @@ class GPUFunction : public LLVMFunction {
   // NOTE: None of the DeviceDataHandle pointers are owned by this struct,
   // they are instead memory-managed by the pushedBufs array.
   struct SetData {
-    int setSize;
+    union {
+      int setSize;
+      DeviceDataHandle *setSizes;
+    };
 
     // Only included if this is an edge set
     DeviceDataHandle *endpoints;

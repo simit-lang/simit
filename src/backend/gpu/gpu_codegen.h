@@ -16,7 +16,13 @@
 // These are the inline versions for all of the SDK helper functions
 inline void __checkCudaErrors(CUresult err, const char *file, const int line) {
   if(CUDA_SUCCESS != err) {
-    ierror << "checkCudaErrors() Driver API error = " << err
+    const char *errName;
+    const char *errStr;
+    cuGetErrorName(err, &errName);
+    cuGetErrorString(err, &errStr);
+    ierror << "checkCudaErrors() Driver API error = " << errName
+           << "(" << err << "):\n"
+           << errStr << "\n"
            << "from file <" << file
            << ", line " << line;
   }
