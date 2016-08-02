@@ -1,11 +1,10 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "ir.h"
 #include "specialize_generic_functions.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 void SpecializeGenericFunctions::specialize(Program::Ptr program) {
   FindGenericFuncs(genericFuncs).find(program);
@@ -17,7 +16,7 @@ void SpecializeGenericFunctions::visit(Program::Ptr program) {
     (*it)->accept(this);
   }
   
-  std::vector<HIRNode::Ptr> newElems;
+  std::vector<FIRNode::Ptr> newElems;
   for (const auto &elem : program->elems) {
     newElems.push_back(elem);
     
@@ -38,12 +37,12 @@ void SpecializeGenericFunctions::visit(Program::Ptr program) {
 
 void SpecializeGenericFunctions::visit(FuncDecl::Ptr decl) {
   if (decl->genericParams.size() == 0 || !decl->originalName.empty()) {
-    HIRVisitor::visit(decl);
+    FIRVisitor::visit(decl);
   }
 }
 
 void SpecializeGenericFunctions::visit(CallExpr::Ptr expr) {
-  HIRVisitor::visit(expr);
+  FIRVisitor::visit(expr);
 
   const auto it = genericFuncs.find(expr->func->ident);
   if (it != genericFuncs.end()) {
@@ -55,7 +54,7 @@ void SpecializeGenericFunctions::visit(CallExpr::Ptr expr) {
 }
 
 void SpecializeGenericFunctions::visit(MapExpr::Ptr expr) {
-  HIRVisitor::visit(expr);
+  FIRVisitor::visit(expr);
   
   const auto it = genericFuncs.find(expr->func->ident);
   if (it != genericFuncs.end()) {

@@ -1,11 +1,11 @@
 #include <string>
 
 #include "const_checker.h"
-#include "hir.h"
+#include "fir.h"
 #include "error.h"
   
 namespace simit {
-namespace hir {
+namespace fir {
 
 void ConstChecker::check(Program::Ptr program) {
   for (auto elem : program->elems) {
@@ -37,7 +37,7 @@ void ConstChecker::check(Program::Ptr program) {
   }
 }
 
-void ConstChecker::reportError(std::string msg, HIRNode::Ptr loc) {
+void ConstChecker::reportError(std::string msg, FIRNode::Ptr loc) {
   const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                               loc->getLineEnd(), loc->getColEnd(), msg);
   errors->push_back(err);

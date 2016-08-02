@@ -10,19 +10,19 @@
 
 #include "domain.h"
 #include "error.h"
-#include "hir.h"
-#include "hir_printer.h"
-#include "hir_rewriter.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_printer.h"
+#include "fir_rewriter.h"
+#include "fir_visitor.h"
 #include "ir.h"
 #include "util/scopedmap.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 // Type checking pass for identifying type errors, redefinitions, and 
 // undeclared identifiers.
-class TypeChecker : public HIRVisitor {
+class TypeChecker : public FIRVisitor {
 public:
   TypeChecker(std::vector<ParseError> *);
 
@@ -179,8 +179,8 @@ private:
   typedef std::vector<IndexSet::Ptr>                     IndexDomain;
   typedef std::vector<IndexDomain>                       TensorDimensions;
   
-  struct ReplaceTypeParams : public HIRRewriter {
-    using HIRRewriter::visit;
+  struct ReplaceTypeParams : public FIRRewriter {
+    using FIRRewriter::visit;
 
     ReplaceTypeParams(SetReplacementMap &specializedSets) : 
         specializedSets(specializedSets) {}
@@ -211,7 +211,7 @@ private:
     private:
       typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
       typedef std::unordered_map<std::string, ElementMap>    ElementDeclMap;
-      typedef std::unordered_map<HIRNode::Ptr, SetType::Ptr> SetDefinitionMap;
+      typedef std::unordered_map<FIRNode::Ptr, SetType::Ptr> SetDefinitionMap;
 
     public:
       void scope() { symbolTable.scope(); }
@@ -320,7 +320,7 @@ private:
       SetDefinitionMap setDefs;
   };
   
-  class ComputeSetDefinitions : public HIRVisitor {
+  class ComputeSetDefinitions : public FIRVisitor {
     public:
       ComputeSetDefinitions(Environment& env) : env(env) {}
 
@@ -329,7 +329,7 @@ private:
     private:
       virtual void visit(SetIndexSet::Ptr);
       virtual void visit(IdentDecl::Ptr);
-      virtual void visit(FieldDecl::Ptr op) { HIRVisitor::visit(op); }
+      virtual void visit(FieldDecl::Ptr op) { FIRVisitor::visit(op); }
       virtual void visit(FuncDecl::Ptr);
       virtual void visit(VarDecl::Ptr);
       virtual void visit(WhileStmt::Ptr);
@@ -363,7 +363,7 @@ private:
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
   ExprType inferType(Expr::Ptr);
-  bool     typeCheck(HIRNode::Ptr);
+  bool     typeCheck(FIRNode::Ptr);
   bool     typeCheckGlobalConstDecl(ConstDecl::Ptr);
 
   static void getDimensions(TensorType::Ptr, TensorDimensions&);
@@ -388,9 +388,9 @@ private:
   static std::string toString(Type::Ptr, bool = true);
   static std::string toString(ScalarType::Type);
   
-  void reportError(const std::string&, HIRNode::Ptr);
-  void reportUndeclared(const std::string&, const std::string&, HIRNode::Ptr);
-  void reportMultipleDefs(const std::string&, const std::string&, HIRNode::Ptr);
+  void reportError(const std::string&, FIRNode::Ptr);
+  void reportUndeclared(const std::string&, const std::string&, FIRNode::Ptr);
+  void reportMultipleDefs(const std::string&, const std::string&, FIRNode::Ptr);
 
 private:
   ExprType retType;

@@ -4,11 +4,11 @@
 #include <vector>
 #include <string>
 
-#include "hir.h"
+#include "fir.h"
 #include "error.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 // Searches for non-literals in places where literals values are expected (i.e. 
 // global constant initialization and tests). Most if not all of the 
@@ -20,7 +20,7 @@ public:
   void check(Program::Ptr);
 
 private:
-  void reportError(std::string, HIRNode::Ptr);
+  void reportError(std::string, FIRNode::Ptr);
 
 private: 
   std::vector<ParseError> *errors;

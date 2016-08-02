@@ -1,16 +1,16 @@
-#ifndef SIMIT_HIR_PRINTER_H
-#define SIMIT_HIR_PRINTER_H
+#ifndef SIMIT_FIR_PRINTER_H
+#define SIMIT_FIR_PRINTER_H
 
 #include <iostream>
 
-#include "hir.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_visitor.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-struct HIRPrinter : public HIRVisitor {
-  HIRPrinter(std::ostream &oss) : oss(oss), indentLevel(0) {}
+struct FIRPrinter : public FIRVisitor {
+  FIRPrinter(std::ostream &oss) : oss(oss), indentLevel(0) {}
 
 protected:
   virtual void visit(Program::Ptr);
