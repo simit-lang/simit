@@ -1,0 +1,24 @@
+element Point
+  b : float;
+  c : float;
+end
+
+element Link
+  a : float;
+end
+
+extern points : set{Point};
+extern springs : lattice[1]{Link}(points);
+
+func vonNeumann(orig : Point,
+                l : lattice[1]{Link}(points))
+    -> (vnMat : tensor[points,points](float))
+    vnMat(orig,orig) = l[0;1].a + l[0;-1].a;
+    vnMat(orig,points[1]) = l[0;1].a;
+    vnMat(orig,points[-1]) = l[0;-1].a;
+end
+
+proc main
+  B = map vonNeumann to points through springs;
+  points.c = B*points.b;
+end

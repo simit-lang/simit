@@ -65,6 +65,10 @@ Expr operator/(Expr a, Expr b) {
   return Div::make(a, b);
 }
 
+Expr operator%(Expr a, Expr b) {
+  return Rem::make(a, b);
+}
+
 // class Stmt
 std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
   IRPrinter printer(os);
@@ -84,6 +88,13 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
       break;
     case ForDomain::Edges:
       os << d.set << ".edges[" << d.var << "]";
+      break;
+    case ForDomain::Lattice:
+      os << "lattice[";
+      for (const Var& v : d.latticeVars) {
+        os << v << ",";
+      }
+      os << "]";
       break;
     case ForDomain::NeighborsOf:
       os << d.set << ".neighborsOf[" << d.var << "]";
@@ -179,6 +190,12 @@ void Literal::cast(Type type) {
   this->type = type;
 }
 
+int Literal::getIntVal(int index) const {
+  iassert(type.toTensor()->getComponentType().isInt())
+      << "getIntVal only valid for literals with int components";
+  return ((int*)data)[index];
+}
+
 double Literal::getFloatVal(int index) const {
   if (ScalarType::singleFloat()) {
     return ((float*)data)[index];
@@ -195,6 +212,15 @@ double_complex Literal::getComplexVal(int index) const {
   else {
     return ((double_complex*)data)[index];
   }
+}
+
+bool Literal::isAllZeros() const {
+  for (unsigned i = 0; i < size; ++i) {
+    if (((uint8_t*)data)[i] != 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Expr Literal::make(Type type) {
@@ -465,6 +491,19 @@ Expr IndexRead::make(Expr edgeSet, Kind kind) {
   return node;
 }
 
+Expr IndexRead::make(Expr edgeSet, Kind kind, int index) {
+  iassert(edgeSet.type().isLatticeLinkSet());
+  iassert(kind == LatticeDim);
+
+  IndexRead *node = new IndexRead;
+  node->type = TensorType::make(ScalarType(ScalarType::Int));
+
+  node->edgeSet = edgeSet;
+  node->kind = kind;
+  node->index = index;
+  return node;
+}
+
 // struct Neg
 Expr Neg::make(Expr a) {
   iassert_scalar(a);
@@ -517,6 +556,18 @@ Expr Div::make(Expr a, Expr b) {
   iassert_types_equal(a,b);
 
   Div *node = new Div;
+  node->type = a.type();
+  node->a = a;
+  node->b = b;
+  return node;
+}
+
+// struct Rem
+Expr Rem::make(Expr a, Expr b) {
+  iassert_int_scalar(a);
+  iassert_types_equal(a,b);
+
+  Rem *node = new Rem;
   node->type = a.type();
   node->a = a;
   node->b = b;
@@ -829,6 +880,37 @@ Expr TupleRead::make(Expr tuple, Expr index) {
   return node;
 }
 
+// struct SetRead
+Expr SetRead::make(Expr set, std::vector<Expr> indices) {
+#ifdef SIMIT_ASSERTS
+  iassert(set.type().isSet());
+  for (const Expr &index : indices) {
+    iassert(isScalar(index.type()));
+  }
+#endif
+
+  if (set.type().isUnstructuredSet() &&
+      set.type().toUnstructuredSet()->getCardinality() == 0) {
+    // TODO: Can't check dimensions of a free-standing unstructured
+    // set, we probably need to track this globally at some point.
+    // For now, this is checked during map lowering.
+  }
+  else if (set.type().isLatticeLinkSet()) {
+    // Indices should index both the source offset and sink offset
+    // giving 2*dims indices.
+    iassert(indices.size() == set.type().toLatticeLinkSet()->dimensions*2);
+  }
+  else {
+    not_supported_yet;
+  }
+
+  SetRead *node = new SetRead;
+  node->type = set.type().toSet()->elementType;
+  node->set = set;
+  node->indices = indices;
+  return node;
+}
+
 // struct TensorRead
 Expr TensorRead::make(Expr tensor, std::vector<Expr> indices) {
   iassert(tensor.type().isTensor());
@@ -934,7 +1016,7 @@ Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
 // struct Map
 Stmt Map::make(std::vector<Var> vars,
                Func function, std::vector<Expr> partial_actuals,
-               Expr target, Expr neighbors,
+               Expr target, Expr neighbors, Expr through,
                ReductionOperator reduction) {
   iassert(target.type().isSet());
   iassert(!neighbors.defined() || neighbors.type().isSet());
@@ -945,6 +1027,7 @@ Stmt Map::make(std::vector<Var> vars,
   node->partial_actuals = partial_actuals;
   node->target = target;
   node->neighbors = neighbors;
+  node->through = through;
   node->reduction = reduction;
   return node;
 }

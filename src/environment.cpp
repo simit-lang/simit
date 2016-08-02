@@ -3,6 +3,7 @@
 #include "var.h"
 #include "ir.h"
 #include "path_expressions.h"
+#include "stencils.h"
 #include "tensor_index.h"
 #include "util/collections.h"
 
@@ -32,6 +33,7 @@ struct Environment::Content {
 
   vector<TensorIndex>            tensorIndices;
   map<pe::PathExpression,size_t> locationOfTensorIndex;
+  map<StencilLayout,size_t>      locationOfTensorIndexStencil;
 
   map<Var,TensorIndex>           tensorIndexOfVar;
 };
@@ -146,6 +148,18 @@ const TensorIndex& Environment::getTensorIndex(const Var& var) const {
   return content->tensorIndexOfVar.at(var);
 }
 
+bool Environment::hasTensorIndex(const StencilLayout& stencil) const {
+  return util::contains(content->locationOfTensorIndexStencil, stencil);
+}
+
+const TensorIndex& Environment::getTensorIndex(
+    const StencilLayout& stencil) const {
+  iassert(util::contains(content->locationOfTensorIndexStencil, stencil))
+      << "Could not find " << stencil << " in environment";
+  return content->tensorIndices[
+      content->locationOfTensorIndexStencil.at(stencil)];
+}
+
 void Environment::addConstant(const Var& var, const Expr& initializer) {
   content->constants.push_back({var, initializer});
 }
@@ -197,6 +211,23 @@ void Environment::addTensorIndex(const pe::PathExpression& pexpr,
     content->locationOfTensorIndex.insert({pexpr, loc});
   }
   content->tensorIndexOfVar.insert({var, getTensorIndex(pexpr)});
+}
+
+void Environment::addTensorIndex(const StencilLayout& stencil, const Var& var) {
+  iassert(var.defined())
+      << "attempting to add a tensor index to an undefined var";
+
+  string name = var.getName();
+
+  // Lazily create a new index if no index with the given pexpr exist.
+  // TODO: Maybe rename indices as they get used by multiple tensors
+  if (!hasTensorIndex(stencil)) {
+    TensorIndex ti(name+"_index", stencil);
+    content->tensorIndices.push_back(ti);
+    size_t loc = content->tensorIndices.size() - 1;
+    content->locationOfTensorIndexStencil.insert({stencil, loc});
+  }
+  content->tensorIndexOfVar.insert({var, getTensorIndex(stencil)});
 }
 
 std::ostream& operator<<(std::ostream& os, const Environment& env) {

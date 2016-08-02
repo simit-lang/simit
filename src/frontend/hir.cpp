@@ -124,8 +124,15 @@ HIRNode::Ptr Endpoint::cloneImpl() {
   return node;
 }
 
-void SetType::copy(HIRNode::Ptr node) {
-  const auto setType = to<SetType>(node);
+SetType::Ptr SetType::getUndefinedSetType() {
+  SetType::Ptr undefinedSetType = to<SetType>(
+      std::make_shared<UnstructuredSetType>());
+  undefinedSetType->element = std::make_shared<ElementType>();
+  return undefinedSetType;
+}
+
+void UnstructuredSetType::copy(HIRNode::Ptr node) {
+  const auto setType = to<UnstructuredSetType>(node);
   Type::copy(setType);
   element = setType->element->clone<ElementType>();
   for (const auto &endpoint : setType->endpoints) {
@@ -133,8 +140,22 @@ void SetType::copy(HIRNode::Ptr node) {
   }
 }
 
-HIRNode::Ptr SetType::cloneImpl() {
-  const auto node = std::make_shared<SetType>();
+HIRNode::Ptr UnstructuredSetType::cloneImpl() {
+  const auto node = std::make_shared<UnstructuredSetType>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void LatticeLinkSetType::copy(HIRNode::Ptr node) {
+  const auto setType = to<LatticeLinkSetType>(node);
+  Type::copy(setType);
+  element = setType->element->clone<ElementType>();
+  latticePointSet = setType->latticePointSet->clone<Endpoint>();
+  dimensions = setType->dimensions;
+}
+
+HIRNode::Ptr LatticeLinkSetType::cloneImpl() {
+  const auto node = std::make_shared<LatticeLinkSetType>();
   node->copy(shared_from_this());
   return node;
 }
@@ -632,6 +653,21 @@ void TensorReadExpr::copy(HIRNode::Ptr node) {
 
 HIRNode::Ptr TensorReadExpr::cloneImpl() {
   const auto node = std::make_shared<TensorReadExpr>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void SetReadExpr::copy(HIRNode::Ptr node) {
+  const auto setReadExpr = to<SetReadExpr>(node);
+  Expr::copy(setReadExpr);
+  set = setReadExpr->set->clone<Expr>();
+  for (const auto &index : setReadExpr->indices) {
+    indices.push_back(index->clone<ReadParam>());
+  }
+}
+
+HIRNode::Ptr SetReadExpr::cloneImpl() {
+  const auto node = std::make_shared<SetReadExpr>();
   node->copy(shared_from_this());
   return node;
 }

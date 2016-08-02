@@ -52,6 +52,9 @@ Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
     case Neg:
       val = Neg::make(a);
       break;
+    default:
+      unreachable;
+      break;
   }
   iassert(val.defined());
  
@@ -109,6 +112,9 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
       break;
     case Div:
       val = Div::make(a, b);
+      break;
+    default:
+      unreachable;
       break;
   }
   iassert(val.defined());

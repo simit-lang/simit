@@ -12,6 +12,9 @@ Set::~Set() {
     delete f;
   }
   free(endpoints);
+  free(latticePoints);
+  free(latticeLinks);
+
   delete this->neighbors;
 }
 

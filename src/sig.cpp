@@ -250,6 +250,10 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
       SIG ig2 = create(op->b);
       sig = merge(ig1, ig2, SIG::Intersection, storage);
     }
+
+    void visit(const Rem *op) {
+      not_supported_yet;
+    }
   };
 
   return SIGBuilder(storage).create(stmt);
@@ -321,21 +325,49 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
       size_t numBlockLevels = indexVar.getNumBlockLevels();
 
       if (currBlockLevel < numBlockLevels) {
-        Var var(nameGenerator.getName(indexVar.getName()), Int);
-        ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
+        // If this vertex connects to any lattice links, we must impose lattice
+        // structure on the loop.
+        Expr latticeSet;
+        for (auto &e : v->connectors) {
+          const TensorStorage& ts = storage.getStorage(e->tensor);
+          auto storageKind = ts.getKind();
+          if (storageKind == TensorStorage::Kind::Stencil &&
+              ts.hasTensorIndex()) {
+            const TensorIndex& ti = ts.getTensorIndex();
+            latticeSet = ti.getStencilLayout().getLatticeSet();
+            break;
+          }
+        }
+        if (!latticeSet.defined()) {
+          Var var(nameGenerator.getName(indexVar.getName()), Int);
+          ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
 
-        // We only reduce w.r.t. to the inner loop variable.
-        ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
-                                ? indexVar.getOperator()
-                                : ReductionOperator::Undefined;
+          // We only reduce w.r.t. to the inner loop variable.
+          ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
+                                  ? indexVar.getOperator()
+                                  : ReductionOperator::Undefined;
       
-        // If the index set we are traversing over is fixed,
-        // we construct the corresponding domain & index set
-        if (indexVar.isFixed()) {
-          domain = ForDomain(IndexSet(*indexVar.ptr->fixedExpr, IndexSet::Single));
+          // If the index set we are traversing over is fixed,
+          // we construct the corresponding domain & index set
+          if (indexVar.isFixed()) {
+            domain = ForDomain(IndexSet(*indexVar.ptr->fixedExpr, IndexSet::Single));
+          }
+
+          addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
+        }
+        else {
+          iassert(latticeSet.type().isLatticeLinkSet());
+          int ndims = latticeSet.type().toLatticeLinkSet()->dimensions;
+          string varName = nameGenerator.getName(indexVar.getName());
+          Var var(varName, Int);
+          // We only reduce w.r.t. to the inner loop variable.
+          ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
+              ? indexVar.getOperator()
+              : ReductionOperator::Undefined;
+          ForDomain domain(latticeSet, var, ndims, varName);
+          addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
         }
 
-        addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
 
       SIGVisitor::visit(v);
@@ -368,7 +400,8 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
       auto storageKind = storage.getStorage(e->tensor).getKind();
      
       auto loopVars = vertexLoopVars[visited[0]->iv];
-      Var link = loopVars[loopVars.size()-1].getVar();
+      LoopVar linkLoop = loopVars[loopVars.size()-1];
+      Var link = linkLoop.getVar();
 
       // Link the not visited variable(s) to the visited variable.
       for (auto &veps : notVisited) {
@@ -390,9 +423,12 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
             }
           } else if (storageKind == TensorStorage::Kind::Diagonal) {
             domainKind = ForDomain::Diagonal;
+          } else if (storageKind == TensorStorage::Kind::Stencil) {
+            domainKind = ForDomain::Neighbors;
           }
-          else
-            iassert("Unknown storage kind for tensor ") << e->tensor;
+          else {
+            ierror << "Unknown storage kind for tensor " << e->tensor;
+          }
           
           ForDomain domain;
           
@@ -409,7 +445,8 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
 
-          if (storageKind == TensorStorage::Kind::Indexed) {
+          if (storageKind == TensorStorage::Kind::Indexed ||
+              storageKind == TensorStorage::Kind::Stencil) {
             // The ij var links i to j through the neighbors indices. E.g.
             // for i in points:
             //   pointsi = 0;
