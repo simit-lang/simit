@@ -92,15 +92,13 @@ private:
 class Set {
 public:
   enum Kind {Unstructured, LatticeLink};
-  
-  Set(const std::string &name, Kind kind=Unstructured)
-      : kind(kind), name(name), numElements(0), endpoints(nullptr),
-        latticePoints(nullptr), latticeLinks(nullptr),
-        capacity(capacityIncrement), neighbors(nullptr) {}
 
   /// UNSTRUCTURED constructors
+  Set(const std::string &name) : Set(name, Unstructured) {}
+
   template <typename ...Sets>
-  Set(const char *name, const Sets& ...sets) : Set(std::string(name)) {
+  Set(const char *name, const Sets& ...sets)
+      : Set(std::string(name), Unstructured) {
     static_assert(util::areSame<Set, Sets...>{},
         "Set constructor takes an optional name followed by zero or more Sets");
     this->endpointSets = {&sets...};
@@ -603,6 +601,12 @@ public:
   inline bool hasSpatialField() const { return !spatialFieldName.empty(); }
 
 private:
+
+  // Private constructor for delegation
+  Set(const std::string &name, Kind kind)
+      : kind(kind), name(name), numElements(0), endpoints(nullptr),
+        latticePoints(nullptr), latticeLinks(nullptr),
+        capacity(capacityIncrement), neighbors(nullptr) {}
 
   // Set data
   Kind kind;
