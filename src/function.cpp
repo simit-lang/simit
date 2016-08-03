@@ -33,8 +33,9 @@ void Function::bind(const std::string& name, simit::Set *set) {
   // Type check
   for (size_t i=0; i < set->fields.size(); ++i) {
     Set::FieldData *fieldData = set->fields[i];
-    uassert(elemType->hasField(fieldData->name))
-        << "Field " << fieldData->name << " not found in set";
+
+    // Skip fields that are not defined in the Simit program
+    if (!elemType->hasField(fieldData->name)) continue;
 
     const Set::FieldData::TensorType *setFieldType = fieldData->type;
     const ir::TensorType *elemFieldType =
