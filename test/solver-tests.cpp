@@ -18,7 +18,7 @@ using namespace std;
 using namespace simit;
 using namespace simit::ir;
 
-TEST(Solvers, solve) {
+TEST(Solver, solve) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -66,7 +66,7 @@ TEST(Solvers, solve) {
   ASSERT_NEAR(4.0, (double)c.get(p2), 0.00001);
 }
 
-TEST(Solvers, solve_blocked) {
+TEST(Solver, solve_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
@@ -117,6 +117,44 @@ TEST(Solvers, solve_blocked) {
   TensorRef<simit_float,2> c2 = c.get(p2);
   ASSERT_NEAR(2.0, c2(0), 1.0);
   ASSERT_NEAR(4.0, c2(1), 1.0);
+}
+
+TEST(DISABLED_Solver, chol) {
+  // Points
+  Set points;
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
+  FieldRef<simit_float> c = points.addField<simit_float>("c");
+  FieldRef<bool> fixed = points.addField<bool>("fixed");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b(p0) = 10.0;
+  b(p1) = 20.0;
+  b(p2) = 30.0;
+
+  fixed(p0) = true;
+
+  // Springs
+  Set springs(points,points);
+
+  springs.add(p0,p1);
+  springs.add(p1,p2);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points",  &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check results
+  SIMIT_ASSERT_FLOAT_EQ(28.284271247461902, (double)c(p0));
+  SIMIT_ASSERT_FLOAT_EQ(48.989794855663561, (double)c(p1));
+  SIMIT_ASSERT_FLOAT_EQ(17.320508075688767, (double)c(p2));
 }
 
 #endif

@@ -182,3 +182,32 @@ void cMatSolve_f32(int n,  int m,  int* rowPtr, int* colIdx,
   return solve(n, m, rowPtr, colIdx, nn, mm, A, x, b);
 }
 }
+
+template <typename Float>
+void chol(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+          int Bnn, int Bmm, Float* B,
+          int An,  int Am,  int** Arowptr, int** Acolidx,
+          int Ann, int Amm, Float** A) {
+#ifdef EIGEN
+  terror << "chol not implemented yet.";
+#else
+  SOLVER_ERROR;
+#endif
+}
+
+extern "C" {
+void schol(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+           int Bnn, int Bmm, float* B,
+           int An,  int Am,  int** Arowptr, int** Acolidx,
+           int Ann, int Amm, float** A) {
+  return chol(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
+              An, Am, Arowptr, Acolidx, Ann, Amm, A);
+}
+void dchol(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+           int Bnn, int Bmm, double* B,
+           int An,  int Am,  int** Arowptr, int** Acolidx,
+           int Ann, int Amm, double** A) {
+  return chol(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
+              An, Am, Arowptr, Acolidx, Ann, Amm, A);
+}
+}

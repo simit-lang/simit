@@ -42,6 +42,7 @@ const Func& det();
 // Solvers
 const Func& inv();
 const Func& solve();
+const Func& chol();
 
 // String manipulation
 const Func& strcmp();
@@ -58,7 +59,6 @@ const Func& malloc();
 const Func& free();
 const Func& loc();
 
-const Func& byName(const std::string& name);
 const std::map<std::string,Func> &byNames();
 
 }}}
