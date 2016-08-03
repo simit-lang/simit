@@ -154,6 +154,8 @@ Func lower(Func func, std::ostream* os, bool time) {
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
+    func = rewriteCallGraph(func, rewriteCompoundOps);
+    printCallGraph("Rewrite Compound Ops (GPU)", func, print);
     func = rewriteCallGraph(func, shardLoops);
     printCallGraph("Shard Loops", func, os);
     func = rewriteCallGraph(func, rewriteVarDecls);

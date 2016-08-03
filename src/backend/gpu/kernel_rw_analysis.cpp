@@ -1,6 +1,8 @@
 #include "kernel_rw_analysis.h"
 #include "gpu_ir.h"
 
+#include <algorithm>
+
 #include "ir_rewriter.h"
 #include "rw_analysis.h"
 
@@ -69,9 +71,50 @@ public:
   void visit(const GPUKernel *op) {
     ReadWriteAnalysis readWriteAnalysis(rootVars);
     readWriteAnalysis.visit(op);
+
     std::set<Var> reads = readWriteAnalysis.getReads();
     std::set<Var> writes = readWriteAnalysis.getWrites();
     stmt = GPUKernel::make(op->body, op->sharding, reads, writes);
+
+    // Safety check: Any variables written must be atomically read only
+    std::set<Var> nonAtomicReads = readWriteAnalysis.getNonAtomicReads();
+    std::vector<Var> maybeUnsafe;
+    std::set_intersection(nonAtomicReads.begin(), nonAtomicReads.end(),
+                          writes.begin(), writes.end(),
+                          back_inserter(maybeUnsafe));
+    std::vector<Var> unsafe;
+    // TODO: For now, we assume reads + writes from the same set are okay,
+    // as long as it's a kernel dimension, since in this case each thread
+    // only has access to its piece of the set.
+    std::vector<Var> domainSets;
+    iassert(op->sharding.xSharded);
+    iassert(isa<VarExpr>(op->sharding.xDomain.getSet()));
+    domainSets.push_back(to<VarExpr>(op->sharding.xDomain.getSet())->var);
+    if (op->sharding.ySharded) {
+      iassert(isa<VarExpr>(op->sharding.yDomain.getSet()));
+      domainSets.push_back(to<VarExpr>(op->sharding.yDomain.getSet())->var);
+    }
+    if (op->sharding.zSharded) {
+      iassert(isa<VarExpr>(op->sharding.zDomain.getSet()));
+      domainSets.push_back(to<VarExpr>(op->sharding.zDomain.getSet())->var);
+    }
+    for (auto &v : maybeUnsafe) {
+      if (!v.getType().isSet()) {
+        unsafe.push_back(v);
+      }
+      else if (!util::contains(domainSets, v)) {
+        unsafe.push_back(v);
+      }
+    }
+    // TODO: This should ideally be a hard assert, but we can't perfectly
+    // analyze when a read/write lives safely within the bounds of a single loop
+    // iteration
+#ifdef SIMIT_ASSERTS
+    if (unsafe.size() == 0) {
+      uwarning << "Variables both non-atomically read and written in kernel: "
+               << stmt << "\n";
+    }
+#endif
   }
 
 private:
