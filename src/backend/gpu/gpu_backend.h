@@ -22,6 +22,7 @@
 #include "fuse_kernels.h"
 #include "kernel_rw_analysis.h"
 #include "localize_temps.h"
+#include "rewrite_compound_ops.h"
 #include "rewrite_system_assign.h"
 #include "shard_gpu_loops.h"
 #include "var_decl_rewriter.h"
@@ -42,7 +43,9 @@ protected:
   // CUDA variables
   int cuDevMajor, cuDevMinor;
   
-  const int blockSize = 128;
+  const int xBlockSize = 16;
+  const int yBlockSize = 16;
+  const int zBlockSize = 16;
 
   // Tracking whether we're in a kernel
   bool inKernel;
@@ -98,6 +101,7 @@ protected:
   // Emits calls to nvvm intrinsics
   llvm::Value *emitBarrier();
   llvm::Value *emitCheckRoot();
+  llvm::Value *getTid(std::string);
   llvm::Value *getTidX();
   llvm::Value *getTidY();
   llvm::Value *getTidZ();

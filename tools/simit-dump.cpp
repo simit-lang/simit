@@ -29,6 +29,7 @@ static void printUsage() {
        << "-emit-llvm"          << endl
        << "-emit-asm"           << endl
        << "-files"              << endl
+       << "-single-float"       << endl
        << "-compile=<function>" << endl
        << "-section=<section>"  << endl
        << "-gpu";
@@ -46,6 +47,7 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
 
+  bool singleFloat = false;
   bool compile = false;
   bool fileoutput = false;
   bool gpu = false;
@@ -81,6 +83,9 @@ int main(int argc, const char* argv[]) {
         }
         else if (arg == "-emit-asm") {
           asmos = &cout;
+        }
+        else if (arg == "-single-float") {
+          singleFloat = true;
         }
         else if (arg == "-compile") {
           compile = true;
@@ -145,11 +150,8 @@ int main(int argc, const char* argv[]) {
   }
 
   std::string backend = gpu ? "gpu" : "cpu";
-#ifdef F32
-  simit::init(backend, sizeof(simit_float));
-#else
-  simit::init(backend, sizeof(double));
-#endif
+  size_t floatSize = singleFloat ? sizeof(float) : sizeof(double);
+  simit::init(backend, floatSize);
 
   std::string source;
   int status = simit::util::loadText(sourceFile, &source);
