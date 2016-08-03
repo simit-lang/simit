@@ -10,7 +10,7 @@ end
 extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
-extern func matrix_neg(A : matrix[V,V](float)) -> (B : matrix[V,V](float));
+extern func matrix_neg<T>(A : matrix[T,T](float)) -> (B : matrix[T,T](float));
 
 func f(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
   A(v(0),v(0)) = e.e;
