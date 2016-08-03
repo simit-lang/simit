@@ -367,9 +367,7 @@ private:
       printTensorStmt = printLargeTensor;
     }
 
-    if (tiVar != nullptr) {
-      delete tiVar;
-    }
+    delete tiVar;
 
     return printTensorStmt;
   }

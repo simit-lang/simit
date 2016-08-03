@@ -1,12 +1,12 @@
 #include <memory>
 
 #include "const_fold.h"
-#include "hir.h"
+#include "fir.h"
 #include "ir.h"
-#include "hir_rewriter.h"
+#include "fir_rewriter.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 void ConstantFolding::visit(NegExpr::Ptr expr) {
   expr->operand = rewrite<Expr>(expr->operand);
@@ -34,7 +34,7 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
     node = operand;
   } else if (isa<DenseTensorLiteral>(expr->operand)) {
     // Helper visitor for negating all elements in tensor literal.
-    class NegateTensorLiteral : public HIRVisitor {
+    class NegateTensorLiteral : public FIRVisitor {
       public:
         void negate(DenseTensorLiteral::Ptr tensor) {
           tensor->accept(this);

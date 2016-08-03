@@ -146,6 +146,57 @@ proc main
   S.f;
 end
 
+%%% bad-set-access-1
+func foo()
+  S = 1;
+  S[1];
+end
+
+%%% bad-set-access-2
+element E
+end
+
+extern P : set{E};
+extern S : lattice[2]{E}(P);
+
+func foo()
+  S[P,1;1,1];
+end
+
+%%% bad-set-access-3
+element E
+end
+
+extern P : set{E};
+extern S : lattice[2]{E}(P);
+
+func foo()
+  S[1,1;1,1,1];
+end
+
+%%% bad-set-access-4
+element E
+end
+
+extern P : set{E};
+extern Q : set{E}(P,P);
+extern S : lattice[2]{E}(P);
+
+func foo()
+  Q[1,1;1,1];
+end
+
+%%% bad-set-access-5
+element E
+end
+
+extern P : set{E};
+extern S : lattice[2]{E}(P);
+
+func foo()
+  S[1,1;:,1];
+end
+
 %%% write-to-readonly-1
 func foo(i : int)
   i = 1;

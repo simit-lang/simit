@@ -5,13 +5,13 @@
 #include <exception>
 
 #include "error.h"
-#include "hir.h"
+#include "fir.h"
 #include "intrinsics.h"
 #include "type_checker.h"
 #include "util/util.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
   
 TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
     retTypeChecked(true),
@@ -174,23 +174,27 @@ void TypeChecker::visit(UnstructuredSetType::Ptr type) {
 }
 
 void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
-  retTypeChecked = typeCheck(type->element);
-  
-  retTypeChecked = typeCheck(type->latticePointSet) && retTypeChecked;
+  const bool elementTypeChecked = typeCheck(type->element);
+  const bool latticeSetTypeChecked = typeCheck(type->latticePointSet);
+
+  retTypeChecked = elementTypeChecked && latticeSetTypeChecked;
+ 
+  const auto latticeSetDef = type->latticePointSet->set->setDef;
+  const auto latticeSetName = type->latticePointSet->set->setName;
+
   // Check lattice point set is an unstructured set
-  if (!isa<UnstructuredSetType>(type->latticePointSet->set->setDef)) {
+  if (!isa<UnstructuredSetType>(latticeSetDef)) {
     std::stringstream errMsg;
-    errMsg << "expected lattice point set of Unstructured kind but got "
-           << type->latticePointSet->set->setName;
+    errMsg << "expected lattice point set of unstructured kind, but set '"
+           << latticeSetName << "' is not an unstructured set";
     reportError(errMsg.str(), type->latticePointSet);
   }
   // Check lattice point set is cardinality zero
-  else if (to<UnstructuredSetType>(type->latticePointSet->set->setDef)
-           ->endpoints.size() != 0) {
+  else if (!to<UnstructuredSetType>(latticeSetDef)->endpoints.empty()) {
     std::stringstream errMsg;
-    errMsg << "expected lattice point set of 0 cardinality, but got "
-           << to<UnstructuredSetType>(type->latticePointSet->set->setDef)
-        ->endpoints.size();
+    errMsg << "expected lattice point set of zero cardinality, but set '" 
+           << latticeSetName << "' has cardinality "
+           << to<UnstructuredSetType>(latticeSetDef)->endpoints.size();
     reportError(errMsg.str(), type->latticePointSet);
   }
 }
@@ -271,9 +275,9 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 
   // Skip type checking for specialized versions of generic functions.
   if (specialized && !decl->genericParams.empty()) {
-    if (env.hasFunction(decl->originalName)) {
-      env.addFunction(name, decl);
-    }
+    const auto specializedFunc = env.getFunction(decl->originalName) ? 
+                                 decl : FuncDecl::Ptr();
+    env.addFunction(name, specializedFunc);
 
     return;
   }
@@ -330,21 +334,21 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 
   // Type check function body.
   if (decl->body) {
+    env.scope();
     typeCheck(decl->body);
+    env.unscope();
   }
 
   env.unscope();
 
-  if (!retTypeChecked) {
-    return;
-  }
+  const auto latestDecl = retTypeChecked ? decl : FuncDecl::Ptr();
 
   // Check that function has not been previously declared.
   if (env.hasFunction(name) && !specialized) {
     reportMultipleDefs("function or procedure", name, decl);
   }
 
-  env.addFunction(name, decl);
+  env.addFunction(name, latestDecl);
 }
 
 void TypeChecker::visit(VarDecl::Ptr decl) {
@@ -932,13 +936,17 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
+  // Type check generic arguments.
+  std::vector<bool> validGenericArg(expr->genericArgs.size());
+  for (unsigned i = 0; i < expr->genericArgs.size(); ++i) {
+    validGenericArg[i] = typeCheck(expr->genericArgs[i]);
+  }
+
+  // Deduce argument types.
   std::vector<ExprType> argTypes(expr->args.size());
   for (unsigned i = 0; i < expr->args.size(); ++i) {
-    const Expr::Ptr arg = expr->args[i];
-
-    if (arg) {
-      argTypes[i] = inferType(arg);
-    }
+    const auto arg = expr->args[i];
+    argTypes[i] = inferType(arg);
    
     if (!argTypes[i].defined) {
       continue;
@@ -964,34 +972,71 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
   
+  FuncDecl::Ptr func;
   std::string funcName = expr->func->ident;
+  
+  // Check that callee has been declared.
+  if (!env.hasFunction(funcName)) {
+    reportUndeclared("function", funcName, expr->func);
+  } else {
+    func = env.getFunction(funcName);
+  }
 
   // If callee type signature could not be determined, 
   // then there's nothing more to do.
-  if (!env.hasFunction(funcName)) {
-    if (util::contains(ir::intrinsics::byNames(), funcName)) {
-      std::stringstream errMsg;
-      errMsg << "cannot call intrinsic function'" << funcName << "'";
-      reportError(errMsg.str(), expr);
-    }
- 
+  if (!func) {
     return;
   }
-
-  FuncDecl::Ptr func = env.getFunction(funcName);
 
   if (!func->originalName.empty()) {
     funcName = func->originalName;
   }
 
+  // Check that number of generic arguments passed to callee is valid.
+  if (expr->genericArgs.size() > func->genericParams.size()) {
+    std::stringstream errMsg;
+    errMsg << "passed in " << expr->genericArgs.size() << " generic arguments " 
+           << "but function '" << funcName << "' expects at most " 
+           << func->genericParams.size();
+    reportError(errMsg.str(), expr);
+  }
+
+  // Check that number of arguments passed to callee is correct.
+  if (expr->args.size() != func->args.size()) {
+    std::stringstream errMsg;
+    errMsg << "passed in " << expr->args.size() << " arguments but function '"
+           << funcName << "' expects " << func->args.size();
+    reportError(errMsg.str(), expr);
+  }
+
   if (!func->genericParams.empty()) {
+    GenericCallTypeChecker checker(env);
+
     // Type parameter resolution needs to be done with information that is 
     // stored only with the original version of the generic function (in 
     // particular, input element sources).
-    const FuncDecl::Ptr funcSignature = func->originalName.empty() ? func :
-                                        env.getFunction(func->originalName);
+    const auto funcSignature = func->originalName.empty() ? func :
+                               env.getFunction(func->originalName);
 
-    GenericCallTypeChecker checker(env);
+    // Map generic parameters to generic arguments.
+    const auto numGenericArgs = std::min(expr->genericArgs.size(),
+                                         funcSignature->genericParams.size());
+    
+    for (unsigned i = 0; i < numGenericArgs; ++i) {
+      if (validGenericArg[i]) {
+        const auto genericParam = funcSignature->genericParams[i];
+        const auto paramIndexSet = std::make_shared<GenericIndexSet>();
+
+        paramIndexSet->setName = genericParam->name;
+        paramIndexSet->type = 
+            (genericParam->type == GenericParam::Type::RANGE) ? 
+            GenericIndexSet::Type::RANGE : GenericIndexSet::Type::UNKNOWN;
+        
+        checker.unify(paramIndexSet, expr->genericArgs[i]);
+      }
+    }
+    
+    // Deduce remaining generic parameters from arguments.
     const auto numArgs = std::min(argTypes.size(), funcSignature->args.size());
 
     for (unsigned i = 0; i < numArgs; ++i) {
@@ -1001,15 +1046,19 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       }
     }
 
-    for (const auto genericParam : funcSignature->genericParams) {
-      const auto it = checker.specializedSets.find(genericParam->name);
-      if (it == checker.specializedSets.end()) {
-        std::stringstream errMsg;
-        errMsg << "unable to resolve type parameter '" << genericParam->name 
-               << "' for call to function '" << funcName << "'";
-        reportError(errMsg.str(), expr);
-        return;
+    // Check that all generic parameters could be deduced.
+    if (funcSignature->genericParams.size() != checker.specializedSets.size()) {
+      for (const auto genericParam : funcSignature->genericParams) {
+        const auto it = checker.specializedSets.find(genericParam->name);
+        if (it == checker.specializedSets.end()) {
+          std::stringstream errMsg;
+          errMsg << "unable to resolve type parameter '" << genericParam->name 
+                 << "' for call to function '" << funcName << "'";
+          reportError(errMsg.str(), expr);
+        }
       }
+
+      return;
     }
 
     if (func->originalName.empty()) { 
@@ -1047,11 +1096,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
                  resultTypes.begin(), getResType);
   retType = ExprType(resultTypes);
 
-  if (expr->args.size() != func->args.size()) {
-    std::stringstream errMsg;
-    errMsg << "passed in " << expr->args.size() << " arguments but function '"
-           << funcName << "' expects " << func->args.size();
-    reportError(errMsg.str(), expr);
+  if (!retTypeChecked) {
     return;
   }
 
@@ -1088,10 +1133,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
 
-  if (!retTypeChecked) {
-    return;
-  }
-
   // Handle some of the more complex generic functions as special cases.
   if (funcName == ir::intrinsics::dot().getName()) {
     // Check that first and second arguments are vectors of same length 
@@ -1117,7 +1158,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   // Check that left operand of tensor read is actually a tensor.
   if (!lhsType.isTensor()) {
     std::stringstream errMsg;
-    errMsg << "cannot access elements from objects of type " 
+    errMsg << "expected left operand of tensor access to be a tensor but got a "
            << toString(lhsType);
     reportError(errMsg.str(), expr->tensor);
     retType = ExprType(lhsType.access);
@@ -1222,15 +1263,27 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 void TypeChecker::visit(SetReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->set);
 
+  // Check that indices are all integral.
+  for (auto index : expr->indices) {
+    const ExprType indexType = inferType(index);
+
+    if (indexType.defined && !indexType.isScalarInt()) {
+      std::stringstream errMsg;
+      errMsg << "lattice set access expects an integral index but "
+             << "got an index of type " << toString(indexType);
+      reportError(errMsg.str(), index);
+    }
+  }
+
   if (!lhsType.defined) {
     retType = ExprType(lhsType.access);
     return;
   }
 
-  // Check that program does not attempt to read from multiple values
-  // simultaneously
+  // Check that program does not attempt to read from 
+  // multiple values simultaneously.
   if (lhsType.isVoid()) {
-    reportError("cannot access field of a void value", expr->set);
+    reportError("cannot access elements of a void value", expr->set);
     retType = ExprType(lhsType.access);
     return;
   }
@@ -1242,87 +1295,52 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
 
   const Type::Ptr type = lhsType.type[0];
 
-  if (isa<SetType>(type)) {
-    // Case 1: Node set, single tuple index, DONT know dims
-    if (isa<UnstructuredSetType>(type)) {
-      // TODO: No good way to check indices = #dims
-      for (auto index : expr->indices) {
-        if (index->isSlice()) {
-          reportError("lattice point access expects integral indices", index);
-        }
-      }
-
-      if (retTypeChecked) {
-        for (auto index : expr->indices) {
-          const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
-          const ExprType indexType = inferType(indexExpr);
-
-          if (indexType.defined && !indexType.isScalarInt()) {
-            std::stringstream errMsg;
-            errMsg << "lattice point access expects an integral index but got "
-                   << "an index of type " << toString(indexType);
-            reportError(errMsg.str(), index);
-          }
-        }
-      }
-      if (retTypeChecked &&
-          to<UnstructuredSetType>(type)->endpoints.size() != 0) {
-        reportError("lattice point set cannot have non-zero cardinality",
-                    expr->set);
-      }
-
-      retType = ExprType(to<SetType>(type)->element, lhsType.access);
-    }
-    // Case 2: Lattice edge set, double set of indices (#indices = 2*dim)
-    else if (isa<LatticeLinkSetType>(type)) {
-      // Check number of indices = 2*dim and all integral
-      unsigned dims = to<LatticeLinkSetType>(type)->dimensions;
-      if (expr->indices.size() != 2*dims) {
-        std::stringstream errMsg;
-        errMsg << "lattice edge set access expects number of indices to equal "
-               << "2*dimensions, but got " << expr->indices.size() << " vs "
-               << 2*dims;
-        reportError(errMsg.str(), expr->indices[0]);
-      }
-      else {
-        for (auto index : expr->indices) {
-          if (index->isSlice()) {
-            reportError("lattice edge set access expects integral indices", index);
-          }
-        }
-
-        if (retTypeChecked) {
-          for (auto index : expr->indices) {
-            const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
-            const ExprType indexType = inferType(indexExpr);
-
-            if (indexType.defined && !indexType.isScalarInt()) {
-              std::stringstream errMsg;
-              errMsg << "lattice point access expects an integral index but got "
-                     << "an index of type " << toString(indexType);
-              reportError(errMsg.str(), index);
-            }
-          }
-        }
-      }
-
-      retType = ExprType(to<SetType>(type)->element, lhsType.access);
-    }
-    else {
-      std::stringstream errMsg;
-      errMsg << "set type cannot be indexed: " << toString(lhsType);
-      reportError(errMsg.str(), expr->set);
-    }
-  } else {
+  if (!isa<SetType>(type)) {
     std::stringstream errMsg;
-    errMsg << "cannot access elements from objects of type "
+    errMsg << "expected left operand of set access to be a set but got a "
            << toString(lhsType);
     reportError(errMsg.str(), expr->set);
+    return;
+  }
+
+  retType = ExprType(to<SetType>(type)->element, lhsType.access);
+
+  // Case 1: Node set, single tuple index, DON'T know dims
+  if (isa<UnstructuredSetType>(type)) {
+    // TODO: No good way to check indices = #dims
+
+    if (!to<UnstructuredSetType>(type)->endpoints.empty()) {
+      const auto msg = "lattice point set cannot have non-zero cardinality";
+      reportError(msg, expr->set);
+    }
+  }
+  // Case 2: Lattice edge set, double set of indices (#indices = 2 * dims)
+  else if (isa<LatticeLinkSetType>(type)) {
+    const unsigned dims = to<LatticeLinkSetType>(type)->dimensions;
+    
+    // Check number of indices = 2 * dims.
+    if (expr->indices.size() != (2 * dims)) {
+      std::stringstream errMsg;
+      errMsg << "lattice edge set access expects 2 * dimensions = "  
+             << (2 * dims) << " indices but got " << expr->indices.size();
+      reportError(errMsg.str(), expr->indices[0]);
+    }
+  }
+  else {
+    not_supported_yet;
   }
 }
 
 void TypeChecker::visit(TupleReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->tuple);
+  const ExprType indexType = inferType(expr->index);
+
+  if (indexType.defined && !indexType.isScalarInt()) {
+    std::stringstream errMsg;
+    errMsg << "tuple access expects an integral index but got an index " 
+           << "of type " << toString(indexType);
+    reportError(errMsg.str(), expr->index);
+  }
 
   if (!lhsType.defined) {
     retType = ExprType(lhsType.access);
@@ -1330,18 +1348,7 @@ void TypeChecker::visit(TupleReadExpr::Ptr expr) {
   }
 
   iassert(lhsType.isSingleValue());
-
-  if (expr->index) {
-    const ExprType indexType = inferType(expr->index);
-
-    if (indexType.defined && !indexType.isScalarInt()) {
-      std::stringstream errMsg;
-      errMsg << "tuple access expects an integral index but got an index " 
-             << "of type " << toString(indexType);
-      reportError(errMsg.str(), expr->index);
-    }
-  }
-
+  
   retType = ExprType(to<TupleType>(lhsType.type[0])->element, lhsType.access);
 }
 
@@ -1356,7 +1363,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   // Check that program does not attempt to read from multiple values 
   // simultaneously (e.g. output of function call returning two tensors).
   if (lhsType.isVoid()) {
-    reportError("cannot access field of a void value", expr->setOrElem);
+    reportError("cannot access fields of a void value", expr->setOrElem);
     retType = ExprType(lhsType.access);
     return;
   } else if (!lhsType.isSingleValue()) {
@@ -1376,7 +1383,10 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
 
   // Check that program only reads fields from sets and elements.
   if (!elemType) {
-    reportError("can only access fields of sets or elements", expr->setOrElem);
+    std::stringstream errMsg;
+    errMsg << "expected left operand of field access to be a set or an element "
+           << "but got a " << toString(type);
+    reportError(errMsg.str(), expr->setOrElem);
     retType = ExprType(lhsType.access);
     return;
   }
@@ -1612,12 +1622,17 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
 void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   const std::string opString = isApply ? "apply" : "map";
 
+  // Type check generic arguments.
+  std::vector<bool> validGenericArg(expr->genericArgs.size());
+  for (unsigned i = 0; i < expr->genericArgs.size(); ++i) {
+    validGenericArg[i] = typeCheck(expr->genericArgs[i]);
+  }
+
+  // Deduce argument types.
   std::vector<ExprType> actualsType(expr->partialActuals.size());
   for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
-    const Expr::Ptr param = expr->partialActuals[i];
-   
-    // Infer argument type.
-    actualsType[i] = inferType(param);
+    const auto arg = expr->partialActuals[i];
+    actualsType[i] = inferType(arg);
 
     if (!actualsType[i].defined) {
       continue;
@@ -1625,10 +1640,10 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
 
     // Check that argument is a single non-void value.
     if (actualsType[i].isVoid()) {
-      reportError("must pass a non-void value as argument", param);
+      reportError("must pass a non-void value as argument", arg);
       continue;
     } else if (!actualsType[i].isSingleValue()) {
-      reportError("cannot pass multiple values as a single argument", param);
+      reportError("cannot pass multiple values as a single argument", arg);
       continue;
     }
       
@@ -1638,7 +1653,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
       std::stringstream errMsg;
       errMsg << "expected argument to be a tensor but got an argument "
              << "of type " << toString(actualsType[i].type[0]);
-      reportError(errMsg.str(), param);
+      reportError(errMsg.str(), arg);
     }
   }
 
@@ -1654,14 +1669,6 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     return;
   } else {
     func = env.getFunction(funcName);
-    
-    if (isApply && !func->results.empty()) {
-      reportError("cannot apply a non-void function", expr->func);
-    }
-  }
-
-  if (!func->originalName.empty()) {
-    funcName = func->originalName;
   }
 
   // Check that target has been declared and is a (non-generic) set.
@@ -1669,15 +1676,13 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     retTypeChecked = false;
   } else if (isa<GenericIndexSet>(expr->target)) {
     std::stringstream errMsg;
-    errMsg << opString << " operation cannot be applied to generic sets";
+    errMsg << opString << " operation cannot be applied to a generic set";
     reportError(errMsg.str(), expr->target);
   } else {
     targetSetType = env.getSetDefinition(expr->target);
   }
   
-  auto getResType = [](IdentDecl::Ptr res) { return res->type; };
-
-  // If through is declared, check that it is a lattice link set,
+  // If through is declared, check that it is a lattice link set.
   if (expr->through) {
     if (!typeCheck(expr->through)) {
       retTypeChecked = false;
@@ -1706,15 +1711,41 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
 
-  if (!retTypeChecked) {
-    // Infer map operation return type if possible.
-    if (func && func->genericParams.empty()) {
-      ExprType::TypeVector resultTypes(func->results.size());
-      std::transform(func->results.begin(), func->results.end(), 
-                     resultTypes.begin(), getResType);
-      retType = ExprType(resultTypes);
-    }
+  // If assembly function type signature could not be determined, 
+  // then there's nothing more to do.
+  if (!func) {
+    return;
+  }
 
+  if (!func->originalName.empty()) {
+    funcName = func->originalName;
+  }
+
+  if (isApply && !func->results.empty()) {
+    reportError("cannot apply a non-void function", expr->func);
+  }
+
+  // Check that number of generic arguments passed to 
+  // assembly function is valid.
+  if (expr->genericArgs.size() > func->genericParams.size()) {
+    std::stringstream errMsg;
+    errMsg << opString << " operation passes " << expr->genericArgs.size() 
+           << " generic arguments to assembly function but function '" 
+           << funcName << "' expects at most " << func->genericParams.size();
+    reportError(errMsg.str(), expr);
+  }
+
+  auto getResType = [](IdentDecl::Ptr res) { return res->type; };
+
+  // Infer map operation return type if possible.
+  if (func->genericParams.empty()) {
+    ExprType::TypeVector resultTypes(func->results.size());
+    std::transform(func->results.begin(), func->results.end(), 
+                   resultTypes.begin(), getResType);
+    retType = ExprType(resultTypes);
+  }
+
+  if (!retTypeChecked) {
     return;
   }
 
@@ -1750,22 +1781,51 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
       actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
     }
   }
-
+  
   // Through declaration adds link set as an argument.
   if (throughSetType) {
     actualsType.push_back(ExprType(throughSetType, Access::READ));
   }
  
+  // Check that assembly function accepts right number of arguments.
+  if (actualsType.size() != func->args.size()) {
+    std::stringstream errMsg;
+    errMsg << opString << " operation passes " << actualsType.size() 
+           << " arguments to assembly function but function '" << funcName
+           << "' expects " << func->args.size();
+    reportError(errMsg.str(), expr);
+  }
+
   if (!func->genericParams.empty()) {
+    GenericCallTypeChecker checker(env);
+
     // Type parameter resolution needs to be done with information that is 
     // stored only with the original version of the generic function (in 
     // particular, input element sources).
-    const FuncDecl::Ptr funcSignature = func->originalName.empty() ? func :
-                                        env.getFunction(func->originalName);
+    const auto funcSignature = func->originalName.empty() ? func :
+                               env.getFunction(func->originalName);
 
-    GenericCallTypeChecker checker(env);
-    const unsigned numArgs = std::min(actualsType.size(), 
-                                      funcSignature->args.size());
+    // Map generic parameters to generic arguments.
+    const auto numGenericArgs = std::min(expr->genericArgs.size(),
+                                         funcSignature->genericParams.size());
+
+    for (unsigned i = 0; i < numGenericArgs; ++i) {
+      if (validGenericArg[i]) {
+        const auto genericParam = funcSignature->genericParams[i];
+        const auto paramIndexSet = std::make_shared<GenericIndexSet>();
+
+        paramIndexSet->setName = genericParam->name;
+        paramIndexSet->type = 
+            (genericParam->type == GenericParam::Type::RANGE) ? 
+            GenericIndexSet::Type::RANGE : GenericIndexSet::Type::UNKNOWN;
+        
+        checker.unify(paramIndexSet, expr->genericArgs[i]);
+      }
+    }
+
+    // Deduce remaining generic parameters from arguments.
+    const auto numArgs = std::min(actualsType.size(), 
+                                  funcSignature->args.size());
 
     for (unsigned i = 0; i < numArgs; ++i) {
       const ExprType paramType = actualsType[i];
@@ -1774,16 +1834,20 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
       }
     }
 
-    for (const auto genericParam : funcSignature->genericParams) {
-      const auto it = checker.specializedSets.find(genericParam->name);
-      if (it == checker.specializedSets.end()) {
-        std::stringstream errMsg;
-        errMsg << "unable to resolve type parameter '" << genericParam->name 
-               << "' for " << opString << " operation with function '" 
-               << funcName << "'";
-        reportError(errMsg.str(), expr);
-        return;
+    // Check that all generic parameters could be deduced.
+    if (funcSignature->genericParams.size() != checker.specializedSets.size()) {
+      for (const auto genericParam : funcSignature->genericParams) {
+        const auto it = checker.specializedSets.find(genericParam->name);
+        if (it == checker.specializedSets.end()) {
+          std::stringstream errMsg;
+          errMsg << "unable to resolve type parameter '" << genericParam->name 
+                 << "' for " << opString << " operation with function '" 
+                 << funcName << "'";
+          reportError(errMsg.str(), expr);
+        }
       }
+
+      return;
     }
 
     if (func->originalName.empty()) {
@@ -1813,19 +1877,15 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
   
-  // Infer map operation return type.
-  ExprType::TypeVector resultTypes(func->results.size());
-  std::transform(func->results.begin(), func->results.end(), 
-                 resultTypes.begin(), getResType);
-  retType = ExprType(resultTypes);
+  // Infer map operation return type if haven't already.
+  if (!retType.defined) {
+    ExprType::TypeVector resultTypes(func->results.size());
+    std::transform(func->results.begin(), func->results.end(), 
+                   resultTypes.begin(), getResType);
+    retType = ExprType(resultTypes);
+  }
 
-  // Check that assembly function accepts right number of arguments.
-  if (actualsType.size() != func->args.size()) {
-    std::stringstream errMsg;
-    errMsg << opString << " operation passes " << actualsType.size() 
-           << " arguments to assembly function but function '" << funcName
-           << "' expects " << func->args.size() << " arguments";
-    reportError(errMsg.str(), expr);
+  if (!retTypeChecked) {
     return;
   }
 
@@ -2093,7 +2153,7 @@ void TypeChecker::ComputeSetDefinitions::visit(SetIndexSet::Ptr set) {
 }
 
 void TypeChecker::ComputeSetDefinitions::visit(IdentDecl::Ptr decl) {
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
 
   const auto type = isa<SetType>(decl->type) ? 
                     to<SetType>(decl->type) : SetType::Ptr();
@@ -2110,12 +2170,12 @@ void TypeChecker::ComputeSetDefinitions::visit(FuncDecl::Ptr decl) {
     env.addSetDefinition(genericParam, setType);
   }
   
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
   decls.unscope();
 }
 
 void TypeChecker::ComputeSetDefinitions::visit(VarDecl::Ptr decl) {
-  HIRVisitor::visit(decl);
+  FIRVisitor::visit(decl);
 
   const auto type = isa<SetType>(decl->type) ? 
                     to<SetType>(decl->type) : SetType::Ptr();
@@ -2171,6 +2231,43 @@ void TypeChecker::ComputeSetDefinitions::visit(AssignStmt::Ptr stmt) {
   }
 }
 
+void TypeChecker::GenericCallTypeChecker::unify(IndexSet::Ptr paramIndexSet,
+                                                IndexSet::Ptr argIndexSet) {
+  // Check that we are actually unifying a concrete index set 
+  // with a generic index set.
+  if (!isa<GenericIndexSet>(paramIndexSet)) {
+    return;
+  }
+  
+  const auto genericName = to<GenericIndexSet>(paramIndexSet)->setName;
+
+  // Check that generic index set has not already been deduced.
+  if (specializedSets.find(genericName) != specializedSets.end()) {
+    return;
+  }
+
+  if (isa<SetIndexSet>(argIndexSet)) {
+    const auto indexSet = argIndexSet->clone<SetIndexSet>();
+    const auto argSet = to<SetIndexSet>(argIndexSet);
+
+    env.addSetDefinition(indexSet, env.getSetDefinition(argSet));
+
+    const auto paramGenericType = to<GenericIndexSet>(paramIndexSet)->type;
+    const auto argGenericType = isa<GenericIndexSet>(argIndexSet) ?
+                                to<GenericIndexSet>(argIndexSet)->type : 
+                                GenericIndexSet::Type::UNKNOWN;
+    
+    if (paramGenericType != GenericIndexSet::Type::RANGE ||
+        argGenericType == GenericIndexSet::Type::RANGE) {
+      specializedSets[genericName] = indexSet;
+    }
+  } else if (isa<RangeIndexSet>(argIndexSet)) {
+    specializedSets[genericName] = argIndexSet->clone<RangeIndexSet>();
+  } else {
+    not_supported_yet;
+  }
+}
+
 void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType, 
                                                 Type::Ptr argType) {
   if (isa<NDTensorType>(paramType) && isa<NDTensorType>(argType)) {
@@ -2182,33 +2279,7 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
     const unsigned domainSize = std::min(paramDomain.size(), argDomain.size());
 
     for (unsigned i = 0; i < domainSize; ++i) {
-      if (isa<GenericIndexSet>(paramDomain[i])) {
-        const auto genericName = to<GenericIndexSet>(paramDomain[i])->setName;
-        
-        if (specializedSets.find(genericName) == specializedSets.end()) {
-          if (isa<SetIndexSet>(argDomain[i])) {
-            const auto indexSet = argDomain[i]->clone<SetIndexSet>();
-            const auto argIndexSet = to<SetIndexSet>(argDomain[i]);
-            env.addSetDefinition(indexSet, env.getSetDefinition(argIndexSet));
-
-            const auto paramGenericType = isa<GenericIndexSet>(paramDomain[i]) ?
-                to<GenericIndexSet>(paramDomain[i])->type : 
-                GenericIndexSet::Type::UNKNOWN;
-            const auto argGenericType = isa<GenericIndexSet>(argDomain[i]) ?
-                to<GenericIndexSet>(argDomain[i])->type : 
-                GenericIndexSet::Type::UNKNOWN;
-            
-            if (paramGenericType != GenericIndexSet::Type::RANGE ||
-                argGenericType == GenericIndexSet::Type::RANGE) {
-              specializedSets[genericName] = indexSet;
-            }
-          } else if (isa<RangeIndexSet>(argDomain[i])) {
-            specializedSets[genericName] = argDomain[i]->clone<RangeIndexSet>();
-          } else {
-            not_supported_yet;
-          }
-        }
-      }
+      unify(paramDomain[i], argDomain[i]);
     }
 
     unify(paramTensorType->blockType, argTensorType->blockType);
@@ -2231,9 +2302,9 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
 }
 
 std::string TypeChecker::getConcretizedTypeSignatureString(FuncDecl::Ptr decl) {
-  class FuncTypeSignaturePrinter : public HIRPrinter {
+  class FuncTypeSignaturePrinter : public FIRPrinter {
     public:
-      FuncTypeSignaturePrinter(std::ostream &oss) : HIRPrinter(oss) {}
+      FuncTypeSignaturePrinter(std::ostream &oss) : FIRPrinter(oss) {}
 
     private:
       virtual void visit(SetIndexSet::Ptr set) {
@@ -2284,7 +2355,7 @@ void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
 }
 
 void TypeChecker::ReplaceTypeParams::visit(IndexSetDomain::Ptr domain) {
-  HIRRewriter::visit(domain);
+  FIRRewriter::visit(domain);
 
   if (isa<RangeIndexSet>(domain->set)) {
     const auto lowerBound = std::make_shared<IntLiteral>();
@@ -2497,7 +2568,7 @@ TypeChecker::ExprType TypeChecker::inferType(Expr::Ptr ptr) {
   return ret;
 }
 
-bool TypeChecker::typeCheck(HIRNode::Ptr ptr) {
+bool TypeChecker::typeCheck(FIRNode::Ptr ptr) {
   iassert(!isa<Expr>(ptr));
   
   const bool tmp = retTypeChecked;
@@ -2703,7 +2774,7 @@ std::string TypeChecker::toString(ScalarType::Type type) {
   }
 }
 
-void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
+void TypeChecker::reportError(const std::string &msg, FIRNode::Ptr loc) {
   const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                               loc->getLineEnd(), loc->getColEnd(), msg);
   errors->push_back(err);
@@ -2712,7 +2783,7 @@ void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
 
 void TypeChecker::reportUndeclared(const std::string &type, 
                                    const std::string &ident,
-                                   HIRNode::Ptr loc) {
+                                   FIRNode::Ptr loc) {
   std::stringstream errMsg;
   errMsg << "undeclared " << type << " '" << ident << "'";
   reportError(errMsg.str(), loc);
@@ -2720,7 +2791,7 @@ void TypeChecker::reportUndeclared(const std::string &type,
 
 void TypeChecker::reportMultipleDefs(const std::string &type, 
                                      const std::string &ident, 
-                                     HIRNode::Ptr loc) {
+                                     FIRNode::Ptr loc) {
   std::stringstream errMsg;
   errMsg << "multiple definitions of " << type << " '" << ident << "'";
   reportError(errMsg.str(), loc);

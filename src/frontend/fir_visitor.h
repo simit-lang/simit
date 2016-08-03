@@ -1,10 +1,10 @@
-#ifndef SIMIT_HIR_VISITOR_H
-#define SIMIT_HIR_VISITOR_H
+#ifndef SIMIT_FIR_VISITOR_H
+#define SIMIT_FIR_VISITOR_H
 
 #include <memory>
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 struct Program;
 struct StmtBlock;
@@ -83,8 +83,7 @@ struct NDTensorLiteral;
 struct ApplyStmt;
 struct Test;
 
-class HIRVisitor {
-public:
+struct FIRVisitor {
   virtual void visit(std::shared_ptr<Program>);
   virtual void visit(std::shared_ptr<StmtBlock>);
   virtual void visit(std::shared_ptr<RangeIndexSet> op) {}

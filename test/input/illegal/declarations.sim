@@ -5,6 +5,22 @@ end
 extern t : int;
 extern V : set{E}(t);
 
+%%% bad-lattice-link-set-type-1
+element E
+end
+
+extern Q : set{E};
+extern P : set{E}(Q);
+extern S : lattice[1]{E}(P);
+
+%%% bad-lattice-link-set-type-2
+element E
+end
+
+extern P : set{E};
+extern S : lattice[1]{E}(P);
+extern T : lattice[1]{E}(S);
+
 %%% bad-tensor-type-1
 element E
 end
@@ -68,6 +84,14 @@ func foo(a : int, inout a : float)
 end
 
 %%% redeclaration-7
+func foo<N>(N : matrix[N,N](float))
+end
+
+func bar(M : matrix[5,5](float))
+  foo(M);
+end
+
+%%% redeclaration-8
 element E
   v : int;
   v : int;
@@ -89,6 +113,10 @@ end
 
 %%% bad-decl-3
 func foo<1:N>()
+end
+
+%%% bad-decl-4
+export func foo<N>()
 end
 
 %%% undeclared-var

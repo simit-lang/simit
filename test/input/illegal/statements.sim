@@ -34,6 +34,15 @@ func bar()
   foo(M);
 end
 
+%%% bad-generic-5
+func foo<N>(v : vector[N](float))
+end
+
+func bar()
+  v = [1.0 2.0]';
+  foo<V>(v);
+end
+
 %%% bad-call-1
 func foo(i : int)
 end
@@ -166,6 +175,14 @@ end
 
 proc main
   t = bazz();
+end
+
+%%% bad-assign-7
+element Vertex
+end
+
+func f(inout v : (Vertex * 2))
+  v = 1;
 end
 
 %%% bad-apply
