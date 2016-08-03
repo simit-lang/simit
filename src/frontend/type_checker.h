@@ -380,7 +380,8 @@ private:
                           const std::vector<ScalarType::Type>&,
                           const std::vector<ScalarType::Type>&);
   void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
-                    const std::vector<Type::Ptr>&);
+                    const std::vector<Type::Ptr>&,
+                    const std::vector<GenericParam::Ptr>& = {});
 
   static std::string getConcretizedTypeSignatureString(FuncDecl::Ptr);
 

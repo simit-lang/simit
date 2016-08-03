@@ -140,7 +140,7 @@ simit::Function loadFunction(std::string fileName, std::string funcName="main"){
     std::cerr << program.getDiagnostics().getMessage() << std::endl;
     return simit::Function();
   }
-  
+
   simit::Function f;
   if (PROFILE) {
     f = program.compileWithTimers(funcName);
