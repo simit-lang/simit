@@ -94,6 +94,7 @@ int main(int argc, const char* argv[]) {
           fileoutput = true;
         }
         else if (arg == "-gpu") {
+          singleFloat = true;
           gpu = true;
         }
         else {

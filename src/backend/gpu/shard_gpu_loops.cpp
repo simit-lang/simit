@@ -138,6 +138,7 @@ private:
       currentKernelSharding = nullptr;
       lowerVars.clear();
       innerFor = Stmt();
+      filledLevel = 0;
     }
     else {
       // Loops that do not own the kernel get snipped and placed in
