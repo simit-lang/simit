@@ -1,23 +1,23 @@
-#include "hir_rewriter.h"
+#include "fir_rewriter.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-void HIRRewriter::visit(Program::Ptr program) {
+void FIRRewriter::visit(Program::Ptr program) {
   for (auto &elem : program->elems) {
-    elem = rewrite<HIRNode>(elem);
+    elem = rewrite<FIRNode>(elem);
   }
   node = program;
 }
 
-void HIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
+void FIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
   for (auto &stmt : stmtBlock->stmts) {
     stmt = rewrite<Stmt>(stmt);
   }
   node = stmtBlock;
 }
 
-void HIRRewriter::visit(Endpoint::Ptr end) {
+void FIRRewriter::visit(Endpoint::Ptr end) {
   end->set = rewrite<SetIndexSet>(end->set);
   if (end->element) {
     end->element = rewrite<ElementType>(end->element);
@@ -25,7 +25,7 @@ void HIRRewriter::visit(Endpoint::Ptr end) {
   node = end;
 }
 
-void HIRRewriter::visit(UnstructuredSetType::Ptr type) {
+void FIRRewriter::visit(UnstructuredSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   for (auto &endpoint : type->endpoints) {
     endpoint = rewrite<Endpoint>(endpoint);
@@ -33,19 +33,19 @@ void HIRRewriter::visit(UnstructuredSetType::Ptr type) {
   node = type;
 }
 
-void HIRRewriter::visit(LatticeLinkSetType::Ptr type) {
+void FIRRewriter::visit(LatticeLinkSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   type->latticePointSet = rewrite<Endpoint>(type->latticePointSet);
   node = type;
 }
 
-void HIRRewriter::visit(TupleType::Ptr type) {
+void FIRRewriter::visit(TupleType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   type->length = rewrite<TupleLength>(type->length);
   node = type;
 }
 
-void HIRRewriter::visit(NDTensorType::Ptr type) {
+void FIRRewriter::visit(NDTensorType::Ptr type) {
   for (auto &is : type->indexSets) {
     is = rewrite<IndexSet>(is);
   }
@@ -53,13 +53,13 @@ void HIRRewriter::visit(NDTensorType::Ptr type) {
   node = type;
 }
 
-void HIRRewriter::visit(IdentDecl::Ptr decl) {
+void FIRRewriter::visit(IdentDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
   decl->type = rewrite<Type>(decl->type);
   node = decl;
 }
 
-void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
+void FIRRewriter::visit(ElementTypeDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
   for (auto &field : decl->fields) {
     field = rewrite<FieldDecl>(field);
@@ -67,7 +67,7 @@ void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(FuncDecl::Ptr decl) {
+void FIRRewriter::visit(FuncDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
   for (auto &genericParam : decl->genericParams) {
     genericParam = rewrite<GenericParam>(genericParam);
@@ -84,7 +84,7 @@ void HIRRewriter::visit(FuncDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(VarDecl::Ptr decl) {
+void FIRRewriter::visit(VarDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
   if (decl->type) {
     decl->type = rewrite<Type>(decl->type);
@@ -95,13 +95,13 @@ void HIRRewriter::visit(VarDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(WhileStmt::Ptr stmt) {
+void FIRRewriter::visit(WhileStmt::Ptr stmt) {
   stmt->cond = rewrite<Expr>(stmt->cond);
   stmt->body = rewrite<StmtBlock>(stmt->body);
   node = stmt;
 }
 
-void HIRRewriter::visit(IfStmt::Ptr stmt) {
+void FIRRewriter::visit(IfStmt::Ptr stmt) {
   stmt->cond = rewrite<Expr>(stmt->cond);
   stmt->ifBody = rewrite<Stmt>(stmt->ifBody);
   if (stmt->elseBody) {
@@ -110,37 +110,37 @@ void HIRRewriter::visit(IfStmt::Ptr stmt) {
   node = stmt;
 }
 
-void HIRRewriter::visit(IndexSetDomain::Ptr domain) {
+void FIRRewriter::visit(IndexSetDomain::Ptr domain) {
   domain->set = rewrite<SetIndexSet>(domain->set);
   node = domain;
 }
 
-void HIRRewriter::visit(RangeDomain::Ptr domain) {
+void FIRRewriter::visit(RangeDomain::Ptr domain) {
   domain->lower = rewrite<Expr>(domain->lower);
   domain->upper = rewrite<Expr>(domain->upper);
   node = domain;
 }
 
-void HIRRewriter::visit(ForStmt::Ptr stmt) {
+void FIRRewriter::visit(ForStmt::Ptr stmt) {
   stmt->loopVar = rewrite<Identifier>(stmt->loopVar);
   stmt->domain = rewrite<ForDomain>(stmt->domain);
   stmt->body = rewrite<StmtBlock>(stmt->body);
   node = stmt;
 }
 
-void HIRRewriter::visit(PrintStmt::Ptr stmt) {
+void FIRRewriter::visit(PrintStmt::Ptr stmt) {
   for (auto &arg : stmt->args) {
     arg = rewrite<Expr>(arg);
   }
   node = stmt;
 }
 
-void HIRRewriter::visit(ExprStmt::Ptr stmt) {
+void FIRRewriter::visit(ExprStmt::Ptr stmt) {
   stmt->expr = rewrite<Expr>(stmt->expr);
   node = stmt;
 }
 
-void HIRRewriter::visit(AssignStmt::Ptr stmt) {
+void FIRRewriter::visit(AssignStmt::Ptr stmt) {
   stmt->expr = rewrite<Expr>(stmt->expr);
   for (auto &lhs : stmt->lhs) {
     lhs = rewrite<Expr>(lhs);
@@ -148,13 +148,16 @@ void HIRRewriter::visit(AssignStmt::Ptr stmt) {
   node = stmt;
 }
 
-void HIRRewriter::visit(ExprParam::Ptr param) {
+void FIRRewriter::visit(ExprParam::Ptr param) {
   param->expr = rewrite<Expr>(param->expr);
   node = param;
 }
 
-void HIRRewriter::visit(MapExpr::Ptr expr) {
+void FIRRewriter::visit(MapExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
+  for (auto &genericArg : expr->genericArgs) {
+    genericArg = rewrite<IndexSet>(genericArg);
+  }
   for (auto &arg : expr->partialActuals) {
     arg = rewrite<Expr>(arg);
   }
@@ -165,80 +168,78 @@ void HIRRewriter::visit(MapExpr::Ptr expr) {
   node = expr;
 }
 
-void HIRRewriter::visit(OrExpr::Ptr expr) {
+void FIRRewriter::visit(OrExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(AndExpr::Ptr expr) {
+void FIRRewriter::visit(AndExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(XorExpr::Ptr expr) {
+void FIRRewriter::visit(XorExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(EqExpr::Ptr expr) {
+void FIRRewriter::visit(EqExpr::Ptr expr) {
   visitNaryExpr(expr);
 }
 
-void HIRRewriter::visit(NotExpr::Ptr expr) {
+void FIRRewriter::visit(NotExpr::Ptr expr) {
   visitUnaryExpr(expr);
 }
 
-void HIRRewriter::visit(AddExpr::Ptr expr) {
+void FIRRewriter::visit(AddExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(SubExpr::Ptr expr) {
+void FIRRewriter::visit(SubExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(MulExpr::Ptr expr) {
+void FIRRewriter::visit(MulExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(DivExpr::Ptr expr) {
+void FIRRewriter::visit(DivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(LeftDivExpr::Ptr expr) {
+void FIRRewriter::visit(LeftDivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(ElwiseMulExpr::Ptr expr) {
+void FIRRewriter::visit(ElwiseMulExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(ElwiseDivExpr::Ptr expr) {
+void FIRRewriter::visit(ElwiseDivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(NegExpr::Ptr expr) {
+void FIRRewriter::visit(NegExpr::Ptr expr) {
   visitUnaryExpr(expr);
 }
 
-void HIRRewriter::visit(ExpExpr::Ptr expr) {
+void FIRRewriter::visit(ExpExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
-void HIRRewriter::visit(TransposeExpr::Ptr expr) {
+void FIRRewriter::visit(TransposeExpr::Ptr expr) {
   visitUnaryExpr(expr);
 }
 
-void HIRRewriter::visit(CallExpr::Ptr expr) {
+void FIRRewriter::visit(CallExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
   for (auto &genericArg : expr->genericArgs) {
-    genericArg = rewrite<Expr>(genericArg);
+    genericArg = rewrite<IndexSet>(genericArg);
   }
   for (auto &arg : expr->args) {
-    if (arg) {
-      arg = rewrite<Expr>(arg);
-    }
+    arg = rewrite<Expr>(arg);
   }
   node = expr;
 }
 
-void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
+void FIRRewriter::visit(TensorReadExpr::Ptr expr) {
   expr->tensor = rewrite<Expr>(expr->tensor);
   for (auto &index : expr->indices) {
     index = rewrite<ReadParam>(index);
@@ -246,46 +247,44 @@ void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
   node = expr;
 }
 
-void HIRRewriter::visit(SetReadExpr::Ptr expr) {
+void FIRRewriter::visit(SetReadExpr::Ptr expr) {
   expr->set = rewrite<Expr>(expr->set);
   for (auto &index : expr->indices) {
-    index = rewrite<ReadParam>(index);
+    index = rewrite<Expr>(index);
   }
   node = expr;
 }
 
-void HIRRewriter::visit(TupleReadExpr::Ptr expr) {
+void FIRRewriter::visit(TupleReadExpr::Ptr expr) {
   expr->tuple = rewrite<Expr>(expr->tuple);
-  if (expr->index) {
-    expr->index = rewrite<Expr>(expr->index);
-  }
+  expr->index = rewrite<Expr>(expr->index);
   node = expr;
 }
 
-void HIRRewriter::visit(FieldReadExpr::Ptr expr) {
+void FIRRewriter::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem = rewrite<Expr>(expr->setOrElem);
   expr->field = rewrite<Identifier>(expr->field);
   node = expr;
 }
 
-void HIRRewriter::visit(ParenExpr::Ptr expr) {
+void FIRRewriter::visit(ParenExpr::Ptr expr) {
   expr->expr = rewrite<Expr>(expr->expr);
   node = expr;
 }
 
-void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {
+void FIRRewriter::visit(NDTensorLiteral::Ptr lit) {
   for (auto &elem : lit->elems) {
     elem = rewrite<DenseTensorLiteral>(elem);
   }
   node = lit;
 }
 
-void HIRRewriter::visit(ApplyStmt::Ptr stmt) {
+void FIRRewriter::visit(ApplyStmt::Ptr stmt) {
   stmt->map = rewrite<UnreducedMapExpr>(stmt->map);
   node = stmt;
 }
 
-void HIRRewriter::visit(Test::Ptr test) {
+void FIRRewriter::visit(Test::Ptr test) {
   test->func = rewrite<Identifier>(test->func);
   for (auto &arg : test->args) {
     arg = rewrite<Expr>(arg);
@@ -294,18 +293,18 @@ void HIRRewriter::visit(Test::Ptr test) {
   node = test;
 }
 
-void HIRRewriter::visitUnaryExpr(UnaryExpr::Ptr expr) {
+void FIRRewriter::visitUnaryExpr(UnaryExpr::Ptr expr) {
   expr->operand = rewrite<Expr>(expr->operand);
   node = expr;
 }
 
-void HIRRewriter::visitBinaryExpr(BinaryExpr::Ptr expr) {
+void FIRRewriter::visitBinaryExpr(BinaryExpr::Ptr expr) {
   expr->lhs = rewrite<Expr>(expr->lhs);
   expr->rhs = rewrite<Expr>(expr->rhs);
   node = expr;
 }
 
-void HIRRewriter::visitNaryExpr(NaryExpr::Ptr expr) {
+void FIRRewriter::visitNaryExpr(NaryExpr::Ptr expr) {
   for (auto &operand : expr->operands) {
     operand = rewrite<Expr>(operand);
   }

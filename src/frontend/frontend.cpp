@@ -9,11 +9,10 @@
 #include "token.h"
 #include "scanner.h"
 #include "parser.h"
-#include "hir.h"
+#include "fir.h"
 
 #include "const_checker.h"
 #include "const_fold.h"
-#include "context_sensitive_rewriter.h"
 #include "infer_element_sources.h"
 #include "ir_emitter.h"
 #include "specialize_generic_functions.h"
@@ -26,15 +25,14 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
   // Lexical and syntactic analyses.
   TokenStream tokens = Scanner(errors).lex(programStream);
-  hir::Program::Ptr program = Parser(errors).parse(tokens);
+  fir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
-  program = hir::ContextSensitiveRewriter(errors).rewrite(program);
-  program = hir::ConstantFolding().rewrite(program);
-  hir::ConstChecker(errors).check(program);
-  hir::InferElementSources().infer(program);
-  hir::SpecializeGenericFunctions().specialize(program);
-  hir::TypeChecker(errors).check(program);
+  program = fir::ConstantFolding().rewrite(program);
+  fir::ConstChecker(errors).check(program);
+  fir::InferElementSources().infer(program);
+  fir::SpecializeGenericFunctions().specialize(program);
+  fir::TypeChecker(errors).check(program);
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {
@@ -43,7 +41,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   }
   
   // IR generation.
-  hir::IREmitter(ctx).emitIR(program);
+  fir::IREmitter(ctx).emitIR(program);
   return 0;
 }
 

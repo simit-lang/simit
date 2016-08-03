@@ -1,18 +1,18 @@
-#ifndef SIMIT_HIR_PRINTER_H
-#define SIMIT_HIR_PRINTER_H
+#ifndef SIMIT_FIR_PRINTER_H
+#define SIMIT_FIR_PRINTER_H
 
 #include <iostream>
 
-#include "hir.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_visitor.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
-class HIRPrinter : public HIRVisitor {
-public:
-  HIRPrinter(std::ostream &oss) : oss(oss), indentLevel(0) {}
+struct FIRPrinter : public FIRVisitor {
+  FIRPrinter(std::ostream &oss) : oss(oss), indentLevel(0) {}
 
+protected:
   virtual void visit(Program::Ptr);
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr);
@@ -80,7 +80,6 @@ public:
   virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
-protected:
   void indent() { ++indentLevel; }
   void dedent() { --indentLevel; }
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }

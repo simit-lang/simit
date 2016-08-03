@@ -4,8 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "hir.h"
-#include "hir_visitor.h"
+#include "fir.h"
+#include "fir_visitor.h"
 #include "types.h"
 #include "domain.h"
 #include "program_context.h"
@@ -13,10 +13,10 @@
 #include "ir.h"
 
 namespace simit {
-namespace hir {
+namespace fir {
 
 // Handles translation from higher-level IR to Simit IR.
-class IREmitter : public HIRVisitor {
+class IREmitter : public FIRVisitor {
 public:
   IREmitter(internal::ProgramContext *ctx) : 
     retField(ir::Field("", ir::Type())), ctx(ctx) {}
@@ -122,7 +122,7 @@ private:
   typedef std::unordered_map<SetType::Ptr, ir::Expr> SetExprMap;
 
 private:
-  ir::Expr emitExpr(HIRNode::Ptr ptr) {
+  ir::Expr emitExpr(FIRNode::Ptr ptr) {
     retExpr = ir::Expr();
     ptr->accept(this);
     const ir::Expr ret = retExpr;
