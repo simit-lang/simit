@@ -388,7 +388,9 @@ GPUFunction::pushGlobalTensor(
       }
     }
     else {
-      ierror << "Higher-order tensor allocation not supported";
+      tassert(!isSystemTensorType(ttype))
+          << "Higher-order system tensor allocation not supported: " << bufVar;
+      bufSize = ttype->size();
     }
   }
   CUdeviceptr *devBuffer = new CUdeviceptr();
@@ -900,6 +902,9 @@ GPUFunction::init() {
   // Get reference to CUDA function
   checkCudaErrors(cuModuleGetFunction(
       &cudaFunction, *cudaModule, harness->getName().data()));
+
+  // Mark initialized
+  initialized = true;
 
   return [this, env, cudaFunction](){
     // std::cerr << "Allocated GPU memory: "
