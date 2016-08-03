@@ -579,18 +579,30 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
     iassert(kernelSharding.xDomain.getKind() == ir::IndexSet::Set);
     iassert(ir::isa<ir::VarExpr>(kernelSharding.xDomain.getSet()));
     ir::Var xDomainVar = ir::to<ir::VarExpr>(kernelSharding.xDomain.getSet())->var;
-    if (std::find(kernelArgs.begin(), kernelArgs.end(), xDomainVar) ==
-        kernelArgs.end() &&
-        std::find(kernelResults.begin(), kernelResults.end(), xDomainVar) ==
-        kernelResults.end()) {
+    if (!util::contains(kernelArgs, xDomainVar) &&
+        !util::contains(kernelResults, xDomainVar)) {
       // If not a duplicate
       kernelArgs.push_back(xDomainVar);
     }
   }
-  iassert(!kernelSharding.ySharded && !kernelSharding.zSharded);
-  // TODO(gkanwar): Passing const arguments to kernels does not work properly
-  // at the moment. This is blocked on consts being handled correctly in
-  // the general backend.
+  if (kernelSharding.ySharded) {
+    iassert(kernelSharding.yDomain.getKind() == ir::IndexSet::Set);
+    iassert(ir::isa<ir::VarExpr>(kernelSharding.yDomain.getSet()));
+    ir::Var yDomainVar = ir::to<ir::VarExpr>(kernelSharding.yDomain.getSet())->var;
+    if (!util::contains(kernelArgs, yDomainVar) &&
+        !util::contains(kernelResults, yDomainVar)) {
+      kernelArgs.push_back(yDomainVar);
+    }
+  }
+  if (kernelSharding.zSharded) {
+    iassert(kernelSharding.zDomain.getKind() == ir::IndexSet::Set);
+    iassert(ir::isa<ir::VarExpr>(kernelSharding.zDomain.getSet()));
+    ir::Var zDomainVar = ir::to<ir::VarExpr>(kernelSharding.zDomain.getSet())->var;
+    if (!util::contains(kernelArgs, zDomainVar) &&
+        !util::contains(kernelResults, zDomainVar)) {
+      kernelArgs.push_back(zDomainVar);
+    }
+  }
 
   // Create LLVM func
   llvm::Function *kernel = emitEmptyFunction(
@@ -615,6 +627,16 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
   // early-exit if so.
   llvm::Value *cond = builder->CreateICmpULT(getTidX(),
     emitComputeLen(kernelSharding.xDomain));
+  if (kernelSharding.ySharded) {
+    llvm::Value *yCond = builder->CreateICmpULT(getTidY(),
+    emitComputeLen(kernelSharding.yDomain));
+    cond = builder->CreateAnd(cond, yCond);
+  }
+  if (kernelSharding.zSharded) {
+    llvm::Value *zCond = builder->CreateICmpULT(getTidZ(),
+    emitComputeLen(kernelSharding.zDomain));
+    cond = builder->CreateAnd(cond, zCond);
+  }
   builder->CreateCondBr(cond, bodyStart, earlyExit);
 
   builder->SetInsertPoint(earlyExit);
@@ -708,27 +730,32 @@ llvm::Value *GPUBackend::emitCheckRoot() {
   return NULL;
 }
 
-llvm::Value *GPUBackend::getTidX() {
+llvm::Value *GPUBackend::getTid(std::string name) {
+  iassert(name == "x" || name == "y" || name == "z");
   llvm::Function *tidFunc = getBuiltIn(
-      "llvm.nvvm.read.ptx.sreg.tid.x", LLVM_INT, {});
+      "llvm.nvvm.read.ptx.sreg.tid."+name, LLVM_INT, {});
   cleanFuncAttrs(tidFunc);
   llvm::Function *bidFunc = getBuiltIn(
-      "llvm.nvvm.read.ptx.sreg.ctaid.x", LLVM_INT, {});
+      "llvm.nvvm.read.ptx.sreg.ctaid."+name, LLVM_INT, {});
   cleanFuncAttrs(bidFunc);
   auto tid = builder->CreateCall(tidFunc);
   auto bid = builder->CreateCall(bidFunc);
+  int blockSize = (name == "x" ? xBlockSize :
+                   (name == "y" ? yBlockSize : zBlockSize));
   auto blockOffset = builder->CreateMul(bid, llvmInt(blockSize));
   return builder->CreateAdd(tid, blockOffset);
 }
 
+llvm::Value *GPUBackend::getTidX() {
+  return getTid("x");
+}
+
 llvm::Value *GPUBackend::getTidY() {
-  not_supported_yet; // these should never be emitted at this point
-  return nullptr;
+  return getTid("y");
 }
 
 llvm::Value *GPUBackend::getTidZ() {
-  not_supported_yet; // these should never be emitted at this point
-  return nullptr;
+  return getTid("z");
 }
 
 llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
@@ -766,7 +793,10 @@ void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
     emitAtomicFLoadAdd(ptr, value);
   }
   else {
-    ierror << "Unknown LLVM value type for atomic load add";
+    ierror << "Unknown LLVM value type for atomic load add. " <<
+        (ir::ScalarType::singleFloat() ? "" :
+         "Ensure you are executing GPU compilation with "
+         "single-precision floats.");
   }
 }
 
@@ -809,9 +839,23 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
 void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                                   std::vector<llvm::Value*> args,
                                   GPUSharding sharding) {
-  iassert(sharding.xSharded && !sharding.ySharded && !sharding.zSharded);
-  emitKernelLaunch(kernel, args,
-                   emitComputeLen(sharding.xDomain), nullptr, nullptr);
+  // Must have at least one parallelized dimension
+  iassert(sharding.xSharded);
+  llvm::Value *xSize = emitComputeLen(sharding.xDomain);
+  llvm::Value *ySize = nullptr;
+  llvm::Value *zSize = nullptr;
+  if (sharding.ySharded) {
+    ySize = emitComputeLen(sharding.yDomain);
+  }
+  if (sharding.zSharded) {
+    zSize = emitComputeLen(sharding.zDomain);
+  }
+#ifdef SIMIT_DEBUG
+  emitPrintf("Kernel launch: %d %d %d\n", {xSize,
+          ySize ? ySize : llvmInt(1),
+          zSize ? zSize : llvmInt(1)});
+#endif
+  emitKernelLaunch(kernel, args, xSize, ySize, zSize);
 }
 
 void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
@@ -820,7 +864,6 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                                   llvm::Value *ySize,
                                   llvm::Value *zSize) {
   iassert(xSize) << "x dimension must be non-null";
-  iassert(!ySize && !zSize) << "y and z dimensions not currently supported";
 
   // LLVM types
   // struct dim3
@@ -851,24 +894,64 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       llvm::ConstantStruct::get(dim3Ty, gridDimsVec);
   
   // numBlocks = 1 + ( (len-1) / blockSize )
-  llvm::Value *numBlocks =  builder->CreateAdd(
-                              builder->CreateUDiv(
-                                builder->CreateSub(
-                                  xSize,
-                                  llvmInt(1)),
-                                llvmInt(blockSize)
-                              ), llvmInt(1)
-                            );
+  llvm::Value *xBlocks = builder->CreateAdd(
+      llvmInt(1),
+      builder->CreateUDiv(
+          builder->CreateSub(xSize, llvmInt(1)),
+          llvmInt(xBlockSize)));
   gridDims = builder->CreateInsertValue(
       gridDims,
-      numBlocks,
+      xBlocks,
       llvm::ArrayRef<unsigned>({0}));
+  llvm::Value *yBlocks = nullptr, *zBlocks = nullptr;
+  if (ySize != nullptr) {
+    yBlocks = builder->CreateAdd(
+        llvmInt(1),
+        builder->CreateUDiv(
+            builder->CreateSub(ySize, llvmInt(1)),
+            llvmInt(yBlockSize)));
+    emitPrintf("yBlocks: %d\n", {yBlocks});
+    gridDims = builder->CreateInsertValue(
+        gridDims,
+        yBlocks,
+        llvm::ArrayRef<unsigned>({1}));
+  }
+  if (zSize != nullptr) {
+    zBlocks = builder->CreateAdd(
+        llvmInt(1),
+        builder->CreateUDiv(
+            builder->CreateSub(zSize, llvmInt(1)),
+            llvmInt(zBlockSize)));
+    gridDims = builder->CreateInsertValue(
+        gridDims,
+        zBlocks,
+        llvm::ArrayRef<unsigned>({2}));
+  }
+#ifdef SIMIT_DEBUG
+  emitPrintf("Grid dims: %d %d %d\n", {
+      builder->CreateExtractValue(gridDims, llvm::ArrayRef<unsigned>({0})),
+      builder->CreateExtractValue(gridDims, llvm::ArrayRef<unsigned>({1})),
+      builder->CreateExtractValue(gridDims, llvm::ArrayRef<unsigned>({2}))});
+#endif
 
   std::vector<llvm::Constant*> initBlockDims = {
-    llvmInt(blockSize), llvmInt(1), llvmInt(1)
+    llvmInt(xBlockSize), llvmInt(1), llvmInt(1)
   };
+  if (ySize != nullptr) {
+    initBlockDims[1] = llvmInt(yBlockSize);
+  }
+  if (zSize != nullptr) {
+    initBlockDims[2] = llvmInt(zBlockSize);
+  }
   llvm::Constant *blockDims =
       llvm::ConstantStruct::get(dim3Ty, initBlockDims);
+
+#ifdef SIMIT_DEBUG
+  emitPrintf("Block dims: %d %d %d\n", {
+      builder->CreateExtractValue(blockDims, llvm::ArrayRef<unsigned>({0})),
+      builder->CreateExtractValue(blockDims, llvm::ArrayRef<unsigned>({1})),
+      builder->CreateExtractValue(blockDims, llvm::ArrayRef<unsigned>({2}))});
+#endif
 
   // Build param buffer
   llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8_PTR);
@@ -881,9 +964,10 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
   std::vector<llvm::Value*> args3 = {
     paramBuf, llvm::ConstantPointerNull::get(cuStreamPtrTy)};
-  builder->CreateCall(cudaLaunchFunc, args3);
-
-  // Synchronize memory after the call
+  llvm::Value *ret = builder->CreateCall(cudaLaunchFunc, args3);
+#ifdef SIMIT_DEBUG
+  emitPrintf("Launch status: %d\n", {ret});
+#endif
   emitDeviceSync();
 }
 
