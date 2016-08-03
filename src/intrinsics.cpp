@@ -305,6 +305,21 @@ const Func& solve() {
   return solveVar;
 }
 
+static Func cholVar;
+void cholInit() {
+  cholVar = Func("chol",
+                 {Var("A", Type())},
+                 {Var("L", Type())},
+                 Func::Intrinsic);
+}
+const Func& chol() {
+  if (!cholVar.defined()) {
+    cholInit();
+  }
+  return cholVar;
+}
+
+
 static Func strcmpVar;
 void strcmpInit() {
   strcmpVar = Func("strcmp",
@@ -456,6 +471,7 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    cholInit();
     strcmpInit();
     strlenInit();
     strcpyInit();
@@ -486,6 +502,7 @@ const std::map<std::string,Func> &byNames() {
                       {"det",detVar},
                       {"inv",invVar},
                       {"__solve",solveVar},
+                      {"chol", cholVar},
                       {"strcmp", strcmpVar},
                       {"strlen", strlenVar},
                       {"strcpy", strcpyVar},
