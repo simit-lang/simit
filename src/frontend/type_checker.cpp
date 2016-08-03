@@ -23,7 +23,23 @@ TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
   const auto threeByThreeTensorType = std::make_shared<NDTensorType>();
   threeByThreeTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   threeByThreeTensorType->indexSets = {threeDim, threeDim};
-  
+
+  auto genericParam = std::make_shared<fir::GenericParam>();
+  genericParam->type = fir::GenericParam::Type::UNKNOWN;
+  genericParam->name = "N";
+
+  const auto nDim = std::make_shared<fir::GenericIndexSet>();
+  nDim->type = fir::GenericIndexSet::Type::UNKNOWN;
+  nDim->setName = "N";
+
+  const auto nVectorType = std::make_shared<NDTensorType>();
+  nVectorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  nVectorType->indexSets = {nDim};
+
+  const auto nMatrixType = std::make_shared<NDTensorType>();
+  nMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  nMatrixType->indexSets = {nDim, nDim};
+
   // Add type signatures for intrinsic functions.
   addScalarIntrinsic(ir::intrinsics::mod().getName(), 
                      {ScalarType::Type::INT, ScalarType::Type::INT}, 
@@ -62,14 +78,19 @@ TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
                {Type::Ptr()}, 
                {makeTensorType(ScalarType::Type::FLOAT)});
   addIntrinsic(ir::intrinsics::dot().getName(), 
-               {Type::Ptr(), Type::Ptr()}, 
-               {makeTensorType(ScalarType::Type::FLOAT)});
+               {nVectorType, nVectorType},
+               {makeTensorType(ScalarType::Type::FLOAT)},
+               {genericParam});
   addIntrinsic(ir::intrinsics::det().getName(), 
                {threeByThreeTensorType}, 
                {makeTensorType(ScalarType::Type::FLOAT)});
   addIntrinsic(ir::intrinsics::inv().getName(), 
                {threeByThreeTensorType}, 
                {threeByThreeTensorType});
+  addIntrinsic(ir::intrinsics::chol().getName(),
+               {nMatrixType},
+               {nMatrixType},
+               {genericParam});
   addScalarIntrinsic(ir::intrinsics::createComplex().getName(), 
                      {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT}, 
                      {ScalarType::Type::COMPLEX});
@@ -971,7 +992,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       continue;
     }
   }
-  
+
   FuncDecl::Ptr func;
   std::string funcName = expr->func->ident;
   
@@ -982,7 +1003,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     func = env.getFunction(funcName);
   }
 
-  // If callee type signature could not be determined, 
+  // If callee type signature could not be determined,
   // then there's nothing more to do.
   if (!func) {
     return;
@@ -995,8 +1016,8 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   // Check that number of generic arguments passed to callee is valid.
   if (expr->genericArgs.size() > func->genericParams.size()) {
     std::stringstream errMsg;
-    errMsg << "passed in " << expr->genericArgs.size() << " generic arguments " 
-           << "but function '" << funcName << "' expects at most " 
+    errMsg << "passed in " << expr->genericArgs.size() << " generic arguments "
+           << "but function '" << funcName << "' expects at most "
            << func->genericParams.size();
     reportError(errMsg.str(), expr);
   }
@@ -1012,7 +1033,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   if (!func->genericParams.empty()) {
     GenericCallTypeChecker checker(env);
 
-    // Type parameter resolution needs to be done with information that is 
+    // Type parameter resolution needs to be done with information that is
     // stored only with the original version of the generic function (in 
     // particular, input element sources).
     const auto funcSignature = func->originalName.empty() ? func :
@@ -1021,7 +1042,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     // Map generic parameters to generic arguments.
     const auto numGenericArgs = std::min(expr->genericArgs.size(),
                                          funcSignature->genericParams.size());
-    
+
     for (unsigned i = 0; i < numGenericArgs; ++i) {
       if (validGenericArg[i]) {
         const auto genericParam = funcSignature->genericParams[i];
@@ -1061,13 +1082,13 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       return;
     }
 
-    if (func->originalName.empty()) { 
+    if (func->originalName.empty()) {
       func = func->clone<FuncDecl>();
       func->body = StmtBlock::Ptr();
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    
+
     if (!func->originalName.empty()) {
       const std::string typeSig = getConcretizedTypeSignatureString(func);
 
@@ -1110,7 +1131,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
 
     // Check that argument is of type expected by callee.
-    if (funcName == ir::intrinsics::norm().getName() || 
+    if (funcName == ir::intrinsics::norm().getName() ||
         funcName == ir::intrinsics::dot().getName()) {
       // Check that argument is a numeric tensor of appropriate order.
       if (!argType.isNumericTensor() || 
@@ -1122,7 +1143,8 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       }
     } else if (!env.compareTypes(argType.type[0], funcArg->type)) {
       std::stringstream errMsg;
-      errMsg << "expected argument of type " << toString(funcArg->type) 
+      iassert(funcArg->type != nullptr);
+      errMsg << "expected argument of type " << toString(funcArg->type)
              << " but got an argument of type " << toString(argType);
       reportError(errMsg.str(), arg);
     }
@@ -2679,23 +2701,29 @@ void TypeChecker::addScalarIntrinsic(const std::string& name,
 
 void TypeChecker::addIntrinsic(const std::string& name,
     const std::vector<Type::Ptr> &args,
-    const std::vector<Type::Ptr> &results) {
+    const std::vector<Type::Ptr> &results,
+    const std::vector<GenericParam::Ptr> &genericParams) {
   const auto decl = std::make_shared<FuncDecl>();
-  decl->name = std::make_shared<Identifier>();
 
+  decl->name = std::make_shared<Identifier>();
   decl->name->ident = name;
   decl->type = FuncDecl::Type::INTERNAL;
-  
+
+  decl->genericParams = genericParams;
+
   for (unsigned i = 0; i < args.size(); ++i) {
     const auto arg = std::make_shared<Argument>();
-    
+    arg->name = std::make_shared<fir::Identifier>();
+    arg->name->ident = "a" + to_string(i+1);
     arg->type = args[i];
     decl->args.push_back(arg);
   }
 
-  for (const auto resType : results) {
+  for (unsigned i = 0; i < results.size(); ++i) {
     const auto res = std::make_shared<IdentDecl>();
-    res->type = resType;
+    res->name = std::make_shared<fir::Identifier>();
+    res->name->ident = "r" + to_string(i+1);
+    res->type = results[i];
     decl->results.push_back(res);
   }
 

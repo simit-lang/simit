@@ -41,7 +41,7 @@ float tan_f32(float x) {
 
 double asin_f64(double x) {
   return asin(x);
-  }
+}
 
 float asin_f32(float x) {
   double d_x = x;
