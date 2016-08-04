@@ -1298,6 +1298,15 @@ protected:
   virtual FIRNode::Ptr cloneNode(); 
 };
 
+
+// Utility functions
+typedef std::vector<IndexSet::Ptr> IndexDomain;
+typedef std::vector<IndexDomain>   TensorDimensions;
+
+TensorType::Ptr
+makeTensorType(ScalarType::Type componentType,
+               const TensorDimensions &dimensions = TensorDimensions(),
+               bool transposed = false);
 }
 }
 

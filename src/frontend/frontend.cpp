@@ -15,6 +15,7 @@
 #include "const_fold.h"
 #include "infer_element_sources.h"
 #include "ir_emitter.h"
+#include "fir_intrinsics.h"
 #include "specialize_generic_functions.h"
 #include "type_checker.h"
 
@@ -23,6 +24,8 @@ using namespace simit::internal;
 // Frontend
 int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
+  std::vector<fir::FuncDecl::Ptr> intrinsics = fir::createIntrinsics();
+
   // Lexical and syntactic analyses.
   TokenStream tokens = Scanner(errors).lex(programStream);
   fir::Program::Ptr program = Parser(errors).parse(tokens);
@@ -31,8 +34,8 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   program = fir::ConstantFolding().rewrite(program);
   fir::ConstChecker(errors).check(program);
   fir::InferElementSources().infer(program);
-  fir::SpecializeGenericFunctions().specialize(program);
-  fir::TypeChecker(errors).check(program);
+  fir::SpecializeGenericFunctions(intrinsics).specialize(program);
+  fir::TypeChecker(intrinsics, errors).check(program);
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {

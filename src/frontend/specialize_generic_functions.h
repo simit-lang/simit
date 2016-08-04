@@ -13,7 +13,8 @@ namespace fir {
 
 class SpecializeGenericFunctions : public FIRVisitor {
 public:
-  SpecializeGenericFunctions() : count(0) {}
+  SpecializeGenericFunctions(const std::vector<fir::FuncDecl::Ptr> &intrinsics)
+      : count(0), intrinsics(intrinsics) {}
 
   void specialize(Program::Ptr);
 
@@ -24,6 +25,7 @@ private:
   virtual void visit(MapExpr::Ptr);
 
   void clone(FuncDecl::Ptr, const std::string &);
+  void cloneIfGeneric(const Identifier::Ptr &funcName);
 
 private:
   typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
@@ -43,10 +45,10 @@ private:
   FuncMap     genericFuncs;
   FuncListMap specializedFuncs;
   unsigned    count;
+  const std::vector<fir::FuncDecl::Ptr> &intrinsics;
 };
 
 }
 }
 
 #endif
-
