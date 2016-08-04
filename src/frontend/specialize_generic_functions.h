@@ -13,7 +13,7 @@ namespace fir {
 
 class SpecializeGenericFunctions : public FIRVisitor {
 public:
-  SpecializeGenericFunctions(const std::vector<fir::FuncDecl::Ptr> &intrinsics)
+  SpecializeGenericFunctions(const std::vector<FuncDecl::Ptr> &intrinsics)
       : count(0), intrinsics(intrinsics) {}
 
   void specialize(Program::Ptr);
@@ -44,8 +44,11 @@ private:
 private:
   FuncMap     genericFuncs;
   FuncListMap specializedFuncs;
+  
   unsigned    count;
-  const std::vector<fir::FuncDecl::Ptr> &intrinsics;
+  std::string currentFunc;
+
+  const std::vector<FuncDecl::Ptr> &intrinsics;
 };
 
 }
