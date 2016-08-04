@@ -66,11 +66,13 @@ void Function::bind(const std::string& name, simit::Set *set) {
 
     uassert(setFieldTypeComponentType == elemFieldType->getComponentType())
         << "field type does not match function argument type "
-        << util::quote(*elemFieldType);
+        << util::quote(*elemFieldType)
+        << "(" << name << "." << fieldData->name << ")";
 
     uassert(setFieldType->getOrder() == elemFieldType->order())
         << "field type does not match function argument type "
-        << util::quote(*elemFieldType);
+        << util::quote(*elemFieldType)
+        << "(" << name << "." << fieldData->name << ")";
 
     const vector<ir::IndexDomain> &fieldDims = elemFieldType->getDimensions();
     for (size_t i=0; i < elemFieldType->order(); ++i) {

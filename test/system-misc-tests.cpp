@@ -543,6 +543,7 @@ TEST(System, slice) {
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
   FieldRef<simit_float> d = points.addField<simit_float>("d");
+  FieldRef<int> i = points.addField<int>("i");
   
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -551,6 +552,10 @@ TEST(System, slice) {
   b.set(p0, 1.0);
   b.set(p1, 2.0);
   b.set(p2, 3.0);
+
+  i.set(p0, 0);
+  i.set(p1, 1);
+  i.set(p2, 2);
 
   // Taint c
   c.set(p0, 42.0);

@@ -23,6 +23,7 @@
 #include "kernel_rw_analysis.h"
 #include "localize_temps.h"
 #include "rewrite_compound_ops.h"
+#include "rewrite_memsets.h"
 #include "rewrite_system_assign.h"
 #include "shard_gpu_loops.h"
 #include "var_decl_rewriter.h"

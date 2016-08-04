@@ -8,7 +8,11 @@
 namespace simit {
 namespace ir {
 
+/// Create a simple assign to scalar zero (regardless of lhs dimensions)
 Stmt initializeLhsToZero(Stmt stmt);
+
+/// Build a loop nest to assign all components of lhs to zero
+Stmt initializeTensorToZero(Stmt stmt);
 
 /// Compute the smallest value of the given Exprs and assign the result to var.
 Stmt min(const Var &result, const std::vector<Expr> &exprs);

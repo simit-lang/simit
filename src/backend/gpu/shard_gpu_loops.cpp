@@ -48,7 +48,6 @@ public:
 private:
   using IRRewriter::visit;
 
-  Stmt innerFor;
   vector<Var> lowerVars;
   int level = 0; // how many GPU dimensions wrap the current stmt
   int filledLevel = 0; // how many GPU dimensions are allocated
@@ -95,11 +94,10 @@ private:
     bodyFirst = split[1];
     bodyRest = split[2];
 
-    std::cout << "bodyFirst: " << bodyFirst << std::endl;
-    std::cout << "bodyRest: " << bodyRest << std::endl;
-
     // Properly rewrite inner body, including sharding inner loops
-    rewrite(loop->body);
+    if (split[0].defined()) {
+      stmt = rewrite(split[0]);
+    }
 
     // For any loop vars of lower for loops, we should only execute this body
     // once. We choose the convention of all lower loop vars = 0.
@@ -109,10 +107,10 @@ private:
         for (int i = 1; i < lowerVars.size(); ++i) {
           cond = And::make(cond, Eq::make(lowerVars[i], 0));
         }
-        innerFor = Block::make(IfThenElse::make(cond, bodyFirst), innerFor);
+        stmt = Block::make(IfThenElse::make(cond, bodyFirst), stmt);
       }
       else {
-        innerFor = Block::make(bodyFirst, innerFor);
+        stmt = Block::make(bodyFirst, stmt);
       }
     }
     if (bodyRest.defined()) {
@@ -121,30 +119,20 @@ private:
         for (int i = 1; i < lowerVars.size(); ++i) {
           cond = And::make(cond, Eq::make(lowerVars[i], 0));
         }
-        innerFor = Block::make(innerFor, IfThenElse::make(cond, bodyRest));
+        stmt = Block::make(stmt, IfThenElse::make(cond, bodyRest));
       }
       else {
-        innerFor = Block::make(innerFor, bodyRest);
+        stmt = Block::make(stmt, bodyRest);
       }
     }
-    std::cout << "For loop: " << Stmt(loop) << std::endl;
-    std::cout << "Built inner for: " << innerFor << std::endl;
-
     lowerVars.push_back(loop->var);
 
     // The kernel owner emits the GPUKernel node around the body
     if (ownsKernel) {
-      stmt = GPUKernel::make(innerFor, *currentKernelSharding);
+      stmt = GPUKernel::make(stmt, *currentKernelSharding);
       currentKernelSharding = nullptr;
       lowerVars.clear();
-      innerFor = Stmt();
       filledLevel = 0;
-    }
-    else {
-      // Loops that do not own the kernel get snipped and placed in
-      // innerFor. This ensures that statements outside loops are correctly
-      // guarded to only run on thread 0 for the relevant dimensions.
-      stmt = Pass::make();
     }
     level--;
   }
