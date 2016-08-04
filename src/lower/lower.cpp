@@ -137,6 +137,14 @@ Func lower(Func func, std::ostream* os, bool time) {
   func = rewriteCallGraph(func, lowerMaps);
   printCallGraph("Lower Maps", func, os);
 
+#ifdef GPU
+  // GPU backend wants memsets as loops over set domains
+  if (kBackend == "gpu") {
+    func = rewriteCallGraph(func, rewriteMemsets);
+    printCallGraph("Rewrite Memsets (GPU)", func, print);
+  }
+#endif
+
   // Lower Index Expressions
   func = rewriteCallGraph(func, lowerIndexExpressions);
   printCallGraph("Lower Index Expressions", func, os);

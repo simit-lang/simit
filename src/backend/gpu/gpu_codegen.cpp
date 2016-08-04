@@ -111,11 +111,13 @@ std::string generatePtx(llvm::Module *module,
   llvm::WriteBitcodeToFile(module, bcOstr);
   bcOstr.flush();
   
-  std::cerr << "Bitcode: " << bcStr.size() << " bytes\n";
+#ifdef SIMIT_DEBUG
+  std::cout << "Bitcode: " << bcStr.size() << " bytes\n";
   
   std::ofstream bcFile("simit.bc", std::ofstream::trunc | std::ofstream::binary);
   bcFile << bcStr << std::endl;
   bcFile.close();
+#endif
   
   // Create NVVM compilation unit from LLVM IR
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
@@ -132,14 +134,12 @@ std::string generatePtx(llvm::Module *module,
   // Compile LLVM IR into PTX
   res = nvvmCompileProgram(compileUnit, 1, options);
   if (res != NVVM_SUCCESS) {
-    std::cerr << "nvvmCompileProgram failed!" << std::endl;
     size_t logSize;
     nvvmGetProgramLogSize(compileUnit, &logSize);
     char *msg = new char[logSize];
     nvvmGetProgramLog(compileUnit, msg);
-    std::cerr << msg << std::endl;
+    ierror << "nvvmCompileProgram failed: " << msg;
     delete [] msg;
-    ierror << "nvvmCompileProgram failed";
   }
 
   size_t ptxSize;

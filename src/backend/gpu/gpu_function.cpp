@@ -74,17 +74,22 @@ GPUFunction::GPUFunction(
 
   char name[128];
   checkCudaErrors(cuDeviceGetName(name, 128, device));
-  // TODO(gkanwar): Figure out logging system
+#ifdef SIMIT_DEBUG
   std::cout << "Using CUDA Device [0]: " << name << std::endl;
+#endif
 
   checkCudaErrors(cuDeviceComputeCapability(&cuDevMajor, &cuDevMinor, device));
+#ifdef SIMIT_DEBUG
   std::cout << "Device Compute Capability: "
             << cuDevMajor << "." << cuDevMinor << std::endl;
+#endif
   iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
 
+#ifdef SIMIT_DEBUG
   size_t bytes;
   checkCudaErrors(cuDeviceTotalMem(&bytes, device));
   std::cout << "Total memory: " << bytes << std::endl;
+#endif
 
   // Create driver context
   cudaContext = new CUcontext();
@@ -111,9 +116,11 @@ GPUFunction::~GPUFunction() {
     delete cudaModule;
   }
 
+#ifdef SIMIT_DEBUG
   size_t free, total;
   cuMemGetInfo(&free, &total);
   std::cerr << "CUDA mem info: " << free << " free of " << total << std::endl;
+#endif
 
   // Release driver context, if any
   if (cudaContext) {
@@ -455,7 +462,6 @@ GPUFunction::pushExternSparseTensor(const ir::Environment& env,
 llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* actual) {
   // TODO: Use ActualVisitor
 
-  // std::cout << "Push arg: " << formal << std::endl;
   if (isa<TensorActual>(actual)) {
     TensorActual* tActual = to<TensorActual>(actual);
     CUdeviceptr *devBuffer = new CUdeviceptr();
@@ -471,6 +477,11 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
           return llvmFP(*(float*)tActual->getData());
         case ir::ScalarType::Boolean:
           return llvmBool(*(bool*)tActual->getData());
+        case ir::ScalarType::Complex:
+          tassert(ir::ScalarType::floatBytes == sizeof(float))
+              << "GPUFunction requires single precision floats";
+          return llvmComplex(((float*)tActual->getData())[0],
+                             ((float*)tActual->getData())[1]);
         default:
           ierror << "Unknown ScalarType: " << ttype->getComponentType().kind;
       }
@@ -479,7 +490,6 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
       size_t size = ttype->size() * ttype->getComponentType().bytes();
       checkCudaErrors(cuMemAlloc(devBuffer, size));
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, tActual->getData(), size));
-      // std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
       pushedBufs.push_back(
           new DeviceDataHandle(tActual->getData(), devBuffer, size));
       std::vector<DeviceDataHandle*> argBufs = { pushedBufs.back() };
@@ -657,14 +667,18 @@ GPUFunction::init() {
       << "LLVM module does not pass verification";
 
   // Generate harness PTX
+#ifdef SIMIT_DEBUG
   std::cout << "Create PTX" << std::endl;
+#endif
   std::string ptxStr = generatePtx(
       module, cuDevMajor, cuDevMinor,
       module->getModuleIdentifier().c_str());
 
+#ifdef SIMIT_DEBUG
   std::ofstream ptxFile("simit.ptx", std::ofstream::trunc);
   ptxFile << ptxStr << std::endl;
   ptxFile.close();
+#endif
 
   // JIT linker and final CUBIN
   char linkerInfo[16384];
@@ -887,16 +901,12 @@ GPUFunction::init() {
         *cudaModule, rowptrs.getName(), sizeof(void*));
     cuMemcpyHtoD(rowptrsPtr, reinterpret_cast<void*>(devRowptrBuffer),
                  sizeof(void*));
-    // std::cout << "store in: " << rowptrsPtr << std::endl;
-    // std::cout << "Value of rowptrsPtr: " << *(void**)rowptrsPtr << std::endl;
 
     const ir::Var& colidx = tensorIndex.getColidxArray();
     CUdeviceptr colidxPtr = getGlobalDevPtr(
         *cudaModule, colidx.getName(), sizeof(void*));
     cuMemcpyHtoD(colidxPtr, reinterpret_cast<void*>(devColidxBuffer),
                  sizeof(void*));
-    // std::cout << "store in: " << colidxPtr << std::endl;
-    // std::cout << "Value of colidxPtr: " << *(void**)colidxPtr << std::endl;
   }
 
   // Get reference to CUDA function
@@ -919,7 +929,6 @@ GPUFunction::init() {
     for (auto& pair : arguments) {
       std::string name = pair.first;
       if (isResult(name)) {
-        // std::cout << "Dirtying " << formal << std::endl;
         for (auto &handle : argBufMap[name]) {
           handle->devDirty = true;
         }

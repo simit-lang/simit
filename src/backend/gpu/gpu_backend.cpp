@@ -237,6 +237,35 @@ void GPUBackend::compile(const ir::Literal& op) {
         }
         break;
       }
+      case ir::ScalarType::Complex: {
+        std::vector<llvm::Constant*> structVals;
+        llvm::ArrayType* arrayType;
+        if (ir::ScalarType::floatBytes == sizeof(float)) {
+          iassert(op.size % sizeof(float_complex) == 0)
+              << "Literal data size not a multiple of element size";
+          for (int i = 0; i < op.size/sizeof(float_complex); ++i) {
+            float_complex &lit = reinterpret_cast<float_complex*>(op.data)[i];
+            structVals.push_back(llvmComplex(lit.real, lit.imag));
+          }
+          arrayType = llvm::ArrayType::get(llvmComplexType(),
+                                           op.size/sizeof(float_complex));
+        }
+        else if (ir::ScalarType::floatBytes == sizeof(double)) {
+          iassert(op.size % sizeof(double_complex) == 0)
+              << "Literal data size not a multiple of element size";
+          for (int i = 0; i < op.size/sizeof(double_complex); ++i) {
+            double_complex &lit = reinterpret_cast<double_complex*>(op.data)[i];
+            structVals.push_back(llvmComplex(lit.real, lit.imag));
+          }
+          arrayType = llvm::ArrayType::get(llvmComplexType(),
+                                           op.size/sizeof(double_complex));
+        }
+        else {
+          unreachable;
+        }
+        dataConstant = llvm::ConstantArray::get(arrayType, structVals);
+        break;
+      }
       case ir::ScalarType::Boolean: {
         not_supported_yet;
         // This code is untested, but likely correct
@@ -355,9 +384,7 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
   }
   else if (varType->order() > 0 && valType->order() == 0 &&
            ir::isa<ir::Literal>(op.value) &&
-           (ir::to<ir::Literal>(op.value)->getFloatVal(0) == 0.0 ||
-            ((int*)ir::to<ir::Literal>(op.value))[0] == 0) &&
-           !inKernel) {
+           ir::to<ir::Literal>(op.value)->isAllZeros()) {
     llvm::Value *varPtr = compile(op.var);
     llvm::Value *len = emitComputeLen(varType, storage.getStorage(op.var));
     emitShardedMemSet(op.var.getType(), varPtr, len);
@@ -440,6 +467,25 @@ void GPUBackend::compile(const ir::CallStmt& op) {
     else if (op.callee == ir::intrinsics::loc()) {
       call = emitCall("loc", args, LLVM_INT);
     }
+    else if (op.callee == ir::intrinsics::complexNorm()) {
+      std::string fname = "complexNorm" + floatTypeName;
+      call = emitCall(fname, {builder->ComplexGetReal(args[0]),
+              builder->ComplexGetImag(args[0])}, llvmFloatType());
+    }
+    else if (op.callee == ir::intrinsics::createComplex()) {
+      call = builder->CreateComplex(args[0], args[1]);
+    }
+    else if (op.callee == ir::intrinsics::complexGetReal()) {
+      call = builder->ComplexGetReal(args[0]);
+    }
+    else if (op.callee == ir::intrinsics::complexGetImag()) {
+      call = builder->ComplexGetImag(args[0]);
+    }
+    else if (op.callee == ir::intrinsics::complexConj()) {
+      auto real = builder->ComplexGetReal(args[0]);
+      auto imag = builder->CreateFNeg(builder->ComplexGetImag(args[0]));
+      call = builder->CreateComplex(real, imag);
+    }
     else {
       ierror << "intrinsic " << op.callee.getName() << " not found";
     }
@@ -498,7 +544,7 @@ void GPUBackend::compile(const ir::FieldWrite& op) {
   if (fieldType.toTensor()->order() > 0 &&
       valueType.toTensor()->order() == 0 &&
       ir::isa<ir::Literal>(op.value) &&
-      ir::to<ir::Literal>(op.value)->getFloatVal(0) == 0.0) {
+      ir::to<ir::Literal>(op.value)->isAllZeros()) {
     // TODO: Currently do not support int memsets
     tassert(valueType.toTensor()->getComponentType().kind
             == ir::ScalarType::Float)
@@ -792,6 +838,15 @@ void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
   else if (value->getType()->isFloatTy()) {
     emitAtomicFLoadAdd(ptr, value);
   }
+  else if (value->getType()->isStructTy()) {
+    // Complex - split into two atomic instructions
+    std::vector<llvm::Value*> realIndices = {llvmInt(0), llvmInt(0)};
+    std::vector<llvm::Value*> imagIndices = {llvmInt(0), llvmInt(1)};
+    emitAtomicFLoadAdd(builder->CreateGEP(ptr, realIndices),
+                       builder->ComplexGetReal(value));
+    emitAtomicFLoadAdd(builder->CreateGEP(ptr, imagIndices),
+                       builder->ComplexGetImag(value));
+  }
   else {
     ierror << "Unknown LLVM value type for atomic load add. " <<
         (ir::ScalarType::singleFloat() ? "" :
@@ -910,7 +965,6 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
         builder->CreateUDiv(
             builder->CreateSub(ySize, llvmInt(1)),
             llvmInt(yBlockSize)));
-    emitPrintf("yBlocks: %d\n", {yBlocks});
     gridDims = builder->CreateInsertValue(
         gridDims,
         yBlocks,
@@ -1034,6 +1088,13 @@ void GPUBackend::emitPrintf(std::string format,
       else if (width < 32) {
         args[i] = builder->CreateSExt(arg, LLVM_INT);
       }
+    }
+    // Split complex structs into two doubles
+    else if (arg->getType()->isStructTy()) {
+      llvm::Value *real = builder->ComplexGetReal(args[i]);
+      llvm::Value *imag = builder->ComplexGetImag(args[i]);
+      args[i] = builder->CreateFPExt(real, LLVM_DOUBLE);
+      args.insert(args.begin()+i+1, builder->CreateFPExt(imag, LLVM_DOUBLE));
     }
   }
 
