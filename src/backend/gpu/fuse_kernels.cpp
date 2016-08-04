@@ -254,7 +254,6 @@ private:
 
 Func fuseKernels(Func func) {
   std::set<Var> rootVars = findRootVars(func);
-  std::cout << "fuseKernels" << std::endl;
   // Pass 1: Move kernels as far down in blocks as possible,
   // starting from the top.
   func = canonicalizeBlocks(func, true);
