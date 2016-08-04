@@ -319,7 +319,6 @@ const Func& chol() {
   return cholVar;
 }
 
-
 static Func strcmpVar;
 void strcmpInit() {
   strcmpVar = Func("strcmp",

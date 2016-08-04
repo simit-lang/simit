@@ -24,7 +24,8 @@ namespace fir {
 // undeclared identifiers.
 class TypeChecker : public FIRVisitor {
 public:
-  TypeChecker(std::vector<ParseError> *);
+  TypeChecker(const std::vector<fir::FuncDecl::Ptr> &intrinsics,
+              std::vector<ParseError> *errors);
 
   void check(Program::Ptr);
 
@@ -372,16 +373,6 @@ private:
   static TensorDimensions getDimensions(TensorType::Ptr);
   static unsigned         getOrder(TensorType::Ptr);
   static bool             getTransposed(TensorType::Ptr);
-
-  static TensorType::Ptr makeTensorType(ScalarType::Type, 
-      const TensorDimensions& = TensorDimensions(), bool = false);
-
-  void addScalarIntrinsic(const std::string&,
-                          const std::vector<ScalarType::Type>&,
-                          const std::vector<ScalarType::Type>&);
-  void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
-                    const std::vector<Type::Ptr>&,
-                    const std::vector<GenericParam::Ptr>& = {});
 
   static std::string getConcretizedTypeSignatureString(FuncDecl::Ptr);
 

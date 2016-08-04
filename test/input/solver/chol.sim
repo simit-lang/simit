@@ -27,8 +27,6 @@ end
 
 proc main 
   A = map dist_a to springs reduce +;
-  println A;
   B = chol(A);
-  println B;
   points.c = B * points.b;
 end

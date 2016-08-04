@@ -1031,7 +1031,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       ir::Expr tmpExpr = ir::VarExpr::make(results[i]);
       if (!isScalar(tmpExpr.type())) {
         // Needed to handle assignment of non-scalar tensors.
-        tmpExpr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, 
+        tmpExpr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None,
                                                      tmpExpr);
       }
       

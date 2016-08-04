@@ -873,6 +873,31 @@ FIRNode::Ptr Test::cloneNode() {
   return node;
 }
 
-}
+TensorType::Ptr makeTensorType(ScalarType::Type componentType,
+                               const TensorDimensions &dimensions,
+                               bool transposed) {
+  const auto scalarType = std::make_shared<ScalarType>();
+  scalarType->type = componentType;
+
+  if (dimensions.empty()) {
+    return scalarType;
+  }
+
+  TensorType::Ptr retType = scalarType;
+  for (unsigned i = 0; i < dimensions[0].size(); ++i) {
+    const auto tensorType = std::make_shared<NDTensorType>();
+    tensorType->blockType = retType;
+
+    const unsigned idx = dimensions[0].size() - i - 1;
+    for (unsigned j = 0; j < dimensions.size(); ++j) {
+      tensorType->indexSets.push_back(dimensions[j][idx]);
+    }
+
+    retType = tensorType;
+  }
+  to<NDTensorType>(retType)->transposed = transposed;
+
+  return retType;
 }
 
+}}
