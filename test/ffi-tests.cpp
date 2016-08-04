@@ -533,7 +533,7 @@ TEST(ffi, matrix_neg) {
   ASSERT_EQ(-10.0, (double)a(v2));
 }
 
-TEST(DISABLED_ffi, matrix_neg_generics) {
+TEST(ffi, matrix_neg_generics) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
