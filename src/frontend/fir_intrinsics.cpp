@@ -128,6 +128,41 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                      ir::intrinsics::pow().getName(),
                      {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
+
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::clock().getName(),
+                     {}, {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::storeTime().getName(),
+                     {ScalarType::Type::INT, ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
+
+  // Local vectors/matrices
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::det().getName(),
+               {threeByThreeTensorType},
+               {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::inv().getName(),
+               {threeByThreeTensorType},
+               {threeByThreeTensorType});
+
+  // System vectors/matrices
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::norm().getName(),
+               {Type::Ptr()},
+               {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::dot().getName(),
+               {Type::Ptr(), Type::Ptr()},
+               {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::chol().getName(),
+               {nMatrixType},
+               {nMatrixType},
+               {genericParam});
+
+  // Complex numbers
   addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::createComplex().getName(),
                      {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
@@ -148,35 +183,6 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                      ir::intrinsics::complexConj().getName(),
                      {ScalarType::Type::COMPLEX},
                      {ScalarType::Type::COMPLEX});
-  addScalarIntrinsic(&intrinsics,
-                     ir::intrinsics::clock().getName(),
-                     {}, {ScalarType::Type::FLOAT});
-  addScalarIntrinsic(&intrinsics,
-                     ir::intrinsics::storeTime().getName(),
-                     {ScalarType::Type::INT, ScalarType::Type::FLOAT},
-                     {ScalarType::Type::FLOAT});
-
-  addIntrinsic(&intrinsics,
-               ir::intrinsics::norm().getName(),
-               {Type::Ptr()},
-               {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic(&intrinsics,
-               ir::intrinsics::dot().getName(),
-               {Type::Ptr(), Type::Ptr()},
-               {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic(&intrinsics,
-               ir::intrinsics::det().getName(),
-               {threeByThreeTensorType},
-               {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic(&intrinsics,
-               ir::intrinsics::inv().getName(),
-               {threeByThreeTensorType},
-               {threeByThreeTensorType});
-  addIntrinsic(&intrinsics,
-               ir::intrinsics::chol().getName(),
-               {nMatrixType},
-               {nMatrixType},
-               {genericParam});
 
   return intrinsics;
 }
