@@ -148,6 +148,10 @@ double simitClock() {
 } // extern "C"
 
 // Solvers
+#ifdef EIGEN
+using namespace Eigen;
+#endif
+
 #define SOLVER_ERROR                                            \
 do {                                                            \
   ierror << "Solvers require that Simit was built with Eigen."; \
@@ -157,16 +161,14 @@ template <typename Float>
 void solve(int n,  int m,  int* rowPtr, int* colIdx,
            int nn, int mm, Float* A, Float* x, Float* b) {
 #ifdef EIGEN
-  using namespace Eigen;
-
-  auto xvec = new Eigen::Map<Eigen::Matrix<Float,Dynamic,1>>(x, m);
-  auto cvec = new Eigen::Map<Eigen::Matrix<Float,Dynamic,1>>(b, n);
-  auto mat = csr2eigen<Float, Eigen::ColMajor>(n, m, rowPtr, colIdx, nn, mm, A);
+  auto A_ = csr2eigen<Float, Eigen::ColMajor>(n, m, rowPtr, colIdx, nn, mm, A);
+  auto x_ = new Map<Matrix<Float,Dynamic,1>>(x, m);
+  auto b_ = new Map<Matrix<Float,Dynamic,1>>(b, n);
 
   ConjugateGradient<SparseMatrix<Float>,Lower,IdentityPreconditioner> solver;
   solver.setMaxIterations(50);
-  solver.compute(mat);
-  *cvec = solver.solve(*xvec);
+  solver.compute(A_);
+  *b_ = solver.solve(*x_);
 #else
   SOLVER_ERROR;
 #endif
