@@ -136,45 +136,7 @@ struct ErrorReport {
   bool warning;
 
   ErrorReport(const char *file, const char *func, int line, bool condition,
-              const char *conditionString, Kind kind, bool warning)
-      : msg(NULL), file(file), func(func), line(line), condition(condition),
-        conditionString(conditionString), kind(kind), warning(warning) {
-    if (condition) {
-      return;
-    }
-    msg = new std::ostringstream;
-
-    switch (kind) {
-      case User:
-        if (warning) {
-          (*msg) << "Warning";
-        } else {
-          (*msg) << "Error";
-        }
-        (*msg) << " in " << func << " in file " << file << ":" << line;
-        break;
-      case Internal:
-        (*msg) << "Internal ";
-        if (warning) {
-          (*msg) << "warning";
-        } else {
-          (*msg) << "error";
-        }
-        (*msg) << " at " << file << ":" << line << " in " << func;
-        if (conditionString) {
-          (*msg)  << "\n" << " Condition failed: " << conditionString;
-        }
-        break;
-      case Temporary:
-        (*msg) << "Temporary assumption broken";
-        (*msg) << " at " << file << ":" << line;
-        if (conditionString) {
-          (*msg) << "\n" << " Condition failed: " << conditionString;
-        }
-        break;
-    }
-    (*msg) << " ";
-  }
+              const char *conditionString, Kind kind, bool warning);
 
   template<typename T>
   ErrorReport &operator<<(T x) {

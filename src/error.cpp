@@ -38,6 +38,48 @@ std::ostream &operator<<(std::ostream &os, const Diagnostics &f) {
 
 namespace internal {
 
+ErrorReport::ErrorReport(const char *file, const char *func, int line,
+                         bool condition, const char *conditionString,
+                         Kind kind, bool warning)
+    : msg(NULL), file(file), func(func), line(line), condition(condition),
+      conditionString(conditionString), kind(kind), warning(warning) {
+  if (condition) {
+    return;
+  }
+  msg = new std::ostringstream;
+
+  switch (kind) {
+    case User:
+      if (warning) {
+        (*msg) << "Warning";
+      } else {
+        (*msg) << "Error";
+      }
+      (*msg) << " in " << func << " in file " << file << ":" << line;
+      break;
+    case Internal:
+      (*msg) << "Internal ";
+      if (warning) {
+        (*msg) << "warning";
+      } else {
+        (*msg) << "error";
+      }
+      (*msg) << " at " << file << ":" << line << " in " << func;
+      if (conditionString) {
+        (*msg)  << "\n" << " Condition failed: " << conditionString;
+      }
+      break;
+    case Temporary:
+      (*msg) << "Temporary assumption broken";
+      (*msg) << " at " << file << ":" << line;
+      if (conditionString) {
+        (*msg) << "\n" << " Condition failed: " << conditionString;
+      }
+      break;
+  }
+  (*msg) << " ";
+}
+
 // Force the classes to exist, even if exceptions are off
 void ErrorReport::explode() {
   // TODO: Add an option to error out on warnings too
