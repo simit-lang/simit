@@ -1,5 +1,5 @@
-#ifndef SIMIT_SPECIALIZE_GENERIC_FUNCTIONS_H
-#define SIMIT_SPECIALIZE_GENERIC_FUNCTIONS_H
+#ifndef SIMIT_CLONE_GENERIC_FUNCTIONS_H
+#define SIMIT_CLONE_GENERIC_FUNCTIONS_H
 
 #include <list>
 #include <string>
@@ -11,9 +11,9 @@
 namespace simit {
 namespace fir {
 
-class SpecializeGenericFunctions : public FIRVisitor {
+class CloneGenericFunctions : public FIRVisitor {
 public:
-  SpecializeGenericFunctions(const std::vector<FuncDecl::Ptr> &intrinsics)
+  CloneGenericFunctions(const std::vector<FuncDecl::Ptr> &intrinsics)
       : count(0), intrinsics(intrinsics) {}
 
   void specialize(Program::Ptr);

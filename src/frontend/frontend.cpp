@@ -16,7 +16,7 @@
 #include "infer_element_sources.h"
 #include "ir_emitter.h"
 #include "fir_intrinsics.h"
-#include "specialize_generic_functions.h"
+#include "clone_generic_functions.h"
 #include "type_checker.h"
 
 using namespace simit::internal;
@@ -34,7 +34,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   program = fir::ConstantFolding().rewrite(program);
   fir::ConstChecker(errors).check(program);
   fir::InferElementSources().infer(program);
-  fir::SpecializeGenericFunctions(intrinsics).specialize(program);
+  fir::CloneGenericFunctions(intrinsics).specialize(program);
   fir::TypeChecker(intrinsics, errors).check(program);
 
   // Only emit IR if no syntactic or semantic error was found.

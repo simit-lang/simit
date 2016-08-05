@@ -1,13 +1,13 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "specialize_generic_functions.h"
+#include "clone_generic_functions.h"
 #include "util/collections.h"
 
 namespace simit {
 namespace fir {
 
-void SpecializeGenericFunctions::specialize(Program::Ptr program) {
+void CloneGenericFunctions::specialize(Program::Ptr program) {
   FindGenericFuncs(genericFuncs).find(program);
   
   for (auto intrinsic : intrinsics) {
@@ -19,7 +19,7 @@ void SpecializeGenericFunctions::specialize(Program::Ptr program) {
   program->accept(this);
 }
 
-void SpecializeGenericFunctions::visit(Program::Ptr program) {
+void CloneGenericFunctions::visit(Program::Ptr program) {
   for (auto it = program->elems.crbegin(); it != program->elems.crend(); ++it) {
     const auto elem = *it;
     
@@ -59,24 +59,24 @@ void SpecializeGenericFunctions::visit(Program::Ptr program) {
   program->elems = newElems;
 }
 
-void SpecializeGenericFunctions::visit(FuncDecl::Ptr decl) {
+void CloneGenericFunctions::visit(FuncDecl::Ptr decl) {
   if (decl->genericParams.size() == 0 || !decl->originalName.empty()) {
     FIRVisitor::visit(decl);
   }
 }
 
-void SpecializeGenericFunctions::visit(CallExpr::Ptr expr) {
+void CloneGenericFunctions::visit(CallExpr::Ptr expr) {
   FIRVisitor::visit(expr);
   cloneIfGeneric(expr->func);
 }
 
-void SpecializeGenericFunctions::visit(MapExpr::Ptr expr) {
+void CloneGenericFunctions::visit(MapExpr::Ptr expr) {
   FIRVisitor::visit(expr);
   cloneIfGeneric(expr->func);
 }
 
-void SpecializeGenericFunctions::clone(FuncDecl::Ptr decl, 
-                                       const std::string &newName) {
+void CloneGenericFunctions::clone(FuncDecl::Ptr decl,
+                                  const std::string &newName) {
   const auto newFunc = decl->clone<FuncDecl>();
 
   if (newFunc->originalName.empty()) {
@@ -90,8 +90,7 @@ void SpecializeGenericFunctions::clone(FuncDecl::Ptr decl,
   newFunc->accept(this);
 }
 
-void
-SpecializeGenericFunctions::cloneIfGeneric(const Identifier::Ptr &funcName) {
+void CloneGenericFunctions::cloneIfGeneric(const Identifier::Ptr &funcName) {
   const auto it = genericFuncs.find(funcName->ident);
   if (it != genericFuncs.end()) {
     std::stringstream newName;
@@ -102,7 +101,7 @@ SpecializeGenericFunctions::cloneIfGeneric(const Identifier::Ptr &funcName) {
   }
 }
 
-void SpecializeGenericFunctions::FindGenericFuncs::visit(FuncDecl::Ptr decl) {
+void CloneGenericFunctions::FindGenericFuncs::visit(FuncDecl::Ptr decl) {
   if (decl->genericParams.size() > 0) {
     genericFuncs[decl->name->ident] = decl;
   }
