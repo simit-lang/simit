@@ -319,6 +319,19 @@ protected:
   virtual FIRNode::Ptr cloneNode(); 
 };
 
+struct OpaqueType : public Type {
+  typedef std::shared_ptr<OpaqueType> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<OpaqueType>());
+  }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode();
+};
+
 struct Identifier : public FIRNode {
   std::string ident;
 

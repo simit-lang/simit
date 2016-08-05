@@ -197,8 +197,6 @@ Type LatticeLinkSetType::make(Type elementType, IndexSet latticePointSet,
 
 // Free operator functions
 bool operator==(const Type& l, const Type& r) {
-  iassert(l.defined() && r.defined());
-
   if (l.kind() != r.kind()) {
     return false;
   }
@@ -226,6 +224,10 @@ bool operator==(const Type& l, const Type& r) {
       return *l.toTuple() == *r.toTuple();
     case Type::Array:
       return *l.toArray() == *r.toArray();
+    case Type::Opaque:
+      return r.kind() == Type::Opaque;
+    case Type::Undefined:
+      return r.kind() == Type::Undefined;
   }
   unreachable;
   return false;
@@ -324,8 +326,6 @@ bool operator!=(const ArrayType& l, const ArrayType& r) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Type& type) {
-  if (!type.defined()) return os << "undefined type";
-
   switch (type.kind()) {
     case Type::Tensor:
       return os << *type.toTensor();
@@ -346,7 +346,12 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
       return os << *type.toTuple();
     case Type::Array:
       return os << *type.toArray();
+    case Type::Opaque:
+      return os << "opaque";
+    case Type::Undefined:
+      return os << "undefined type";
   }
+  unreachable;
   return os;
 }
 

@@ -337,11 +337,11 @@ capture environment variables (e.g. [&]):
 ~~~~~~~~~~~~~~~{.cpp}
 match(func,
   std::function<void(const Add*)>([](const Add* op) {
-    std::cout << *op << std::endl;
+    // ...
   })
   ,
   std::function<void(const AssignStmt*)>([](const AssignStmt* op) {
-    std::cout << *op << std::endl;
+    // ...
   })
 );
 ~~~~~~~~~~~~~~~

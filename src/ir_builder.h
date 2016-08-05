@@ -31,7 +31,7 @@ private:
 /// Builds Simit IR nodes with unique names.
 class IRBuilder {
 public:
-  enum UnaryOperator { None, Neg };
+  enum UnaryOperator { Copy, Neg };
   enum BinaryOperator { Add, Sub, Mul, Div };
 
   void setInsertionPoint(std::vector<ir::Stmt> *stmts) {this->stmts = stmts;}

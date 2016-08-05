@@ -212,6 +212,17 @@ FIRNode::Ptr NDTensorType::cloneNode() {
   return node;
 }
 
+void OpaqueType::copy(FIRNode::Ptr node) {
+  const auto opaqueType = to<OpaqueType>(node);
+  Type::copy(opaqueType);
+}
+
+FIRNode::Ptr OpaqueType::cloneNode() {
+  const auto node = std::make_shared<OpaqueType>();
+  node->copy(shared_from_this());
+  return node;
+}
+
 void Identifier::copy(FIRNode::Ptr node) {
   const auto identifier = to<Identifier>(node);
   FIRNode::copy(identifier);

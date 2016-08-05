@@ -1356,6 +1356,10 @@ fir::Type::Ptr Parser::parseType() {
     case Token::Type::VECTOR:
       type = parseTensorType();
       break;
+    case Token::Type::OPAQUE:
+      consume(Token::Type::OPAQUE);
+      type = std::make_shared<fir::OpaqueType>();
+      break;
     default:
       reportError(peek(), "a type identifier");
       throw SyntaxError();

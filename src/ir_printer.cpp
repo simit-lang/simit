@@ -154,8 +154,11 @@ void IRPrinter::visit(const Literal *op) {
     case Type::Set:
     case Type::Tuple:
     case Type::Array:
+    case Type::Opaque:
       not_supported_yet;
       break;
+    case Type::Undefined:
+      os << "undefined type";
   }
 }
 

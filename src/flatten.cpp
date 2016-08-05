@@ -64,7 +64,7 @@ private:
       // TODO: We should let these actually go into the backend as
       // assign statements and deal with them there
       if (spill.type().isTensor()) {
-        spill = builder.unaryElwiseExpr(IRBuilder::None, spill);
+        spill = builder.unaryElwiseExpr(IRBuilder::Copy, spill);
       }
       IRRewriter::spill(AssignStmt::make(tmp, spill));
       return VarExpr::make(tmp);

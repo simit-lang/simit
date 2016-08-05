@@ -23,6 +23,7 @@ struct FIRRewriter : public FIRVisitor {
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarType::Ptr op) { node = op; }
   virtual void visit(NDTensorType::Ptr);
+  virtual void visit(OpaqueType::Ptr op) { node = op; }
   virtual void visit(Identifier::Ptr op) { node = op; }
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);

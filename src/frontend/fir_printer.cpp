@@ -132,6 +132,10 @@ void FIRPrinter::visit(NDTensorType::Ptr type) {
   }
 }
 
+void FIRPrinter::visit(OpaqueType::Ptr ident) {
+  oss << "opaque";
+}
+
 void FIRPrinter::visit(Identifier::Ptr ident) {
   oss << ident->ident;
 }

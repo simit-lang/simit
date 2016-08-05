@@ -34,6 +34,10 @@ std::string IndexVarFactory::makeName() {
 
 // class IRBuilder
 Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
+  tassert(e.type().isTensor())
+      << "Only tensors can be operands of index expressions "
+      << "(not " << e.type() << " types)";
+
   vector<IndexVar> indexVars;
   const TensorType *tensorType = e.type().toTensor();
   vector<IndexDomain> dimensions = tensorType->getDimensions();
@@ -46,7 +50,7 @@ Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
 
   Expr val;
   switch (op) {
-    case None:
+    case Copy:
       val = a;
       break;
     case Neg:
@@ -160,7 +164,6 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
 
   iassert(ltype->order() == 2 && rtype->order() == 1);
   iassert(ldimensions[1] == rdimensions[0]);
-//  iassert(rtype->isColumnVector);
 
   auto i = factory.createIndexVar(ldimensions[0]);
   auto j = factory.createIndexVar(ldimensions[1], ReductionOperator::Sum);

@@ -21,6 +21,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "element") return Token::Type::ELEMENT;
   if (token == "set") return Token::Type::SET;
   if (token == "lattice") return Token::Type::LATTICE;
+  if (token == "opaque") return Token::Type::OPAQUE;
   if (token == "var") return Token::Type::VAR;
   if (token == "const") return Token::Type::CONST;
   if (token == "extern") return Token::Type::EXTERN;
