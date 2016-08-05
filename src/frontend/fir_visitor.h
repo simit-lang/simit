@@ -20,6 +20,7 @@ struct TupleLength;
 struct TupleType;
 struct ScalarType;
 struct NDTensorType;
+struct OpaqueType;
 struct Identifier;
 struct IdentDecl;
 struct FieldDecl;
@@ -98,6 +99,7 @@ struct FIRVisitor {
   virtual void visit(std::shared_ptr<TupleType>);
   virtual void visit(std::shared_ptr<ScalarType> op) {}
   virtual void visit(std::shared_ptr<NDTensorType>);
+  virtual void visit(std::shared_ptr<OpaqueType>) {}
   virtual void visit(std::shared_ptr<Identifier> op) {}
   virtual void visit(std::shared_ptr<IdentDecl>);
   virtual void visit(std::shared_ptr<FieldDecl>);

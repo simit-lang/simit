@@ -1,0 +1,14 @@
+element Point
+  a : int;
+  b : int;
+end
+
+extern points : set{Point};
+
+extern func pack(a : vector[points](int)) -> (p : opaque);
+extern func unpack(b : opaque) -> (a : vector[points](int));
+
+export func main()
+  packet = pack(points.a);
+  points.b = unpack(packet);
+end

@@ -32,28 +32,35 @@ struct ArrayType;
 
 class Type {
 public:
-  enum Kind {Tensor, Element, Set, Tuple, Array};
-  Type() : ptr(nullptr) {}
+  enum Kind {Undefined, Tensor, Element, Set, Tuple, Array, Opaque};
+  Type() : _kind(Undefined), ptr(nullptr) {}
+  Type(Kind kind) : _kind(kind) {}
   Type(TensorType* tensor);
   Type(ElementType* element);
   Type(SetType* set);
   Type(TupleType* tuple);
   Type(ArrayType* array);
 
-  bool defined() const { return ptr != nullptr; }
+  bool defined() const { return kind() != Undefined; }
 
   Kind kind() const { return _kind; }
 
-  bool isTensor()  const { return _kind==Tensor; }
-  bool isElement() const { return _kind==Element; }
-  bool isSet()     const { return _kind==Set; }
+  bool isTensor()          const { return kind()==Tensor; }
+  bool isElement()         const { return kind()==Element; }
+  bool isSet()             const { return kind()==Set; }
   bool isUnstructuredSet() const;
-  bool isLatticeLinkSet() const;
-  bool isTuple()   const { return _kind==Tuple; }
-  bool isArray()   const { return _kind==Array; }
+  bool isLatticeLinkSet()  const;
+  bool isTuple()           const { return kind()==Tuple; }
+  bool isArray()           const { return kind()==Array; }
+  bool isOpaque()          const { return kind()==Opaque; }
 
-
-  const TensorType*  toTensor()  const {iassert(isTensor());  return tensor;}
+  const TensorType*  toTensor()  const {
+    if (!isTensor()) {
+      assert(false);
+    }
+    iassert(isTensor());
+    return tensor;
+  }
   const ElementType* toElement() const {iassert(isElement()); return element;}
   const SetType*     toSet()     const {iassert(isSet());     return set;}
   const UnstructuredSetType* toUnstructuredSet() const;
@@ -85,10 +92,6 @@ struct ScalarType {
   Kind kind;
 
   static bool singleFloat();
-
-  // TODO: Add variable bit sizes later
-//  unsigned bits;
-//  unsigned bytes() const { return (bits + 7) / 8; }
 
   unsigned bytes() const {
     if (isInt()) {

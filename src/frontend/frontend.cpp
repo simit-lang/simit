@@ -42,7 +42,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
     std::stable_sort(errors->begin(), errors->end());
     return 1;
   }
-  
+
   // IR generation.
   fir::IREmitter(ctx).emitIR(program);
   return 0;

@@ -35,6 +35,7 @@ private:
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarType::Ptr);
   virtual void visit(NDTensorType::Ptr);
+  virtual void visit(OpaqueType::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);

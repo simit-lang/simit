@@ -166,6 +166,10 @@ private:
         return isScalar() && isNumericType(to<ScalarType>(type[0])->type);
       }
 
+      bool isOpaque() const {
+        return isa<OpaqueType>(type[0]);
+      }
+
       bool isNumericTensor() const;
 
       bool isReadable() const;

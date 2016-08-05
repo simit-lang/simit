@@ -449,9 +449,10 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 
       // Check that expression on right-hand side returns only tensors.
       // TODO: Remove once support for assignment of non-tensors is added.
-      if (!isa<TensorType>(exprType.type[i])) {
+      if (!(isa<TensorType>(exprType.type[i]) ||
+            isa<OpaqueType>(exprType.type[i]))) {
         std::stringstream errMsg;
-        errMsg << "cannot assign a non-tensor value of type "
+        errMsg << "cannot assign a non-tensor/opaque value of type "
                << toString(exprType.type[i]) << " to a variable";
         reportError(errMsg.str(), stmt->expr);
       }
@@ -894,10 +895,10 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
     // Check that argument is a tensor.
     // TODO: Remove once support for passing non-tensor arguments is added.
-    if (!argTypes[i].isTensor()) {
+    if (!(argTypes[i].isTensor() || argTypes[i].isOpaque())) {
       std::stringstream errMsg;
-      errMsg << "expected argument to be a tensor but got an argument "
-             << "of type " << toString(argTypes[i]);
+      errMsg << "expected argument to be a tensor or an opaque type but got "
+             << "an argument of type " << toString(argTypes[i]);
       reportError(errMsg.str(), arg);
       continue;
     }
@@ -1373,7 +1374,7 @@ void TypeChecker::visit(VarExpr::Ptr expr) {
     retType = ExprType(Access::READ_WRITE);
     return;
   }
- 
+
   const Type::Ptr varType = env.getSymbolType(expr->ident);
   const Access varAccess = env.getSymbolAccess(expr->ident);
 
@@ -1581,10 +1582,10 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
       
     // Check that additional argument is a tensor.
     // TODO: Remove once support for passing non-tensor arguments is added.
-    if (!actualsType[i].isTensor()) {
+    if (!(actualsType[i].isTensor() || actualsType[i].isOpaque())) {
       std::stringstream errMsg;
-      errMsg << "expected argument to be a tensor but got an argument "
-             << "of type " << toString(actualsType[i].type[0]);
+      errMsg << "expected argument to be a tensor or opaque but got an "
+             << "argument of type " << toString(actualsType[i].type[0]);
       reportError(errMsg.str(), arg);
     }
   }
@@ -2391,7 +2392,8 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
   if (isa<ScalarType>(l)) {
     return isa<ScalarType>(r) && 
            (to<ScalarType>(l)->type == to<ScalarType>(r)->type);
-  } else if (isa<NDTensorType>(l)) {
+  }
+  else if (isa<NDTensorType>(l)) {
     if (!isa<NDTensorType>(r)) {
       return false;
     }
@@ -2402,7 +2404,8 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
     return ((ltype->transposed == rtype->transposed) || ignoreTranspose) && 
            compareDomains(ltype->indexSets, rtype->indexSets) && 
            compareTypes(ltype->blockType, rtype->blockType);
-  } else if (isa<ElementType>(l)) {
+  }
+  else if (isa<ElementType>(l)) {
     if (!isa<ElementType>(r)) {
       return false;
     }
@@ -2412,7 +2415,8 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
 
     return (!ltype->source || !rtype->source) ? (ltype->ident == rtype->ident) :
            compareIndexSets(ltype->source, rtype->source);
-  } else if (isa<SetType>(l)) {
+  }
+  else if (isa<SetType>(l)) {
     if (!isa<SetType>(r)) {
       return false;
     }
@@ -2474,7 +2478,8 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
     }
 
     return false;
-  } else if (isa<TupleType>(l)) {
+  }
+  else if (isa<TupleType>(l)) {
     if (!isa<TupleType>(r)) {
       return false;
     }
@@ -2484,6 +2489,9 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
 
     return (ltype->length->val == rtype->length->val) && 
            compareTypes(ltype->element, rtype->element);
+  }
+  else if (isa<OpaqueType>(l)) {
+    return isa<OpaqueType>(r);
   }
 
   return false;

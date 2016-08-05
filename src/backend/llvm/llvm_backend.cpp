@@ -649,26 +649,27 @@ void LLVMBackend::compile(const ir::Xor& xorExpr) {
 }
 
 void LLVMBackend::compile(const ir::VarDecl& varDecl) {
-  tassert(varDecl.var.getType().isTensor()) << "Only tensor decls supported";
-
   Var var = varDecl.var;
+  Type type = var.getType();
+
   // Do not duplicate variable storage, even on a duplicated declaration
   if (symtable.contains(var)) {
     return;
   }
-  llvm::Value *llvmVar = nullptr;
-  if (isScalar(var.getType())) {
-    ScalarType type = var.getType().toTensor()->getComponentType();
-    llvmVar = builder->CreateAlloca(llvmType(type),nullptr,var.getName());
 
-    if (isString(var.getType())) {
-      // Initialize pointer to null.
-      llvm::Value *valuePtr = defaultInitializer(llvmType(ScalarType::String));
-      builder->CreateStore(valuePtr, llvmVar);
+  llvm::Value *llvmVar = nullptr;
+  if (type.isTensor()) {
+    if (isScalar(type)) {
+      ScalarType stype = type.toTensor()->getComponentType();
+      llvmVar = builder->CreateAlloca(llvmType(stype), nullptr, var.getName());
+
+      if (isString(type)) {
+        // Initialize pointer to null.
+        llvm::Value *valuePtr = defaultInitializer(llvmType(ScalarType::String));
+        builder->CreateStore(valuePtr, llvmVar);
+      }
     }
-  }
-  else {
-    if (var.getType().isTensor()) {
+    else {
       auto tensorStorage = storage.getStorage(varDecl.var);
 
       // Sparse matrices with path expressions are stored globally
@@ -688,11 +689,17 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
         symtable.insert(rowptr, rowptrPtr);
         symtable.insert(colidx, colidxPtr);
 
-        llvmVar = builder->CreateAlloca(llvmType(var.getType()), llvmInt(1),
+        llvmVar = builder->CreateAlloca(llvmType(type), llvmInt(1),
                                         var.getName()+PTR_SUFFIX);
       }
     }
+  } else if (type.isOpaque()) {
+    llvmVar = builder->CreateAlloca(llvmType(type), nullptr, var.getName());
   }
+  else {
+    terror << type << " type declarations not supported yet";
+  }
+
   iassert(llvmVar);
   symtable.insert(var, llvmVar);
 }
@@ -791,14 +798,15 @@ vector<llvm::Value*>
 LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
                         vector<std::pair<ir::Var, llvm::Value*>>* resVals) {
   std::vector<llvm::Value*> resultValues;
+  Type type = result.getType();
 
-  if (result.getType().isTensor()) {
-    auto type = result.getType().toTensor();
-    vector<IndexDomain> dimensions = type->getDimensions();
+  if (type.isTensor()) {
+    auto tensorType = result.getType().toTensor();
+    vector<IndexDomain> dimensions = tensorType->getDimensions();
 
     // Emit type arguments
     // Sparse Matrices
-    if (type->order() == 2 && type->hasSystemDimensions()) {
+    if (tensorType->order() == 2 && tensorType->hasSystemDimensions()) {
       // we need to add additional arguments: rowPtr and colIdx pointers,
       // as well as the number of rows, columns and blocksize.
       tassert(isa<VarExpr>(result));
@@ -820,7 +828,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       // get block sizes
       llvm::Value* nn;
       llvm::Value* mm;
-      Type blockType = type->getBlockType();
+      Type blockType = tensorType->getBlockType();
       if (isScalar(blockType)) {
         nn = llvmInt(1);
         mm = llvmInt(1);
@@ -847,7 +855,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       resultValues.push_back(resultPtr);
     }
     // Dense vectors and matrices
-    else if (type->order() == 1 || type->order() == 2) {
+    else if (tensorType->order() == 1 || tensorType->order() == 2) {
       if (!excludeStaticTypes) {
         auto N = emitComputeLen(dimensions[0]);
         resultValues.push_back(N);
@@ -855,8 +863,11 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       resultValues.push_back(compile(result));
     }
   }
+  else if (type.isOpaque()) {
+    resultValues.push_back(compile(result));
+  }
   else {
-    terror << "Only tensor return values currently supported";
+    terror << type << " type return values not supported yet";
   }
 
   return resultValues;

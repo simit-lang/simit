@@ -334,7 +334,7 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
     void visit(const AssignStmt *op) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
-        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::Copy, op->value);
         stmt = AssignStmt::make(op->var, value, op->cop);
       }
       else {
@@ -345,7 +345,7 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
     void visit(const FieldWrite *op) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
-        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::Copy, op->value);
         stmt = FieldWrite::make(op->elementOrSet, op->fieldName, value,
                                 op->cop);
       }
@@ -357,7 +357,7 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
     void visit(const TensorWrite *op) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
-        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::Copy, op->value);
         stmt = TensorWrite::make(op->tensor, op->indices, value, op->cop);
       }
       else {

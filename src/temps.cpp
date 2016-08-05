@@ -108,7 +108,7 @@ class InsertTemporaries : public IRRewriter {
     }
 
     Var tmp(names.getName(), op->expr.type());
-    Expr val = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->expr);
+    Expr val = IRBuilder().unaryElwiseExpr(IRBuilder::Copy, op->expr);
 
     std::vector<Stmt> stmts;
     stmts.push_back(flattenIndexExpressions(AssignStmt::make(tmp, val)));

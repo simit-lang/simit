@@ -135,6 +135,10 @@ void IREmitter::visit(NDTensorType::Ptr type) {
   }
 }
 
+void IREmitter::visit(OpaqueType::Ptr lit) {
+  retType = ir::Type(ir::Type::Opaque);
+}
+
 void IREmitter::visit(IdentDecl::Ptr decl) {
   const ir::Type type = emitType(decl->type);
   retVar = ir::Var(decl->name->ident, type);
@@ -588,12 +592,12 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
   switch (type->order()) {
     case 0:
       // OPT: This might lead to redundant code to be removed in later pass
-      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
+      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::Copy, operand);
       break;
     case 1:
     {
       // OPT: This might lead to redundant code to be removed in later pass
-      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
+      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::Copy, operand);
       auto retExprNode = const_cast<ir::ExprNode *>(to<ir::ExprNode>(retExpr));
       
       const bool isColumnVector = !type->isColumnVector;
@@ -1029,9 +1033,14 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     // of function call or map statement copied over from temporary variable.
     for (unsigned int i = 0; i < lhs.size(); ++i) {
       ir::Expr tmpExpr = ir::VarExpr::make(results[i]);
-      if (!isScalar(tmpExpr.type())) {
+      ir::Type type = tmpExpr.type();
+      tassert(type.isTensor() || type.isOpaque())
+          << "Copying only supported for tensor and opaque types"
+          << " (not " << type << " types)";
+
+      if (tmpExpr.type().isTensor() && !isScalar(tmpExpr.type())) {
         // Needed to handle assignment of non-scalar tensors.
-        tmpExpr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None,
+        tmpExpr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Copy,
                                                      tmpExpr);
       }
       
@@ -1050,7 +1059,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
   } else if (lhs.size() == 1) {
     if (!ir::isa<ir::IndexExpr>(expr) && !isScalar(expr.type())) {
       // Needed to handle assignment of non-scalar tensors.
-      expr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, expr);
+      expr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Copy, expr);
     }
 
     if (ir::isa<ir::FieldRead>(lhs[0])) {

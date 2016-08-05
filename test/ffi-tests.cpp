@@ -441,6 +441,50 @@ TEST(ffi, gemv_blocked_generics) {
 
 }
 
+extern "C"
+int pack(int n, int* a, void** p) {
+  int* data = static_cast<int*>(malloc(n*sizeof(int)));
+  memcpy(data, a, n*sizeof(int));
+  *p = data;
+  return 0;
+}
+
+extern "C"
+int unpack(void** p, int n, int* b) {
+  memcpy(b, *p, n*sizeof(int));
+  free(*p);
+  *p = nullptr;
+  return 0;
+}
+
+TEST(ffi, opaque) {
+  Set points;
+  FieldRef<int> a = points.addField<int>("a");
+  FieldRef<int> b = points.addField<int>("b");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a(p0) = 1.0;
+  a(p1) = 2.0;
+  a(p2) = 3.0;
+
+  b(p0) = 0.0;
+  b(p1) = 0.0;
+  b(p2) = 0.0;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+
+  func.runSafe();
+
+  ASSERT_EQ((int)a(p0), (int)b(p0));
+  ASSERT_EQ((int)a(p1), (int)b(p1));
+  ASSERT_EQ((int)a(p2), (int)b(p2));
+}
+
 // Tests that use Eigen
 #ifdef EIGEN
 #include <Eigen/Core>

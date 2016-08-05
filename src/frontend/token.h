@@ -31,6 +31,7 @@ public:
     ELEMENT,
     SET,
     LATTICE,
+    OPAQUE,
     VAR,
     CONST,
     EXTERN,

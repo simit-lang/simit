@@ -285,7 +285,11 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
     case Type::Element:
     case Type::Tuple:
     case Type::Array:
-      iassert(false) << "Only tensor and scalar literals currently supported";
+    case Type::Opaque:
+      iassert(false) << "only tensor and scalar literals currently supported";
+      break;
+    case Type::Undefined:
+      ierror << "attempting to create literal of undefined type";
       break;
   }
 

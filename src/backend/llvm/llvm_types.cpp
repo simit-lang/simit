@@ -50,6 +50,10 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
       break;
     case Type::Array:
       return llvmType(*type.toArray(), addrspace);
+    case Type::Opaque:
+      return LLVM_INT8_PTR;
+    case Type::Undefined:
+      ierror << "Can't create llvm type for undefined simit type";
   }
   unreachable;
   return nullptr;
