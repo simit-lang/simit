@@ -309,14 +309,42 @@ static Func cholVar;
 void cholInit() {
   cholVar = Func("chol",
                  {Var("A", Type())},
-                 {Var("L", Type())},
-                 Func::Intrinsic);
+                 {Var("solver", Type(Type::Opaque))},
+                 Func::External);
 }
 const Func& chol() {
   if (!cholVar.defined()) {
     cholInit();
   }
   return cholVar;
+}
+
+static Func cholfreeVar;
+void cholfreeInit() {
+  cholfreeVar = Func("cholfree",
+                     {Var("A", Type(Type::Opaque))},
+                     {},
+                     Func::External);
+}
+const Func& cholfree() {
+  if (!cholfreeVar.defined()) {
+    cholfreeInit();
+  }
+  return cholfreeVar;
+}
+
+static Func lltsolvesVar;
+void lltsolvesInit() {
+  lltsolvesVar = Func("lltsolves",
+                 {Var("solver", Type(Type::Opaque)), Var("b", Type())},
+                 {Var("x", Type())},
+                 Func::External);
+}
+const Func& lltsolves() {
+  if (!lltsolvesVar.defined()) {
+    lltsolvesInit();
+  }
+  return lltsolvesVar;
 }
 
 static Func strcmpVar;
@@ -471,6 +499,8 @@ const std::map<std::string,Func> &byNames() {
     invInit();
     solveInit();
     cholInit();
+    cholfreeInit();
+    lltsolvesInit();
     strcmpInit();
     strlenInit();
     strcpyInit();
@@ -502,6 +532,8 @@ const std::map<std::string,Func> &byNames() {
                       {"inv",invVar},
                       {"__solve",solveVar},
                       {"chol", cholVar},
+                      {"cholfree", cholfreeVar},
+                      {"lltsolves", lltsolvesVar},
                       {"strcmp", strcmpVar},
                       {"strlen", strlenVar},
                       {"strcpy", strcpyVar},

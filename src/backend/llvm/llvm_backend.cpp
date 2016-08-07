@@ -52,7 +52,6 @@
 #include "tensor_index.h"
 #include "llvm_function.h"
 #include "macros.h"
-#include "runtime.h"
 #include "path_expressions.h"
 #include "util/collections.h"
 
@@ -697,7 +696,7 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
     llvmVar = builder->CreateAlloca(llvmType(type), nullptr, var.getName());
   }
   else {
-    terror << type << " type declarations not supported yet";
+    terror << type << " declarations not supported yet";
   }
 
   iassert(llvmVar);
@@ -901,22 +900,6 @@ void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
   }
 }
 
-static bool hasFloatArgs(Func func) {
-  for (auto arg : func.getArguments()) {
-    if (arg.getType().isTensor() &&
-        arg.getType().toTensor()->getComponentType() == ScalarType::Float) {
-      return true;
-    }
-  }
-  for (auto res : func.getResults()) {
-    if (res.getType().isTensor() &&
-        res.getType().toTensor()->getComponentType() == ScalarType::Float) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   // ensure it is called with the correct number of arguments.
   uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
@@ -937,10 +920,8 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   // Function name
   std::string name = callStmt.callee.getName();
   name = name.substr(0, name.find("@"));
-  if (hasFloatArgs(callStmt.callee)) {
-    std::string floatType = ir::ScalarType::singleFloat() ? "s" : "d";
-    name = floatType + name;
-  }
+  std::string floatType = ir::ScalarType::singleFloat() ? "s" : "d";
+  name = floatType + name;
 
   auto errorCode = emitCall(name, args, LLVM_INT);
   UNUSED(errorCode);  // TODO: Accept and handle error code from extern func
@@ -1551,7 +1532,7 @@ llvm::Value *LLVMBackend::emitCall(string name, vector<llvm::Value*> args,
       llvm::FunctionType::get(returnType, argTypes, false);
   llvm::Function *fun =
       llvm::cast<llvm::Function>(module->getOrInsertFunction(name, ftype));
-
+  
   iassert(fun != nullptr)
       << "could not find" << fun << "with the given signature";
 

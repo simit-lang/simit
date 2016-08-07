@@ -117,7 +117,6 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
       not_supported_yet;
     }
   }
-
 }
 
 LLVMFunction::~LLVMFunction() {

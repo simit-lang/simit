@@ -18,7 +18,7 @@ using namespace std;
 using namespace simit;
 using namespace simit::ir;
 
-TEST(Solver, solve) {
+TEST(solver, solve) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -66,7 +66,7 @@ TEST(Solver, solve) {
   ASSERT_NEAR(4.0, (double)c.get(p2), 0.00001);
 }
 
-TEST(Solver, solve_blocked) {
+TEST(solver, solve_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
@@ -119,7 +119,7 @@ TEST(Solver, solve_blocked) {
   ASSERT_NEAR(4.0, c2(1), 1.0);
 }
 
-TEST(DISABLED_Solver, chol) {
+TEST(solver, chol) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -152,9 +152,9 @@ TEST(DISABLED_Solver, chol) {
   func.runSafe();
 
   // Check results
-  SIMIT_ASSERT_FLOAT_EQ(28.284271247461902, (double)c(p0));
-  SIMIT_ASSERT_FLOAT_EQ(48.989794855663561, (double)c(p1));
-  SIMIT_ASSERT_FLOAT_EQ(17.320508075688767, (double)c(p2));
+  SIMIT_ASSERT_FLOAT_EQ(20.0, c(p0));
+  SIMIT_ASSERT_FLOAT_EQ(-30, c(p1));
+  SIMIT_ASSERT_FLOAT_EQ(60.0, c(p2));
 }
 
 #endif

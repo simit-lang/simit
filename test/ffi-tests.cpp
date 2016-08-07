@@ -19,7 +19,11 @@ using namespace simit::ir;
 using namespace simit::ffi;
 
 static bool noargsVisited = false;
-extern "C" int noargs() {
+extern "C" int snoargs() {
+  noargsVisited = true;
+  return 0;
+}
+extern "C" int dnoargs() {
   noargsVisited = true;
   return 0;
 }
@@ -441,20 +445,32 @@ TEST(ffi, gemv_blocked_generics) {
 
 }
 
-extern "C"
+template <typename Float>
 int pack(int n, int* a, void** p) {
   int* data = static_cast<int*>(malloc(n*sizeof(int)));
   memcpy(data, a, n*sizeof(int));
   *p = data;
   return 0;
 }
+extern "C" int spack(int n, int* a, void** p) {
+  return pack<float>(n, a, p);
+}
+extern "C" int dpack(int n, int* a, void** p) {
+  return pack<double>(n, a, p);
+}
 
-extern "C"
+template <typename Float>
 int unpack(void** p, int n, int* b) {
   memcpy(b, *p, n*sizeof(int));
   free(*p);
   *p = nullptr;
   return 0;
+}
+extern "C" int sunpack(void** p, int n, int* b) {
+  return unpack<float>(p, n, b);
+}
+extern "C" int dunpack(void** p, int n, int* b) {
+  return unpack<double>(p, n, b);
 }
 
 TEST(ffi, opaque) {

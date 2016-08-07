@@ -1,16 +1,17 @@
 #include "runtime.h"
 
 #include <cmath>
+#include <time.h>
+#include <chrono>
+#include <vector>
 
 #include "timers.h"
 #include "stdio.h"
-#include <chrono>
 
 #ifdef EIGEN
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include <Eigen/IterativeLinearSolvers>
 #endif
 
 extern "C" {
@@ -158,58 +159,100 @@ do {                                                            \
 } while (false)
 
 template <typename Float>
-void solve(int n,  int m,  int* rowPtr, int* colIdx,
-           int nn, int mm, Float* A, Float* x, Float* b) {
+void solve(int n,  int m,  int* rowptr, int* colidx,
+           int nn, int mm, Float* Avals, Float* xvals, Float* bvals) {
 #ifdef EIGEN
-  auto A_ = csr2eigen<Float, Eigen::ColMajor>(n, m, rowPtr, colIdx, nn, mm, A);
-  auto x_ = new Map<Matrix<Float,Dynamic,1>>(x, m);
-  auto b_ = new Map<Matrix<Float,Dynamic,1>>(b, n);
+  auto A = csr2eigen<Float, Eigen::ColMajor>(n, m, rowptr, colidx, nn, mm, Avals);
+  auto b = new Map<Matrix<Float,Dynamic,1>>(bvals, n);
+  auto x = new Map<Matrix<Float,Dynamic,1>>(xvals, m);
 
   ConjugateGradient<SparseMatrix<Float>,Lower,IdentityPreconditioner> solver;
   solver.setMaxIterations(50);
-  solver.compute(A_);
-  *b_ = solver.solve(*x_);
+  solver.compute(A);
+  *b = solver.solve(*x);
 #else
   SOLVER_ERROR;
 #endif
 }
 
 extern "C" {
-void cMatSolve_f64(int n,  int m,  int* rowPtr, int* colIdx,
+void cMatSolve_f64(int n,  int m,  int* rowptr, int* colidx,
                    int nn, int mm, double* A, double* x, double* b) {
-  return solve(n, m, rowPtr, colIdx, nn, mm, A, x, b);
+  return solve(n, m, rowptr, colidx, nn, mm, A, x, b);
 }
-void cMatSolve_f32(int n,  int m,  int* rowPtr, int* colIdx,
+void cMatSolve_f32(int n,  int m,  int* rowptr, int* colidx,
                    int nn, int mm, float* A, float* x, float* b) {
-  return solve(n, m, rowPtr, colIdx, nn, mm, A, x, b);
+  return solve(n, m, rowptr, colidx, nn, mm, A, x, b);
 }
 }
 
 template <typename Float>
-void chol(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-          int Bnn, int Bmm, Float* B,
-          int An,  int Am,  int** Arowptr, int** Acolidx,
-          int Ann, int Amm, Float** A) {
+void chol(int An,  int Am,  int* Arowptr, int* Acolidx,
+          int Ann, int Amm, Float* Avals,
+          void** solverPtr) {
 #ifdef EIGEN
-  terror << "chol not implemented yet.";
+  auto A = csr2eigen<Float,Eigen::ColMajor>(An, Am, Arowptr, Acolidx,
+                                            Ann, Amm, Avals);
+  auto solver = new SimplicialCholesky<SparseMatrix<Float>>();
+  solver->compute(A);
+  *solverPtr = static_cast<void*>(solver);
 #else
   SOLVER_ERROR;
 #endif
 }
 
 extern "C" {
-void schol(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-           int Bnn, int Bmm, float* B,
-           int An,  int Am,  int** Arowptr, int** Acolidx,
-           int Ann, int Amm, float** A) {
-  return chol(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
-              An, Am, Arowptr, Acolidx, Ann, Amm, A);
+void schol(int An,  int Am,  int* Arowptr, int* Acolidx,
+           int Ann, int Amm, float* Avals,
+           void** solver) {
+  return chol(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
 }
-void dchol(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-           int Bnn, int Bmm, double* B,
-           int An,  int Am,  int** Arowptr, int** Acolidx,
-           int Ann, int Amm, double** A) {
-  return chol(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
-              An, Am, Arowptr, Acolidx, Ann, Amm, A);
+void dchol(int An,  int Am,  int* Arowptr, int* Acolidx,
+           int Ann, int Amm, double* Avals,
+           void** solver) {
+  return chol(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
+}
+}
+
+template <typename Float>
+void lltsolves(void** solverPtr, int nb, Float *bvals, int nx, Float *xvals) {
+#ifdef EIGEN
+  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
+  auto b = dense2eigen(nb, bvals);
+  auto x = Eigen::Matrix<Float,Eigen::Dynamic,1>(nx);
+  x = solver->solve(b);
+  for (int i=0; i<nx; ++i) {
+    xvals[i] = x(i);
+  }
+#else
+  SOLVER_ERROR;
+#endif
+}
+
+extern "C" {
+void slltsolves(void** solverPtr, int bn, float *bvals, int xn, float *xvals) {
+  return lltsolves(solverPtr, bn, bvals, xn, xvals);
+}
+void dlltsolves(void** solverPtr, int bn, double *bvals, int xn, double *xvals){
+  return lltsolves(solverPtr, bn, bvals, xn, xvals);
+}
+}
+
+template <typename Float>
+void cholfree(void** solverPtr) {
+#ifdef EIGEN
+  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
+  delete solver;
+#else
+  SOLVER_ERROR;
+#endif
+}
+
+extern "C" {
+void scholfree(void** solverPtr) {
+  return cholfree<float>(solverPtr);
+}
+void dcholfree(void** solverPtr){
+  return cholfree<double>(solverPtr);
 }
 }

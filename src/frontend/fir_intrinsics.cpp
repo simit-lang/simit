@@ -83,6 +83,8 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
   nMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   nMatrixType->indexSets = {nDim, nDim};
 
+  const auto opaqueType = std::make_shared<OpaqueType>();
+
   // Add type signatures for intrinsic functions.
   addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::mod().getName(),
@@ -159,7 +161,17 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
   addIntrinsic(&intrinsics,
                ir::intrinsics::chol().getName(),
                {nMatrixType},
-               {nMatrixType},
+               {opaqueType},
+               {genericParam});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::cholfree().getName(),
+               {opaqueType},
+               {},
+               {});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::lltsolves().getName(),
+               {opaqueType, nVectorType},
+               {nVectorType},
                {genericParam});
 
   // Complex numbers

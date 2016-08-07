@@ -38,11 +38,13 @@ const Func& complexGetImag();
 const Func& norm();
 const Func& dot();
 const Func& det();
+const Func& inv();
 
 // Solvers
-const Func& inv();
 const Func& solve();
 const Func& chol();
+const Func& cholfree();
+const Func& lltsolves();
 
 // String manipulation
 const Func& strcmp();
