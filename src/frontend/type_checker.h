@@ -386,7 +386,7 @@ private:
   
   void reportError(const std::string&, FIRNode::Ptr);
   void reportUndeclared(const std::string&, const std::string&, FIRNode::Ptr);
-  void reportMultipleDefs(const std::string&, const std::string&, FIRNode::Ptr);
+  void reportRedefinition(const std::string&, const std::string&, FIRNode::Ptr);
 
 private:
   ExprType retType;

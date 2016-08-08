@@ -131,6 +131,22 @@ export func main()
   end
 end
 
+%%% bad-call-11
+export func main()
+  foo<1>();
+end
+
+%%% bad-call-12
+export func main()
+  foo<1,2>(3,4);
+end
+
+%%% bad-call-13
+export func main()
+  A = 1.0;
+  B = unde(A);
+end
+
 %%% bad-assign-1
 proc main
   1 = 1;

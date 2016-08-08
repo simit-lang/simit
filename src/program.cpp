@@ -72,7 +72,8 @@ int Program::loadString(const string &programString) {
   for (auto &error : errors) {
     content->diags.report() << error.toString();
   }
-  uassert(errors.size() == 0) << "Parse Error:" << content->diags.getMessage();
+  uassert(errors.size() == 0) << "during compilation:" << std::endl 
+                              << content->diags.getMessage();
   return status;
 }
 
@@ -83,7 +84,8 @@ int Program::loadFile(const std::string &filename) {
   for (auto &error : errors) {
     content->diags.report() << error.toString();
   }
-  uassert(errors.size() == 0) << "Parse Error:" << content->diags.getMessage();
+  uassert(errors.size() == 0) << "during compilation:" << std::endl 
+                              << content->diags.getMessage();
   return status;
 }
 
