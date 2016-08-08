@@ -1180,6 +1180,20 @@ fir::Expr::Ptr Parser::parseFactor() {
     }
     case Token::Type::IDENT:
     {
+      if (peek(1).type == Token::Type::LA) {
+        switch (peek(3).type) {
+          case Token::Type::RA:
+            if (peek(4).type != Token::Type::LP || 
+                peek(5).type != Token::Type::RP) {
+              break;
+            }
+          case Token::Type::COMMA:
+            return parseCallExpr();
+          default:
+            break;
+        }
+      }
+
       const std::string identStr = peek().str;
 
       if (decls.contains(identStr)) {

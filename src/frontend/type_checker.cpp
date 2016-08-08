@@ -172,7 +172,7 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
     const bool typeChecked = typeCheck(field);
 
     if (elemFields.find(fieldName) != elemFields.end()) {
-      reportMultipleDefs("element field", fieldName, field);
+      reportRedefinition("element field", fieldName, field);
     }
 
     elemFields[fieldName] = typeChecked ? fieldType : Type::Ptr();
@@ -180,7 +180,7 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
 
   // Check that element type has not been previously declared.
   if (env.hasElementType(decl->name->ident)) {
-    reportMultipleDefs("element type", decl->name->ident, decl);
+    reportRedefinition("element type", decl->name->ident, decl);
   }
 
   env.addElementType(decl->name->ident, elemFields);
@@ -194,7 +194,7 @@ void TypeChecker::visit(ExternDecl::Ptr decl) {
 
   // Check that variable has not been previously declared.
   if (env.hasSymbol(externName, Environment::Scope::CurrentOnly)) {
-    reportMultipleDefs("variable or constant", externName, decl);
+    reportRedefinition("variable or constant", externName, decl);
   }
  
   env.addSymbol(externName, externType, Access::READ_WRITE);
@@ -223,7 +223,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     const std::string name = genericParam->name;
 
     if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
-      reportMultipleDefs("function parameter", name, genericParam);
+      reportRedefinition("function parameter", name, genericParam);
     }
 
     const Type::Ptr type = (genericParam->type == GenericParam::Type::RANGE) ?
@@ -242,7 +242,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     const Access access = arg->isInOut() ? Access::READ_WRITE : Access::READ;
     
     if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
-      reportMultipleDefs("function parameter", name, arg);
+      reportRedefinition("function parameter", name, arg);
     }
 
     env.addSymbol(name, type, access);
@@ -257,7 +257,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     const Type::Ptr type = typeChecked ? res->type : Type::Ptr();
     
     if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
-      reportMultipleDefs("function parameter", name, res);
+      reportRedefinition("function parameter", name, res);
     }
 
     env.addSymbol(name, type, Access::READ_WRITE);
@@ -276,7 +276,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 
   // Check that function has not been previously declared.
   if (env.hasFunction(name) && !specialized) {
-    reportMultipleDefs("function or procedure", name, decl);
+    reportRedefinition("function or procedure", name, decl);
   }
 
   env.addFunction(name, latestDecl);
@@ -1081,11 +1081,41 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(TensorReadExpr::Ptr expr) {
-  const ExprType lhsType = inferType(expr->tensor);
+  auto checkSlice = [](const ReadParam::Ptr& idx) { return !idx->isSlice(); };
 
-  if (!lhsType.defined) {
-    retType = ExprType(lhsType.access);
-    return;
+  const bool maybeCall = isa<VarExpr>(expr->tensor) && 
+      std::all_of(expr->indices.begin(), expr->indices.end(), checkSlice);
+
+  ExprType lhsType;
+  if (maybeCall) {
+    const VarExpr::Ptr lhs = to<VarExpr>(expr->tensor);
+
+    // Check that variable has been declared.
+    if (!env.hasSymbol(lhs->ident)) {
+      if (!skipCheckDeclared) {
+        reportUndeclared("variable, constant, or function", lhs->ident, lhs);
+      }
+  
+      retType = ExprType(Access::READ_WRITE);
+      return;
+    }
+
+    const auto varType = env.getSymbolType(lhs->ident);
+    const auto varAccess = env.getSymbolAccess(lhs->ident);
+
+    if (!varType) {
+      retType = ExprType(varAccess);
+      return;
+    }
+
+    lhsType = ExprType(varType, varAccess);
+  } else {
+    lhsType = inferType(expr->tensor);
+  
+    if (!lhsType.defined) {
+      retType = ExprType(lhsType.access);
+      return;
+    }
   }
 
   // Check that left operand of tensor read is actually a tensor.
@@ -1449,7 +1479,7 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
 
   // Check that variable/constant hasn't already been declared in current scope.
   if (env.hasSymbol(varName, Environment::Scope::CurrentOnly)) {
-    reportMultipleDefs(varDeclType, varName, decl);
+    reportRedefinition("variable or constant", varName, decl);
   }
   
   // Record declaration of variable/constant in symbol table.
@@ -2661,11 +2691,11 @@ void TypeChecker::reportUndeclared(const std::string &type,
   reportError(errMsg.str(), loc);
 }
 
-void TypeChecker::reportMultipleDefs(const std::string &type, 
+void TypeChecker::reportRedefinition(const std::string &type, 
                                      const std::string &ident, 
                                      FIRNode::Ptr loc) {
   std::stringstream errMsg;
-  errMsg << "multiple definitions of " << type << " '" << ident << "'";
+  errMsg << "redefinition of " << type << " '" << ident << "'";
   reportError(errMsg.str(), loc);
 }
 

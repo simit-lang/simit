@@ -218,6 +218,16 @@ export func main()
   map foo to B;
 end
 
+%%% bad-map-8
+element E
+end
+
+extern A : set{E};
+
+export func main()
+  map f to A;
+end
+
 %%% bad-and
 proc main
   1 and 2;
