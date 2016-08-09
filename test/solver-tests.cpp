@@ -157,4 +157,65 @@ TEST(solver, chol) {
   SIMIT_ASSERT_FLOAT_EQ( 60.0, x(p2));
 }
 
+template<typename Float>
+void getB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
+          int Bnn, int Bmm, Float** Bvals) {
+  Eigen::SparseMatrix<Float,Eigen::RowMajor> B(Bn, Bm);
+  B.insert(0,0) = 10;
+  B.insert(1,0) = 20;
+  B.insert(2,0) = 30;
+  B.insert(1,1) = 1;
+  B.insert(0,2) = 100;
+  B.insert(2,2) = 200;
+  eigen2csr(B, Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+}
+extern "C"
+void sgetB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
+           int Bnn, int Bmm, float** Bvals) {
+  getB(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+}
+extern "C"
+void dgetB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
+           int Bnn, int Bmm, double** Bvals) {
+  getB(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+}
+
+TEST(DISABLED_solver, cholmat) {
+  // Points
+  Set points;
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
+  FieldRef<bool> fixed = points.addField<bool>("fixed");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b(p0) = 1.0;
+  b(p1) = 1.0;
+  b(p2) = 1.0;
+
+  fixed(p0) = true;
+
+  // Springs
+  Set springs(points,points);
+
+  springs.add(p0,p1);
+  springs.add(p1,p2);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points",  &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check results
+  SIMIT_ASSERT_FLOAT_EQ( 319.0, x(p0));
+  SIMIT_ASSERT_FLOAT_EQ(-528.0, x(p1));
+  SIMIT_ASSERT_FLOAT_EQ( 758.0, x(p2));
+}
+
 #endif

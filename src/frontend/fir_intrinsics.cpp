@@ -173,6 +173,11 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                {opaqueType, nVectorType},
                {nVectorType},
                {genericParam});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::lltmatsolve().getName(),
+               {opaqueType, nMatrixType},
+               {nMatrixType},
+               {genericParam});
 
   // Complex numbers
   addScalarIntrinsic(&intrinsics,

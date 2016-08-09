@@ -45,6 +45,7 @@ const Func& solve();
 const Func& chol();
 const Func& cholfree();
 const Func& lltsolve();
+const Func& lltmatsolve();
 
 // String manipulation
 const Func& strcmp();

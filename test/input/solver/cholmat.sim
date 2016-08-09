@@ -25,9 +25,13 @@ func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
   A(p(1),p(0)) = 1.0;
 end
 
+extern func getB() -> (B : matrix[points,points](float));
+
 export func main()
   A = map dist_a to springs reduce +;
   solver = chol(A);
-  points.x = lltsolve(solver, points.b);
+  B = getB();
+  X = lltmatsolve(solver, B);
+  points.x = X * points.b;
   cholfree(solver);
 end

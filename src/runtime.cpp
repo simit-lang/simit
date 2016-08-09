@@ -262,3 +262,55 @@ int dlltsolve(void** solverPtr, int bn, double *bvals, int xn, double *xvals){
   return lltsolve(solverPtr, bn, bvals, xn, xvals);
 }
 }
+
+/// Solve `T=L^{-1}*B` and `X=L'^{-1}*T`, where `A=LL'` is the matrix that was
+/// factorized with the provided solver using `chol`.
+template <typename Float>
+int lltmatsolve(void** solverPtr,
+                 int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                 int Bnn, int Bmm, Float* Bvals,
+                 int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                 int Xnn, int Xmm, Float** Xvals){
+#ifdef EIGEN
+//  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
+  std::cout << "rowptr: " << Browptr << std::endl;
+  auto B = csr2eigen<Float,Eigen::ColMajor>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+  std::cout << B << std::endl;
+  exit(0);
+//  SparseMatrix<Float> B(Bn, Bm);
+//  SparseMatrix<Float> X(Xn, Xm);
+//  X = solver->solve(B);
+
+
+//  auto b = dense2eigen(nb, bvals);
+//  auto x = Eigen::Matrix<Float,Eigen::Dynamic,1>(nx);
+//  x = solver->solve(b);
+//  for (int i=0; i<nx; ++i) {
+//    xvals[i] = x(i);
+//  }
+
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" {
+int slltmatsolve(void** solverPtr,
+                  int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                  int Bnn, int Bmm, float* Bvals,
+                  int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                  int Xnn, int Xmm, float** Xvals) {
+  return lltmatsolve(solverPtr,
+                      Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
+                      Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
+}
+int dlltmatsolve(void** solverPtr,
+                  int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                  int Bnn, int Bmm, double* Bvals,
+                  int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                  int Xnn, int Xmm, double** Xvals) {
+  return lltmatsolve(solverPtr,
+                      Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
+                      Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
+}
+}
