@@ -165,8 +165,8 @@ void getB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
   B.insert(1,0) = 20;
   B.insert(2,0) = 30;
   B.insert(1,1) = 1;
-  B.insert(0,2) = 100;
-  B.insert(2,2) = 200;
+  B.insert(0,2) = 1;
+  B.insert(2,2) = 2;
   eigen2csr(B, Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
 }
 extern "C"
@@ -180,7 +180,7 @@ void dgetB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
   getB(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
 }
 
-TEST(DISABLED_solver, cholmat) {
+TEST(solver, cholmat) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -213,9 +213,9 @@ TEST(DISABLED_solver, cholmat) {
   func.runSafe();
 
   // Check results
-  SIMIT_ASSERT_FLOAT_EQ( 319.0, x(p0));
-  SIMIT_ASSERT_FLOAT_EQ(-528.0, x(p1));
-  SIMIT_ASSERT_FLOAT_EQ( 758.0, x(p2));
+  SIMIT_ASSERT_FLOAT_EQ( 22.0, x(p0));
+  SIMIT_ASSERT_FLOAT_EQ(-33.0, x(p1));
+  SIMIT_ASSERT_FLOAT_EQ( 65.0, x(p2));
 }
 
 #endif

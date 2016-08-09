@@ -34,7 +34,7 @@ csr2eigen(int n, int m, int* rowptr, int* colidx, int nn, int mm, Float* vals) {
   return mat;
 }
 
-template<typename Float,int Major=Eigen::RowMajor>
+template<typename Float,int Major>
 void eigen2csr(Eigen::SparseMatrix<Float,Major> mat,
                int n, int m, int** rowptr, int** colidx,
                int nn, int mm, Float** vals) {

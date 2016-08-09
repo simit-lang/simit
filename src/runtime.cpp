@@ -272,23 +272,12 @@ int lltmatsolve(void** solverPtr,
                  int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
                  int Xnn, int Xmm, Float** Xvals){
 #ifdef EIGEN
-//  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
-  std::cout << "rowptr: " << Browptr << std::endl;
-  auto B = csr2eigen<Float,Eigen::ColMajor>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
-  std::cout << B << std::endl;
-  exit(0);
-//  SparseMatrix<Float> B(Bn, Bm);
-//  SparseMatrix<Float> X(Xn, Xm);
-//  X = solver->solve(B);
-
-
-//  auto b = dense2eigen(nb, bvals);
-//  auto x = Eigen::Matrix<Float,Eigen::Dynamic,1>(nx);
-//  x = solver->solve(b);
-//  for (int i=0; i<nx; ++i) {
-//    xvals[i] = x(i);
-//  }
-
+  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
+  auto B = csr2eigen<Float>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+  SparseMatrix<Float> X(Xn, Xm);
+  X = solver->solve(B);
+  X = X.transpose();
+  eigen2csr<Float>(X, Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
 #else
   SOLVER_ERROR;
 #endif

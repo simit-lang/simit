@@ -20,7 +20,7 @@ func f(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
 end
 
 export func main()
-  B = map f to E reduce +;
-  A = matrix_neg(B);
-  V.a = A * V.b;
+  A = map f to E reduce +;
+  B = matrix_neg(A);
+  V.a = B * V.b;
 end
