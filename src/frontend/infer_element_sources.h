@@ -8,6 +8,17 @@
 namespace simit {
 namespace fir {
 
+// As the name of the class suggests, the purpose of this analysis is to infer, 
+// based on how elements are used to index into tensor function arguments and 
+// result variables, what the source of an element can/must be. As an example, 
+// for the following example, the analysis would infer that p must actually be 
+// an element of the `points` set (rather than just any arbitrary Point) and 
+// annotate `p` (or more precisely the type of `p`) appropriately.
+//
+// func f(p : Point) -> (M : matrix[points,points](float))
+//   M(p,p) = 1.0;
+// end
+
 class InferElementSources : public FIRVisitor {
 public:
   void infer(Program::Ptr program) { program->accept(this); }
