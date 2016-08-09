@@ -38,12 +38,6 @@ public:
     return pos;
   }
 
-  inline void printTimedLines() {
-    for (auto& line : timedLines) {
-      std::cout << line << std::endl;
-    }
-  }
-
   inline void storeTime(size_t index, double time) {
     while (timerCount.size() < index + 1) {
       timerCount.push_back(0);

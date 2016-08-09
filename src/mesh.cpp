@@ -31,7 +31,7 @@ int openIfstream(ifstream & in, const char * filename)
 {
   in.open(filename);
   if(!in.good()){
-    std::cout<<"Cannot read "<<filename<<"\n";
+    std::cerr << "Cannot read " << filename << std::endl;
     return -1;
   }
   return 0;
@@ -41,7 +41,7 @@ int openOfstream(ofstream & out, const char * filename)
 {
   out.open(filename);
   if(!out.good()){
-    std::cout<<"Cannot write to "<<filename<<"\n";
+    std::cerr << "Cannot write to " << filename << std::endl;
     return -1;
   }
   return 0;
@@ -123,7 +123,7 @@ int Mesh::save(const char * filename)
 {
   ofstream out(filename);
   if(!out.good()){
-    std::cout<<"Could not open "<<filename<<"\n";
+    std::cerr << "Could not open " << filename << std::endl;
     return -1;
   }
   int status = save(out);
@@ -197,7 +197,7 @@ int MeshVol::save(const char * filename)
 {
   ofstream out(filename);
   if(!out.good()){
-    cout<<"Could not open "<<filename<<"\n";
+    std::cerr << "Could not open " << filename << std::endl;
     return -1;
   }
   int status = save(out);

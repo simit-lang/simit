@@ -5,3 +5,6 @@ doc
 debug
 release
 .*.swp
+*.ir.sim
+*.ir.ll
+*.ir.asm
