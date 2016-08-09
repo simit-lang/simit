@@ -169,7 +169,7 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                {},
                {});
   addIntrinsic(&intrinsics,
-               ir::intrinsics::lltsolves().getName(),
+               ir::intrinsics::lltsolve().getName(),
                {opaqueType, nVectorType},
                {nVectorType},
                {genericParam});

@@ -123,7 +123,7 @@ TEST(solver, chol) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
-  FieldRef<simit_float> c = points.addField<simit_float>("c");
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
   FieldRef<bool> fixed = points.addField<bool>("fixed");
 
   ElementRef p0 = points.add();
@@ -152,9 +152,9 @@ TEST(solver, chol) {
   func.runSafe();
 
   // Check results
-  SIMIT_ASSERT_FLOAT_EQ(20.0, c(p0));
-  SIMIT_ASSERT_FLOAT_EQ(-30, c(p1));
-  SIMIT_ASSERT_FLOAT_EQ(60.0, c(p2));
+  SIMIT_ASSERT_FLOAT_EQ( 20.0, x(p0));
+  SIMIT_ASSERT_FLOAT_EQ(-30.0, x(p1));
+  SIMIT_ASSERT_FLOAT_EQ( 60.0, x(p2));
 }
 
 #endif

@@ -3,6 +3,7 @@
 
 #include <tuple>
 #include <cstdlib>
+#include <vector>
 
 namespace simit {
 namespace ffi {

@@ -44,7 +44,7 @@ const Func& inv();
 const Func& solve();
 const Func& chol();
 const Func& cholfree();
-const Func& lltsolves();
+const Func& lltsolve();
 
 // String manipulation
 const Func& strcmp();

@@ -186,10 +186,13 @@ void cMatSolve_f32(int n,  int m,  int* rowptr, int* colidx,
 }
 }
 
+/// Cholesky factorization. Returns a solver object that can be used with
+/// `lltsolve` and `lltmatsolve`. The solver object must be freed using
+/// `cholfree`.
 template <typename Float>
-void chol(int An,  int Am,  int* Arowptr, int* Acolidx,
-          int Ann, int Amm, Float* Avals,
-          void** solverPtr) {
+int chol(int An,  int Am,  int* Arowptr, int* Acolidx,
+         int Ann, int Amm, Float* Avals,
+         void** solverPtr) {
 #ifdef EIGEN
   auto A = csr2eigen<Float,Eigen::ColMajor>(An, Am, Arowptr, Acolidx,
                                             Ann, Amm, Avals);
@@ -199,23 +202,45 @@ void chol(int An,  int Am,  int* Arowptr, int* Acolidx,
 #else
   SOLVER_ERROR;
 #endif
+  return 0;
 }
-
 extern "C" {
-void schol(int An,  int Am,  int* Arowptr, int* Acolidx,
-           int Ann, int Amm, float* Avals,
-           void** solver) {
+int schol(int An,  int Am,  int* Arowptr, int* Acolidx,
+          int Ann, int Amm, float* Avals,
+          void** solver) {
   return chol(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
 }
-void dchol(int An,  int Am,  int* Arowptr, int* Acolidx,
-           int Ann, int Amm, double* Avals,
-           void** solver) {
+int dchol(int An,  int Am,  int* Arowptr, int* Acolidx,
+          int Ann, int Amm, double* Avals,
+          void** solver) {
   return chol(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
 }
 }
 
+/// Free a Cholesky solver.
 template <typename Float>
-void lltsolves(void** solverPtr, int nb, Float *bvals, int nx, Float *xvals) {
+int cholfree(void** solverPtr) {
+#ifdef EIGEN
+  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
+  delete solver;
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" {
+int scholfree(void** solverPtr) {
+  return cholfree<float>(solverPtr);
+}
+int dcholfree(void** solverPtr){
+  return cholfree<double>(solverPtr);
+}
+}
+
+/// Solve `t=L^{-1}*b` and `x=L'^{-1}*t`, where `A=LL'` is the matrix that was
+/// factorized with the provided solver using `chol`.
+template <typename Float>
+int lltsolve(void** solverPtr, int nb, Float *bvals, int nx, Float *xvals) {
 #ifdef EIGEN
   auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
   auto b = dense2eigen(nb, bvals);
@@ -227,32 +252,13 @@ void lltsolves(void** solverPtr, int nb, Float *bvals, int nx, Float *xvals) {
 #else
   SOLVER_ERROR;
 #endif
+  return 0;
 }
-
 extern "C" {
-void slltsolves(void** solverPtr, int bn, float *bvals, int xn, float *xvals) {
-  return lltsolves(solverPtr, bn, bvals, xn, xvals);
+int slltsolve(void** solverPtr, int bn, float *bvals, int xn, float *xvals) {
+  return lltsolve(solverPtr, bn, bvals, xn, xvals);
 }
-void dlltsolves(void** solverPtr, int bn, double *bvals, int xn, double *xvals){
-  return lltsolves(solverPtr, bn, bvals, xn, xvals);
-}
-}
-
-template <typename Float>
-void cholfree(void** solverPtr) {
-#ifdef EIGEN
-  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
-  delete solver;
-#else
-  SOLVER_ERROR;
-#endif
-}
-
-extern "C" {
-void scholfree(void** solverPtr) {
-  return cholfree<float>(solverPtr);
-}
-void dcholfree(void** solverPtr){
-  return cholfree<double>(solverPtr);
+int dlltsolve(void** solverPtr, int bn, double *bvals, int xn, double *xvals){
+  return lltsolve(solverPtr, bn, bvals, xn, xvals);
 }
 }

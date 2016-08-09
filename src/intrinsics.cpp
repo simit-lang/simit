@@ -333,18 +333,18 @@ const Func& cholfree() {
   return cholfreeVar;
 }
 
-static Func lltsolvesVar;
-void lltsolvesInit() {
-  lltsolvesVar = Func("lltsolves",
+static Func lltsolveVar;
+void lltsolveInit() {
+  lltsolveVar = Func("lltsolve",
                  {Var("solver", Type(Type::Opaque)), Var("b", Type())},
                  {Var("x", Type())},
                  Func::External);
 }
-const Func& lltsolves() {
-  if (!lltsolvesVar.defined()) {
-    lltsolvesInit();
+const Func& lltsolve() {
+  if (!lltsolveVar.defined()) {
+    lltsolveInit();
   }
-  return lltsolvesVar;
+  return lltsolveVar;
 }
 
 static Func strcmpVar;
@@ -500,7 +500,7 @@ const std::map<std::string,Func> &byNames() {
     solveInit();
     cholInit();
     cholfreeInit();
-    lltsolvesInit();
+    lltsolveInit();
     strcmpInit();
     strlenInit();
     strcpyInit();
@@ -533,7 +533,7 @@ const std::map<std::string,Func> &byNames() {
                       {"__solve",solveVar},
                       {"chol", cholVar},
                       {"cholfree", cholfreeVar},
-                      {"lltsolves", lltsolvesVar},
+                      {"lltsolve", lltsolveVar},
                       {"strcmp", strcmpVar},
                       {"strlen", strlenVar},
                       {"strcpy", strcpyVar},

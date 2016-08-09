@@ -1,6 +1,6 @@
 element Point
   b : float;
-  c : float;
+  x : float;
   fixed : bool;
 end
 
@@ -28,6 +28,6 @@ end
 proc main 
   A = map dist_a to springs reduce +;
   solver = chol(A);
-  points.c = lltsolves(solver, points.b);
+  points.x = lltsolve(solver, points.b);
   cholfree(solver);
 end
