@@ -734,11 +734,8 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
       auto tensorStorage = storage.getStorage(to<VarExpr>(argument)->var);
       auto tensorIndex = tensorStorage.getTensorIndex();
 
-      llvm::Value* rowptrPtr = symtable.get(tensorIndex.getRowptrArray());
-      llvm::Value* rowptr = builder->CreateAlignedLoad(rowptrPtr, 8);
-
-      llvm::Value* colidxPtr = symtable.get(tensorIndex.getColidxArray());
-      llvm::Value* colidx = builder->CreateAlignedLoad(colidxPtr, 8);
+      llvm::Value *rowptr = compile(tensorIndex.getRowptrArray());
+      llvm::Value *colidx = compile(tensorIndex.getColidxArray());
 
       auto n = emitComputeLen(dimensions[0]);
       auto m = emitComputeLen(dimensions[1]);
