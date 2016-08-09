@@ -72,22 +72,23 @@ void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
 }
 
 static inline
-void printTimedCallGraph(string headerText, Func func, bool print) {
+void printTimedCallGraph(string headerText, Func func, ostream* os) {
   stringstream ss;
   simit::ir::IRPrinterCallGraph(ss).print(func);
   TimerStorage::getInstance().addSourceLines(ss);
+  *os << ss.rdbuf();
 }
 
 static inline
-void printCallGraph(string headerText, Func func, bool print) {
-  if (print) {
-    cout << "%% " << headerText << endl;
-    simit::ir::IRPrinterCallGraph(cout).print(func);
-    cout << endl;
+void printCallGraph(string headerText, Func func, ostream* os) {
+  if (os) {
+    *os << "%% " << headerText << endl;
+    simit::ir::IRPrinterCallGraph(*os).print(func);
+    *os << endl;
   }
 }
 
-Func lower(Func func, bool print, bool time) {
+Func lower(Func func, std::ostream* os, bool time) {
 #ifdef GPU
   // Rewrite system assignments
   if (kBackend == "gpu") {
@@ -99,70 +100,70 @@ Func lower(Func func, bool print, bool time) {
   // Flatten index expressions and insert temporaries
   func = rewriteCallGraph(func, (Func(*)(Func))flattenIndexExpressions);
   func = rewriteCallGraph(func, insertTemporaries);
-  printCallGraph("Insert Temporaries and Flatten Index Expressions", func, print);
+  printCallGraph("Insert Temporaries and Flatten Index Expressions", func, os);
 
   // Determine Storage
   func = rewriteCallGraph(func, [](Func func) -> Func {
     updateStorage(func, &func.getStorage(), &func.getEnvironment());
     return func;
   });
-  if (print) {
-    cout << "%% Tensor storage" << endl;
-    visitCallGraph(func, [](Func func) {
-      cout << "func " << func.getName() << ":" << endl;
+  if (os) {
+    *os << "%% Tensor storage" << endl;
+    visitCallGraph(func, [os](Func func) {
+      *os << "func " << func.getName() << ":" << endl;
       for (auto &var : func.getStorage()) {
-        cout << "  " << var <<" : "<< func.getStorage().getStorage(var) << endl;
+        *os << "  " << var <<" : "<< func.getStorage().getStorage(var) << endl;
       }
-      cout << endl;
+      *os << endl;
     });
-    cout << endl;
+    *os << endl;
   }
 
   func = rewriteCallGraph(func, insertFrees);
-  printCallGraph("Insert Frees", func, print);
+  printCallGraph("Insert Frees", func, os);
 
   func = rewriteCallGraph(func, lowerStringOps);
   func = rewriteCallGraph(func, lowerPrints);
-  printCallGraph("Lower String Operations and Prints", func, print);
+  printCallGraph("Lower String Operations and Prints", func, os);
 
   func = rewriteCallGraph(func, lowerFieldAccesses);
-  printCallGraph("Lower Field Accesses", func, print);
+  printCallGraph("Lower Field Accesses", func, os);
 
   // Lower stencil assemblies
   func = rewriteCallGraph(func, lowerStencilAssemblies);
-  printCallGraph("Normalize Row Indices", func, print);
+  printCallGraph("Normalize Row Indices", func, os);
 
   // Lower maps
   func = rewriteCallGraph(func, lowerMaps);
-  printCallGraph("Lower Maps", func, print);
+  printCallGraph("Lower Maps", func, os);
 
   // Lower Index Expressions
   func = rewriteCallGraph(func, lowerIndexExpressions);
-  printCallGraph("Lower Index Expressions", func, print);
+  printCallGraph("Lower Index Expressions", func, os);
 
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);
-  printCallGraph("Lower Tensor Reads and Writes", func, print);
+  printCallGraph("Lower Tensor Reads and Writes", func, os);
 
   if (time) {
-    printTimedCallGraph("Insert Timers", func, print);
+    printTimedCallGraph("Insert Timers", func, os);
     func = rewriteCallGraph(func, insertTimers);
-    printCallGraph("Insert Timers", func, print);
+    printCallGraph("Insert Timers", func, os);
   }
 
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, shardLoops);
-    printCallGraph("Shard Loops", func, print);
+    printCallGraph("Shard Loops", func, os);
     func = rewriteCallGraph(func, rewriteVarDecls);
-    printCallGraph("Rewritten Var Decls", func, print);
+    printCallGraph("Rewritten Var Decls", func, os);
     func = rewriteCallGraph(func, localizeTemps);
-    printCallGraph("Localize Temps", func, print);
+    printCallGraph("Localize Temps", func, os);
     func = rewriteCallGraph(func, kernelRWAnalysis);
-    printCallGraph("Kernel RW Analysis", func, print);
+    printCallGraph("Kernel RW Analysis", func, os);
     func = rewriteCallGraph(func, fuseKernels);
-    printCallGraph("Fuse Kernels", func, print);
+    printCallGraph("Fuse Kernels", func, os);
   }
 #endif
   return func;

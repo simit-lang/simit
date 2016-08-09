@@ -38,7 +38,6 @@ template<typename Float,int Major=Eigen::RowMajor>
 void eigen2csr(Eigen::SparseMatrix<Float,Major> mat,
                int n, int m, int** rowptr, int** colidx,
                int nn, int mm, Float** vals) {
-  std::cout << "eigen2csr" << std::endl;
   mat.makeCompressed();
 
   auto nnz = mat.nonZeros();
@@ -59,9 +58,6 @@ void eigen2csr(Eigen::SparseMatrix<Float,Major> mat,
     (*colidx)[i] = matcolidx[i];
     (*vals)[i] = data.value(i);
   }
-
-  std::cout << "rowptr: " << *rowptr << std::endl;
-  std::cout << "vals:   " << *vals << std::endl;
 }
 
 template<typename Float> Eigen::Matrix<Float,Eigen::Dynamic,1>

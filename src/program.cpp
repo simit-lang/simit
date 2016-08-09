@@ -32,7 +32,7 @@ Function compile(ir::Func func, backend::Backend *backend, bool addTimers) {
   // Fill in storage path expressions, etc.
   /// map<Var,pe::PathExpressions> pes = assignPathExpressions(func);
   /// storage.addPathExpressions(pes);
-  func = lower(func, false, addTimers);
+  func = lower(func, nullptr, addTimers);
   return Function(backend->compile(func, storage));
 }
 

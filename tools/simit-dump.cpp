@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <memory>
 
 #include "ir.h"
 #include "ir_visitor.h"
@@ -19,18 +21,23 @@
 using namespace std;
 using namespace simit;
 
-void printUsage(); // GCC shut up
-
-void printUsage() {
+static void printUsage() {
   cerr << "Usage: simit-dump [options] <simit-source> " << endl << endl
        << "Options:"            << endl
+       << "-emit-all"           << endl
        << "-emit-simit"         << endl
        << "-emit-llvm"          << endl
        << "-emit-asm"           << endl
-       << "-emit-gpu=<file>"    << endl
-       << "-compile"            << endl
+       << "-files"              << endl
        << "-compile=<function>" << endl
-       << "-section=<section>"  << endl;
+       << "-section=<section>"  << endl
+       << "-gpu";
+}
+const ios_base::openmode outputMode = ios_base::trunc;
+
+unique_ptr<ostream> irOutputStream(string sourceFile, string suffix="") {
+  string filename = (suffix != "") ? sourceFile + ".ir." + suffix : sourceFile;
+  return unique_ptr<ostream>(new ofstream(filename, outputMode));
 }
 
 int main(int argc, const char* argv[]) {
@@ -39,37 +46,50 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
 
-  bool emitSimit = false;
-  bool emitLLVM = false;
-  bool emitASM = false;
-  bool emitGPU = false;
   bool compile = false;
+  bool fileoutput = false;
+  bool gpu = false;
+
+  ostream* simitos = nullptr;
+  ostream* llvmos  = nullptr;
+  ostream* asmos   = nullptr;
+
+  std::unique_ptr<ostream> simitosCleanup;
+  std::unique_ptr<ostream> llvmosCleanup;
+  std::unique_ptr<ostream> asmosCleanup;
 
   string section;
   string function;
   string sourceFile;
-  string gpuOutFile;
 
   // Parse Arguments
   for (int i=1; i < argc; ++i) {
-    std::string arg = argv[i];
+    string arg = argv[i];
     if (arg[0] == '-') {
       std::vector<std::string> keyValPair = simit::util::split(arg, "=");
       if (keyValPair.size() == 1) {
-        if (arg == "-emit-simit") {
-          emitSimit = true;
+        if (arg == "-emit-all") {
+          simitos = &cout;
+          llvmos = &cout;
+          asmos = &cout;
+        }
+        else if (arg == "-emit-simit") {
+          simitos = &cout;
         }
         else if (arg == "-emit-llvm") {
-          emitLLVM = true;
+          llvmos = &cout;
         }
         else if (arg == "-emit-asm") {
-          emitASM = true;
-        }
-        else if (arg == "-emit-gpu") {
-          emitGPU = true;
+          asmos = &cout;
         }
         else if (arg == "-compile") {
           compile = true;
+        }
+        else if (arg == "-files") {
+          fileoutput = true;
+        }
+        else if (arg == "-gpu") {
+          gpu = true;
         }
         else {
           printUsage();
@@ -79,10 +99,6 @@ int main(int argc, const char* argv[]) {
       else if (keyValPair.size() == 2) {
         if (keyValPair[0] == "-section") {
           section = keyValPair[1];
-        }
-        else if (keyValPair[0] == "-emit-gpu") {
-          emitGPU = true;
-          gpuOutFile = keyValPair[1];
         }
         else if (keyValPair[0] == "-compile") {
           compile = true;
@@ -112,19 +128,25 @@ int main(int argc, const char* argv[]) {
     printUsage();
     return 3;
   }
-  if (!(emitSimit || emitLLVM || emitGPU)) {
-    emitSimit = emitLLVM = true;
-#ifdef GPU
-    emitGPU = true;
-#endif
-  }
-  if (emitGPU && gpuOutFile == "") {
-    gpuOutFile = sourceFile + ".out";
+
+  if (fileoutput) {
+    if (simitos) {
+      simitosCleanup = irOutputStream(sourceFile, "sim");
+      simitos = simitosCleanup.get();
+    }
+    if (llvmos) {
+      llvmosCleanup = irOutputStream(sourceFile, "ll");
+      llvmos = llvmosCleanup.get();
+    }
+    if (asmos) {
+      asmosCleanup = irOutputStream(sourceFile, "ll");
+      asmos = asmosCleanup.get();
+    }
   }
 
-  std::string backend = emitGPU ? "gpu" : "cpu";
+  std::string backend = gpu ? "gpu" : "cpu";
 #ifdef F32
-  simit::init(backend, sizeof(float));
+  simit::init(backend, sizeof(simit_float));
 #else
   simit::init(backend, sizeof(double));
 #endif
@@ -173,19 +195,19 @@ int main(int argc, const char* argv[]) {
 
   auto functions = ctx.getFunctions();
 
-  if (emitSimit) {
+  if (simitos) {
     for (auto &constant : ctx.getConstants()) {
-      std::cout << "const " << constant.first << " = "
-                << constant.second << ";" << std::endl;
+      *simitos << "const " << constant.first << " = "
+              << constant.second << ";" << std::endl;
     }
     if (ctx.getConstants().size() > 0) {
-      std::cout << std::endl;
+      *simitos << std::endl;
     }
 
     auto iter = functions.begin();
     while (iter != functions.end()) {
       if (iter->second.getKind() == simit::ir::Func::Internal) {
-        cout << iter->second << endl;
+        *simitos << iter->second << endl;
         ++iter;
         break;
       }
@@ -193,7 +215,7 @@ int main(int argc, const char* argv[]) {
     }
     while (iter != functions.end()) {
       if (iter->second.getKind() == simit::ir::Func::Internal) {
-        cout << endl << iter->second << endl;
+        *simitos << endl << iter->second << endl;
       }
       ++iter;
     }
@@ -221,40 +243,41 @@ int main(int argc, const char* argv[]) {
       }
     }
 
-    if (emitSimit) {
-      cout << endl << endl;
-      cout << "% Compile " << function << endl;
+    if (simitos) {
+      *simitos << endl << endl;
+      *simitos << "% Compile " << function << endl;
     }
 
-    // Call lower with print=emitSimit
-    func = lower(func, emitSimit);
+    func = lower(func, simitos);
 
     // Emit and print llvm code
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
-    if (emitLLVM || emitASM) {
+    if (llvmos || asmos) {
       backend::Backend backend("cpu");
       simit::Function  llvmFunc(backend.compile(func));
 
-      if (emitLLVM) {
-        std::string fstr = simit::util::toString(llvmFunc);
-        if (emitSimit) {
-          cout << "--- Emitting LLVM" << endl;
+      if (llvmos) {
+        if (!fileoutput && simitos) {
+          *llvmos << "--- Emitting LLVM" << endl;
         }
-        cout << simit::util::trim(fstr) << endl;
+        *llvmos << util::trim(util::toString(llvmFunc)) << endl;
       }
 
-      if (emitASM) {
-        cout << "--- Emitting Assembly" << endl;
-        llvmFunc.printMachine(cout);
+      if (asmos) {
+        if (!fileoutput && (simitos || llvmos)) {
+          *asmos << "--- Emitting Assembly" << endl;
+        }
+        llvmFunc.printMachine(*asmos);
       }
     }
-    else if (emitGPU) {
+    else if (gpu) {
       backend::Backend backend("gpu");
       simit::Function llvmFunc(backend.compile(func));
 
-      std::string fstr = simit::util::toString(llvmFunc);
-      cout << "--- Emitting GPU" << endl;
-      cout << simit::util::trim(fstr) << endl;
+      if (!fileoutput && simitos) {
+        cout << "--- Emitting GPU" << endl;
+      }
+      cout << util::trim(util::toString(llvmFunc)) << endl;
     }
   }
 
