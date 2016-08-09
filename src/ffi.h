@@ -4,6 +4,7 @@
 #include <tuple>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 
 namespace simit {
 namespace ffi {
