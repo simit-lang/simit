@@ -137,8 +137,7 @@ private:
 };
 
 
-class PathExpression
-    : public util::IntrusivePtr<const PathExpressionImpl> {
+class PathExpression : public util::IntrusivePtr<const PathExpressionImpl> {
 public:
   PathExpression() : IntrusivePtr() {}
   PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
