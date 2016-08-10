@@ -1,103 +1,103 @@
 %%% neg
 %! neg([0.0, 1.0, 2.0]) == [-0.0, -1.0, -2.0];
-func neg(a : tensor[3](float)') -> (c : tensor[3](float)')
+func neg(a : tensor[3](float)') -> c : tensor[3](float)'
   c = -a;
 end
 
 %%% neg-literal
 %! neg() == -[0.0, 1.0, 2.0];
-func neg() -> (c : tensor[3](float)')
+func neg() -> c : tensor[3](float)'
   c = -+--[0.0, 1.0, 2.0];
 end
 
 %%% scale
 %! scale(3.0, [0.0, 1.0, 4.0]) == [0.0, 3.0, 12.0];
-func scale(a : float, b : tensor[3](float)') -> (c : tensor[3](float)')
+func scale(a : float, b : tensor[3](float)') -> c : tensor[3](float)'
   c = a*b;
 end
 
 %%% scale-reverse
 %! scaler([0.0, 1.0, 4.0], 3.0) == [0.0, 3.0, 12.0];
-func scaler(a : tensor[3](float)', b : float) -> (c : tensor[3](float)')
+func scaler(a : tensor[3](float)', b : float) -> c : tensor[3](float)'
   c = a*b;
 end
 
 %%% add-scalar
 %! adds(3.0, [0.0, 1.0, 4.0]) == [3.0, 4.0, 7.0];
-func adds(a : float, b : tensor[3](float)') -> (c : tensor[3](float)')
+func adds(a : float, b : tensor[3](float)') -> c : tensor[3](float)'
   c = a+b;
 end
 
 %%% div-vector-by-scalar
 %! adds(2.0, [1.0, 2.0, 4.0]) == [0.5, 1.0, 2.0];
-func adds(a : float, b : tensor[3](float)') -> (c : tensor[3](float)')
+func adds(a : float, b : tensor[3](float)') -> c : tensor[3](float)'
   c = b/a;
 end
 
 %%% div-scalar-by-vector
 %! adds(2.0, [1.0, 2.0, 4.0]) == [2.0, 1.0, 0.5];
-func adds(a : float, b : tensor[3](float)') -> (c : tensor[3](float)')
+func adds(a : float, b : tensor[3](float)') -> c : tensor[3](float)'
   c = a/b;
 end
 
 %%% add
 %! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
-func add(a : tensor[3](float)', b : tensor[3](float)') -> (c : tensor[3](float)')
+func add(a : tensor[3](float)', b : tensor[3](float)') -> c : tensor[3](float)'
   c = a + b;
 end
 
 %%% sub
 %! sub([0.0, 1.0, 2.0], [3.0, 7.0, 1.0]) == [-3.0, -6.0, 1.0];
-func sub(a : tensor[3](float)', b : tensor[3](float)') -> (c : tensor[3](float)')
+func sub(a : tensor[3](float)', b : tensor[3](float)') -> c : tensor[3](float)'
   c = a - b;
 end
 
 %%% inner
 %! inner([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]') == 14.0; 
-func inner(a : tensor[3](float)', b : tensor[3](float)) -> (c : float)
+func inner(a : tensor[3](float)', b : tensor[3](float)) -> c : float
   c = a * b;
 end
 
 %%% inner-int
 %! innerint([0, 1, 2], [3, 4, 5]') == 14; 
-func innerint(a : tensor[3](int)', b : tensor[3](int)) -> (c : int)
+func innerint(a : tensor[3](int)', b : tensor[3](int)) -> c : int
   c = a * b;
 end
 
 %%% outer
 %! outer([0.0, 2.0]', [3.0, 4.0]) == [0.0, 0.0; 6.0, 8.0];
-func outer(a : tensor[2](float), b : tensor[2](float)') -> (c : tensor[2,2](float))
+func outer(a : tensor[2](float), b : tensor[2](float)') -> c : tensor[2,2](float)
   c = a * b;
 end
 
 %%% mul-elwise
 %! mulelwise([0.0, 1.0, 2.0], [3.0, 7.0, 1.0]) == [0.0, 7.0, 2.0];
-func mulelwise(a : tensor[3](float)', b : tensor[3](float)') -> (c : tensor[3](float)')
+func mulelwise(a : tensor[3](float)', b : tensor[3](float)') -> c : tensor[3](float)'
   c = a .* b;
 end
 
 %%% div-elwise
 %! divelwise([0.0, 9.0, 8.0], [3.0, 3.0, 4.0]) == [0.0, 3.0, 2.0];
-func divelwise(a : tensor[3](float)', b : tensor[3](float)') -> (c : tensor[3](float)')
+func divelwise(a : tensor[3](float)', b : tensor[3](float)') -> c : tensor[3](float)'
   c = a ./ b;
 end
 
 %%% transpose-row2col
 %! row2col([0.0, 1.0, 2.0])  == [0.0, 1.0, 2.0]';
-func row2col(a : tensor[3](float)') -> (c : tensor[3](float))
+func row2col(a : tensor[3](float)') -> c : tensor[3](float)
   c = a';
 end
 
 %%% transpose-col2row
 %! col2row([0.0, 1.0, 2.0]') == [0.0, 1.0, 2.0];
-func col2row(a : tensor[3](float)) -> (c : tensor[3](float)')
+func col2row(a : tensor[3](float)) -> c : tensor[3](float)'
   c = a';
 end
 
 %%% cross
 %! cross([0.0, 1.0, 0.0], [0.0, 0.0, 1.0]) == [1.0, 0.0, 0.0];
 %! cross([0.0, 1.0, 2.0], [1.0, 2.0, 0.0]) == [-4.0, 2.0, -1.0];
-func cross(v1 : tensor[3](float)', v2 : tensor[3](float)') -> (result : tensor[3](float)')
+func cross(v1 : tensor[3](float)', v2 : tensor[3](float)') -> result : tensor[3](float)'
   result(0) = v1(1)*v2(2)-v1(2)*v2(1);
   result(1) = v1(2)*v2(0)-v1(0)*v2(2);
   result(2) = v1(0)*v2(1)-v1(1)*v2(0);
