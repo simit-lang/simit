@@ -41,9 +41,9 @@ void eigen2csr(Eigen::SparseMatrix<Float,Major> mat,
   mat.makeCompressed();
 
   auto nnz = mat.nonZeros();
-  *rowptr =   static_cast<int*>(simit::ffi::simit_malloc((n+1) * sizeof(int)));
-  *colidx =   static_cast<int*>(simit::ffi::simit_malloc(nnz * sizeof(int)));
-  *vals = static_cast<Float*>(simit::ffi::simit_malloc(nnz * sizeof(Float)));
+  *rowptr = static_cast<int*>(simit::ffi::simit_malloc((n/nn+1) * sizeof(int)));
+  *colidx = static_cast<int*>(simit::ffi::simit_malloc(nnz * sizeof(int)));
+  *vals =   static_cast<Float*>(simit::ffi::simit_malloc(nnz * sizeof(Float)));
 
   // copy rowptr
   auto matrowptr = mat.outerIndexPtr();

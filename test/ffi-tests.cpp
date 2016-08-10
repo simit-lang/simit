@@ -501,22 +501,23 @@ TEST(ffi, opaque) {
   ASSERT_EQ((int)a(p2), (int)b(p2));
 }
 
-// Tests that use Eigen
-#ifdef EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <Eigen/IterativeLinearSolvers>
-
 template<typename Float>
 void matrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
                 int Bnn, int Bmm, Float* Bvals,
                 int An,  int Am,  int** Arowptr, int** Acolidx,
                 int Ann, int Amm, Float** Avals) {
   assert(Bn == An && Bm == Am);
-  auto B = csr2eigen(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
-  B = -B;
-  eigen2csr(B, An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
+  int Annz = Browptr[Bn/Bnn];
+  *Arowptr= static_cast<int*>(simit::ffi::simit_malloc((An/Ann+1)*sizeof(int)));
+  memcpy(*Arowptr, Browptr, (An/Ann+1)*sizeof(int));
+
+  *Acolidx =   static_cast<int*>(simit::ffi::simit_malloc(Annz*sizeof(int)));
+  memcpy(*Acolidx, Bcolidx, Annz*sizeof(int));
+
+  *Avals = static_cast<Float*>(simit::ffi::simit_malloc(Annz*sizeof(Float)));
+  for (int i=0; i<Annz*Ann*Amm; ++i) {
+    (*Avals)[i] = -Bvals[i];
+  }
 }
 extern "C"
 void smatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
@@ -606,5 +607,3 @@ TEST(ffi, matrix_neg_generics) {
   ASSERT_EQ(-13.0, (double)a(v1));
   ASSERT_EQ(-10.0, (double)a(v2));
 }
-
-#endif
