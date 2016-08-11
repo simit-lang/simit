@@ -376,6 +376,8 @@ private:
   }
 
   void inferStorage(Var var, Expr rhs) {
+    iassert(rhs.defined()) << "Cannot infer storage from an undefined expr";
+
     // Scalars don't need storage
     if (isScalar(var.getType())) return;
 
