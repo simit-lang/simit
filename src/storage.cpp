@@ -189,19 +189,19 @@ public:
   void get(Func func) {
     for (auto &global : func.getEnvironment().getConstants()) {
       if (global.first.getType().isTensor()) {
-        determineStorage(global.first);
+        storage->add(global.first, TensorStorage::Dense);
       }
     }
 
     for (auto &arg : func.getArguments()) {
       if (arg.getType().isTensor()) {
-        determineStorage(arg);
+        storage->add(arg, TensorStorage::Dense);
       }
     }
 
     for (auto &res : func.getResults()) {
       if (res.getType().isTensor()) {
-        determineStorage(res);
+        storage->add(res, TensorStorage::Dense);
       }
     }
 
@@ -241,9 +241,8 @@ private:
   void visit(const VarDecl *op) {
     Var var = op->var;
     Type type = var.getType();
-    //iassert(!storage->hasStorage(var)) << "Redeclaration of variable " << var;
     if (type.isTensor() && !isScalar(type)) {
-      determineStorage(var);
+      storage->add(var, TensorStorage::Dense);
     }
   }
 
@@ -259,18 +258,18 @@ private:
       // Element tensor and system vectors are dense.
       if (isElementTensorType(ttype) || ttype->order() <= 1) {
         if (!storage->hasStorage(var)) {
-          determineStorage(var);
+          storage->add(var, TensorStorage::Dense);
         }
       }
       // System matrices
       else {
-          pe::PathExpression pexpr;
-          if (isa<IndexExpr>(op->value)) {
-            peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
-            pexpr = peBuilder.getPathExpression(var);
-          }
+        pe::PathExpression pexpr;
+        if (isa<IndexExpr>(op->value)) {
+          peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
+          pexpr = peBuilder.getPathExpression(var);
+        }
 
-          determineStorage(var, op->value);
+        inferStorage(var, op->value);
       }
     }
   }
@@ -280,12 +279,13 @@ private:
       const Var &var = to<VarExpr>(op->tensor)->var;
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-        determineStorage(var);
+        storage->add(var, TensorStorage::Dense);
       }
     }
   }
 
   void visit(const CallStmt* op) {
+    // Classify the result of extern functions.
     if (op->callee.getKind() == Func::External) {
       for (auto& result : op->results) {
         if (result.getType().isTensor()) {
@@ -294,6 +294,8 @@ private:
             storage->add(result, TensorStorage(TensorStorage::Dense));
           }
           else {
+            // Sparse matrices returned from extern functions have undefined
+            // path expressions (sparsity not known)
             auto index = TensorIndex(result.getName(), pe::PathExpression());
             storage->add(result, TensorStorage(TensorStorage::Indexed, index));
           }
@@ -373,12 +375,10 @@ private:
     }
   }
 
-  void determineStorage(Var var, Expr rhs=Expr()) {
+  void inferStorage(Var var, Expr rhs) {
     // Scalars don't need storage
     if (isScalar(var.getType())) return;
 
-    // If all dimensions are ranges then we choose dense row major. Otherwise,
-    // we choose system reduced storage order (for now).
     Type type = var.getType();
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
@@ -403,16 +403,19 @@ private:
       LeafVarsVisitor leafVars;
       rhs.accept(&leafVars);
 
-      // When creating a matrix by combining two matrices, the new matrix gets
-      // the storage with higher priority from the inputs.
+      // When creating a matrix by combining matrices, the new matrix gets the
+      // storage with higher priority from the inputs.
       // E.g. if one of the input variables to the RHS expression is dense then
       // the output becomes dense.
       static map<TensorStorage::Kind, unsigned> priorities = {
-        {TensorStorage::Dense,     4},
-        {TensorStorage::Indexed,   3},
-        {TensorStorage::Diagonal,  2},
+        {TensorStorage::Dense,     3},
+        {TensorStorage::Indexed,   2},
+        {TensorStorage::Diagonal,  1},
         {TensorStorage::Undefined, 0}
       };
+
+      // Start out at lowest priority (monotonically nondecreasing)
+      tensorStorage = TensorStorage(TensorStorage::Undefined);
 
       for (Var operand : leafVars.vars) {
         if (isScalar(operand.getType())) {
@@ -425,10 +428,11 @@ private:
         const TensorStorage operandStorage  = storage->getStorage(operand);
         auto operandStorageKind = operandStorage.getKind();
         auto tensorStorageKind = tensorStorage.getKind();
+
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
             case TensorStorage::Dense:
-              tensorStorage = operandStorage.getKind();
+              tensorStorage = TensorStorage(TensorStorage::Dense);
               break;
             case TensorStorage::Indexed: {
               auto index = getTensorIndex(var);
