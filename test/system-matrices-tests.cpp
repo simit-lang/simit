@@ -6,7 +6,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, add) {
+TEST(system, add) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -50,7 +50,7 @@ TEST(System, add) {
   ASSERT_EQ(3.0, (double)b(v2));
 }
 
-TEST(System, add_blocked) {
+TEST(system, add_blocked) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -88,7 +88,7 @@ TEST(System, add_blocked) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
-TEST(System, add_double_blocked) {
+TEST(system, add_double_blocked) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -126,7 +126,7 @@ TEST(System, add_double_blocked) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
-TEST(System, add_stencil) {
+TEST(system, add_stencil) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -218,7 +218,7 @@ TEST(System, add_stencil) {
   ASSERT_EQ(307.5, (simit_float)c.get(p12));
 }
 
-TEST(System, DISABLED_add_stencil_indexless) {
+TEST(system, DISABLED_add_stencil_indexless) {
   // HACK: Set kIndexlessStencils to true for this type of test
   kIndexlessStencils = true;
 
@@ -316,7 +316,7 @@ TEST(System, DISABLED_add_stencil_indexless) {
   kIndexlessStencils = false;
 }
 
-TEST(System, add_generics) {
+TEST(system, add_generics) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -360,7 +360,7 @@ TEST(System, add_generics) {
   ASSERT_EQ(3.0, (double)b(v2));
 }
 
-TEST(System, add_twice) {
+TEST(system, add_twice) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -404,7 +404,7 @@ TEST(System, add_twice) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
-TEST(System, dot_product_in_assembly) {
+TEST(system, dot_product_in_assembly) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -442,7 +442,7 @@ TEST(System, dot_product_in_assembly) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
-TEST(System, gemm_simple) {
+TEST(system, gemm_simple) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -489,7 +489,7 @@ TEST(System, gemm_simple) {
   ASSERT_EQ(25276.0, (double)c.get(p2));
 }
 
-TEST(DISABLED_System, gemm_blocked) {
+TEST(DISABLED_system, gemm_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
