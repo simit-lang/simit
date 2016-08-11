@@ -9,7 +9,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, gemv) {
+TEST(system, gemv) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -57,7 +57,7 @@ TEST(System, gemv) {
   ASSERT_EQ(10.0, c.get(p2));
 }
 
-TEST(System, gemv_stencil) {
+TEST(system, gemv_stencil) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -110,7 +110,7 @@ TEST(System, gemv_stencil) {
   ASSERT_EQ(10.0, c.get(p2));
 }
 
-TEST(System, gemv_stencil_indexless) {
+TEST(system, gemv_stencil_indexless) {
   // HACK: Set kIndexlessStencils to true for this type of test
   kIndexlessStencils = true;
   
@@ -168,7 +168,7 @@ TEST(System, gemv_stencil_indexless) {
   kIndexlessStencils = false;
 }
 
-TEST(System, gemv_stencil_2d) {
+TEST(system, gemv_stencil_2d) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -251,7 +251,7 @@ TEST(System, gemv_stencil_2d) {
   ASSERT_EQ(304.0, (simit_float)c.get(p12));
 }
 
-TEST(System, gemv_stencil_2d_indexless) {
+TEST(system, gemv_stencil_2d_indexless) {
   // HACK: Set kIndexlessStencils to true for this type of test
   kIndexlessStencils = true;
 
@@ -339,7 +339,7 @@ TEST(System, gemv_stencil_2d_indexless) {
   kIndexlessStencils = false;
 }
 
-TEST(System, gemv_add) {
+TEST(system, gemv_add) {
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
@@ -387,7 +387,7 @@ TEST(System, gemv_add) {
 }
 
 
-TEST(System, gemv_storage) {
+TEST(system, gemv_storage) {
   // This test tests whether we determine storage correctly for matrices
   // that do not come (directly) from maps
   // Points
@@ -438,7 +438,7 @@ TEST(System, gemv_storage) {
 }
 
 
-TEST(System, gemv_diagonal) {
+TEST(system, gemv_diagonal) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -477,7 +477,7 @@ TEST(System, gemv_diagonal) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_diagonal_func) {
+TEST(system, DISABLED_gemv_diagonal_func) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -516,7 +516,7 @@ TEST(System, DISABLED_gemv_diagonal_func) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, gemv_diagonal_extraparams) {
+TEST(system, gemv_diagonal_extraparams) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -555,7 +555,7 @@ TEST(System, gemv_diagonal_extraparams) {
   ASSERT_EQ(12.0, c.get(p2));
 }
 
-TEST(System, gemv_diagonal_inout) {
+TEST(system, gemv_diagonal_inout) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -597,7 +597,7 @@ TEST(System, gemv_diagonal_inout) {
   ASSERT_EQ(12.0, c.get(p2));
 }
 
-TEST(System, gemv_generics) {
+TEST(system, gemv_generics) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -645,7 +645,7 @@ TEST(System, gemv_generics) {
   ASSERT_EQ(10.0, c.get(p2));
 }
 
-TEST(System, gemv_generics_hidden) {
+TEST(system, gemv_generics_hidden) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -693,7 +693,7 @@ TEST(System, gemv_generics_hidden) {
   ASSERT_EQ(10.0, c.get(p2));
 }
 
-TEST(System, gemv_nw) {
+TEST(system, gemv_nw) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -732,7 +732,7 @@ TEST(System, gemv_nw) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-TEST(System, gemv_sw) {
+TEST(system, gemv_sw) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -771,7 +771,7 @@ TEST(System, gemv_sw) {
   ASSERT_EQ(4.0, c.get(p2));
 }
 
-TEST(System, gemv_assemble_from_points) {
+TEST(system, gemv_assemble_from_points) {
   // Points
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -813,7 +813,7 @@ TEST(System, gemv_assemble_from_points) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-TEST(System, gemv_inplace) {
+TEST(system, gemv_inplace) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -851,7 +851,7 @@ TEST(System, gemv_inplace) {
   ASSERT_EQ(10.0, (double)b.get(p2));
 }
 
-TEST(System, gemv_blocked) {
+TEST(system, gemv_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
@@ -903,7 +903,7 @@ TEST(System, gemv_blocked) {
   ASSERT_EQ(136.0, c2(1));
 }
 
-TEST(System, gemv_blocked_nw) {
+TEST(system, gemv_blocked_nw) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
@@ -955,7 +955,7 @@ TEST(System, gemv_blocked_nw) {
   ASSERT_EQ(0.0, c2(1));
 }
 
-TEST(System, gemv_blocked_computed) {
+TEST(system, gemv_blocked_computed) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
@@ -1007,7 +1007,7 @@ TEST(System, gemv_blocked_computed) {
   ASSERT_EQ(400.0, c2(1));
 }
 
-TEST(System, gemv_input) {
+TEST(system, gemv_input) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -1061,7 +1061,7 @@ TEST(System, gemv_input) {
   ASSERT_EQ(20.0, (simit_float)c.get(p2));
 }
 
-TEST(System, gemv_diagonal_storage) {
+TEST(system, gemv_diagonal_storage) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -1098,7 +1098,7 @@ TEST(System, gemv_diagonal_storage) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, gemv_blocked_diagonal_storage) {
+TEST(system, gemv_blocked_diagonal_storage) {
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
@@ -1135,7 +1135,7 @@ TEST(System, gemv_blocked_diagonal_storage) {
   ASSERT_EQ(366.0, c.get(p2)(1));
 }
 
-TEST(System, gemv_blocked_scaled_diagonal) {
+TEST(system, gemv_blocked_scaled_diagonal) {
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
@@ -1168,7 +1168,7 @@ TEST(System, gemv_blocked_scaled_diagonal) {
   ASSERT_EQ(660.0, c.get(p2)(1));
 }
 
-TEST(System, gemv_diagonal_storage_and_sysreduced) {
+TEST(system, gemv_diagonal_storage_and_sysreduced) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -1208,7 +1208,7 @@ TEST(System, gemv_diagonal_storage_and_sysreduced) {
  }
 
  
-TEST(System, DISABLED_gemv_pass_element) {
+TEST(system, DISABLED_gemv_pass_element) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");

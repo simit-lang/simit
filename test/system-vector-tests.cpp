@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, vector_add) {
+TEST(system, vector_add) {
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
@@ -24,7 +24,7 @@ TEST(System, vector_add) {
   SIMIT_EXPECT_FLOAT_EQ(84.0, (int)x.get(p0));
 }
 
-TEST(System, vector_add_blocked) {
+TEST(system, vector_add_blocked) {
   Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
 
@@ -48,7 +48,7 @@ TEST(System, vector_add_blocked) {
   SIMIT_EXPECT_FLOAT_EQ(12.0, x.get(p1)(2));
 }
 
-TEST(System, vector_dot) {
+TEST(system, vector_dot) {
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
   FieldRef<simit_float> z = points.addField<simit_float>("z");
@@ -68,7 +68,7 @@ TEST(System, vector_dot) {
   SIMIT_EXPECT_FLOAT_EQ(14.0, (int)z.get(p0));
 }
 
-TEST(System, vector_dot_blocked) {
+TEST(system, vector_dot_blocked) {
   Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> z = points.addField<simit_float>("z");
@@ -88,7 +88,7 @@ TEST(System, vector_dot_blocked) {
   SIMIT_EXPECT_FLOAT_EQ(285.0, (simit_float)z.get(p0));
 }
 
-TEST(System, vector_dot_intrinsic) {
+TEST(system, vector_dot_intrinsic) {
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
   FieldRef<simit_float> z = points.addField<simit_float>("z");
@@ -124,7 +124,7 @@ TEST(System, vector_dot_intrinsic) {
   SIMIT_EXPECT_FLOAT_EQ(506.0, (int)z.get(p0));
 }
 
-TEST(System, vector_assign_blocked) {
+TEST(system, vector_assign_blocked) {
   Set points;
   FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
 
@@ -145,7 +145,7 @@ TEST(System, vector_assign_blocked) {
   SIMIT_EXPECT_FLOAT_EQ(8.0, x.get(p1)(1));
 }
 
-TEST(System, vector_add_large_system) {
+TEST(system, vector_add_large_system) {
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
