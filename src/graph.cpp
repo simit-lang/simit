@@ -32,13 +32,16 @@ void Set::increaseCapacity() {
 }
 
 const internal::NeighborIndex *Set::getNeighborIndex() const {
+  iassert(getCardinality() > 0) << "Vertex sets have no neighbor index.";
+
   tassert(isHomogeneous())
       << "neighbor indices are currently only supported for homogeneous sets";
 
-  if (getCardinality() >= 2 && neighbors == nullptr) {
-    // Cast to non-const since adding a neighbor index does not change the 
+  // Lazy allocation
+  if (this->neighbors == nullptr) {
     this->neighbors = new internal::NeighborIndex(*this);
   }
+
   return this->neighbors;
 }
 

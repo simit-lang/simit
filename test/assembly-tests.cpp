@@ -30,7 +30,7 @@ TEST(assembly, vertices) {
   ASSERT_EQ(6, b.get(v2));
 }
 
-TEST(DISABLED_assembly, edges_unary) {
+TEST(assembly, edges_unary) {
   Set V;
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
