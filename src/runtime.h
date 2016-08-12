@@ -4,11 +4,6 @@
 #include "ffi.h"
 #include <iostream>
 
-#ifdef EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-
 template <typename Float>
 void mallocMatrix(int n,  int m,  int** rowptr, int** colidx,
                   int nn, int mm, Float** vals,
@@ -17,6 +12,11 @@ void mallocMatrix(int n,  int m,  int** rowptr, int** colidx,
   *colidx = static_cast<int*>(simit::ffi::simit_malloc(nnz * sizeof(int)));
   *vals = static_cast<Float*>(simit::ffi::simit_malloc(nnz * sizeof(Float)));
 }
+
+#ifdef EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 template <typename Float, int Major=Eigen::RowMajor>
 Eigen::SparseMatrix<Float,Major>
