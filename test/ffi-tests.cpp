@@ -18,6 +18,41 @@ using namespace simit;
 using namespace simit::ir;
 using namespace simit::ffi;
 
+// Helper functions
+template<typename Float>
+void getMat(int n,  int m,  int** rowptr, int** colidx,
+            int nn, int mm, Float** vals) {
+  mallocMatrix(n, m, rowptr, colidx, nn, mm, vals, 6);
+  (*rowptr)[0] = 0;
+  (*rowptr)[1] = 2;
+  (*rowptr)[2] = 4;
+  (*rowptr)[3] = 6;
+
+  (*colidx)[0] = 0;
+  (*colidx)[1] = 1;
+  (*colidx)[2] = 0;
+  (*colidx)[3] = 1;
+  (*colidx)[4] = 0;
+  (*colidx)[5] = 2;
+
+  (*vals)[0] = 10.0;
+  (*vals)[1] = 1.0;
+  (*vals)[2] = 20.0;
+  (*vals)[3] = 1.0;
+  (*vals)[4] = 30.0;
+  (*vals)[5] = 2.0;
+}
+extern "C"
+void sgetMat(int n,  int m, int** rowptr, int** colidx,
+             int nn, int mm, float** vals) {
+  getMat(n, m, rowptr, colidx, nn, mm, vals);
+}
+extern "C"
+void dgetMat(int n,  int m,  int** rowptr, int** colidx,
+             int nn, int mm, double** vals) {
+  getMat(n, m, rowptr, colidx, nn, mm, vals);
+}
+
 static bool noargsVisited = false;
 extern "C" int snoargs() {
   noargsVisited = true;
@@ -501,22 +536,23 @@ TEST(ffi, opaque) {
   ASSERT_EQ((int)a(p2), (int)b(p2));
 }
 
-// Tests that use Eigen
-#ifdef EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <Eigen/IterativeLinearSolvers>
-
 template<typename Float>
 void matrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
                 int Bnn, int Bmm, Float* Bvals,
                 int An,  int Am,  int** Arowptr, int** Acolidx,
                 int Ann, int Amm, Float** Avals) {
   assert(Bn == An && Bm == Am);
-  auto B = csr2eigen(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
-  B = -B;
-  eigen2csr(B, An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
+  int Annz = Browptr[Bn/Bnn];
+  *Arowptr= static_cast<int*>(simit::ffi::simit_malloc((An/Ann+1)*sizeof(int)));
+  memcpy(*Arowptr, Browptr, (An/Ann+1)*sizeof(int));
+
+  *Acolidx =   static_cast<int*>(simit::ffi::simit_malloc(Annz*sizeof(int)));
+  memcpy(*Acolidx, Bcolidx, Annz*sizeof(int));
+
+  *Avals = static_cast<Float*>(simit::ffi::simit_malloc(Annz*sizeof(Float)));
+  for (int i=0; i<Annz*Ann*Amm; ++i) {
+    (*Avals)[i] = -Bvals[i];
+  }
 }
 extern "C"
 void smatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
@@ -607,4 +643,27 @@ TEST(ffi, matrix_neg_generics) {
   ASSERT_EQ(-10.0, (double)a(v2));
 }
 
+#ifdef EIGEN
+TEST(ffi, extern_matrix_multiply) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1.0;
+  b(v1) = 1.0;
+  b(v2) = 1.0;
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(131.0, (double)a(v0));
+  ASSERT_EQ(241.0, (double)a(v1));
+  ASSERT_EQ(394.0, (double)a(v2));
+}
 #endif

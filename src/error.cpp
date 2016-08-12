@@ -66,14 +66,14 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
       }
       (*msg) << " at " << file << ":" << line << " in " << func;
       if (conditionString) {
-        (*msg)  << "\n" << " Condition failed: " << conditionString;
+        (*msg)  << endl << " Condition failed: " << conditionString << endl;
       }
       break;
     case Temporary:
       (*msg) << "Temporary assumption broken";
       (*msg) << " at " << file << ":" << line;
       if (conditionString) {
-        (*msg) << "\n" << " Condition failed: " << conditionString;
+        (*msg) << endl << " Condition failed: " << conditionString << endl;
       }
       break;
   }

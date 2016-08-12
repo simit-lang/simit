@@ -7,7 +7,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, swap) {
+TEST(system, swap) {
   Set V;
   FieldRef<simit_float> val = V.addField<simit_float>("val");
   ElementRef v0 = V.add();
@@ -39,7 +39,7 @@ TEST(System, swap) {
   ASSERT_EQ(3.0, val.get(v3));
 }
 
-TEST(System, element_field_access_in_proc) {
+TEST(system, element_field_access_in_proc) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -69,7 +69,7 @@ TEST(System, element_field_access_in_proc) {
   ASSERT_EQ(33.0, a.get(v0));
 }
 
-TEST(System, map_triangle) {
+TEST(system, map_triangle) {
   simit::Set verts;
   simit::FieldRef<simit_float> b = verts.addField<simit_float>("b");
 
@@ -103,7 +103,7 @@ TEST(System, map_triangle) {
   SIMIT_ASSERT_FLOAT_EQ(0.1, b.get(v3));
 }
 
-TEST(System, map_assemble_from_literal_vector) {
+TEST(system, map_assemble_from_literal_vector) {
   // Points
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
@@ -135,7 +135,7 @@ TEST(System, map_assemble_from_literal_vector) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
-TEST(System, map_assemble_vector_components) {
+TEST(system, map_assemble_vector_components) {
   // Points
   Set points;
   FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
@@ -168,7 +168,7 @@ TEST(System, map_assemble_vector_components) {
   ASSERT_EQ(0.0, x.get(p2)(1));
 }
 
-TEST(System, map_assemble_blocked) {
+TEST(system, map_assemble_blocked) {
   // Points
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
@@ -196,7 +196,7 @@ TEST(System, map_assemble_blocked) {
   ASSERT_EQ(729.0, z.get(p2));
 }
 
-TEST(System, DISABLED_map_assemble_fem) {
+TEST(system, DISABLED_map_assemble_fem) {
   // Points
   Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
@@ -229,7 +229,7 @@ TEST(System, DISABLED_map_assemble_fem) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
-TEST(System, map_one_set) {
+TEST(system, map_one_set) {
   // Points
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -255,7 +255,7 @@ TEST(System, map_one_set) {
   SIMIT_ASSERT_FLOAT_EQ(6, a.get(p2));
 }
 
-TEST(System, map_env_folding) {
+TEST(system, map_env_folding) {
   // Points
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -281,7 +281,7 @@ TEST(System, map_env_folding) {
   SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p2));
 }
 
-TEST(System, DISABLED_map_one_set_const_ref) {
+TEST(system, DISABLED_map_one_set_const_ref) {
   // Points
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -307,7 +307,7 @@ TEST(System, DISABLED_map_one_set_const_ref) {
   SIMIT_ASSERT_FLOAT_EQ(1.5, a.get(p2));
 }
 
-TEST(System, map_no_results_one_set) {
+TEST(system, map_no_results_one_set) {
   // Points
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -334,7 +334,7 @@ TEST(System, map_no_results_one_set) {
   ASSERT_EQ(6.0, (simit_float)a.get(p2));
 }
 
-TEST(System, map_no_results_two_sets) {
+TEST(system, map_no_results_two_sets) {
   // Points
   Set points;
   ElementRef p0 = points.add();
@@ -365,7 +365,7 @@ TEST(System, map_no_results_two_sets) {
   ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
-TEST(System, map_two_results_one_set) {
+TEST(system, map_two_results_one_set) {
   // Points
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -393,7 +393,7 @@ TEST(System, map_two_results_one_set) {
   ASSERT_EQ(54.0, (simit_float)b.get(p2));
 }
 
-TEST(System, map_two_results_two_sets) {
+TEST(system, map_two_results_two_sets) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -427,7 +427,7 @@ TEST(System, map_two_results_two_sets) {
   ASSERT_EQ(168.0, (simit_float)b.get(p2));
 }
 
-TEST(System, map_edgeset_no_endpoints) {
+TEST(system, map_edgeset_no_endpoints) {
   // Points
   Set points;
   ElementRef p0 = points.add();
@@ -458,7 +458,7 @@ TEST(System, map_edgeset_no_endpoints) {
   ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
-TEST(System, map_edgeset_no_endpoints_results) {
+TEST(system, map_edgeset_no_endpoints_results) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -491,7 +491,7 @@ TEST(System, map_edgeset_no_endpoints_results) {
   ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
-TEST(System, assembly_vector_copy) {
+TEST(system, assembly_vector_copy) {
   Set points;
   auto result = points.addField<simit_float,2>("result");
 
@@ -537,7 +537,7 @@ TEST(System, assembly_vector_copy) {
   EXPECT_EQ(60.0, (simit_float)result.get(p3)(1));
 }
 
-TEST(System, slice) {
+TEST(system, slice) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -590,7 +590,7 @@ TEST(System, slice) {
   ASSERT_EQ(2.0, d.get(p2));
 }
 
-TEST(System, map_norm) {
+TEST(system, map_norm) {
   Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> y = points.addField<simit_float>("y");
@@ -614,7 +614,7 @@ TEST(System, map_norm) {
   SIMIT_ASSERT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
 
-TEST(System, map_pass_field) {
+TEST(system, map_pass_field) {
   Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> y = points.addField<simit_float>("y");
@@ -639,7 +639,7 @@ TEST(System, map_pass_field) {
 }
 
 
-TEST(System, DISABLED_map_vec_assign) {
+TEST(system, DISABLED_map_vec_assign) {
   Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   
@@ -669,7 +669,7 @@ TEST(System, DISABLED_map_vec_assign) {
   SIMIT_ASSERT_FLOAT_EQ(9.1, x(p2)(2));
 }
 
-TEST(System, DISABLED_if_reassign) {
+TEST(system, DISABLED_if_reassign) {
   // Points
   Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");

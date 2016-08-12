@@ -4,12 +4,21 @@
 #include "ffi.h"
 #include <iostream>
 
+template <typename Float>
+void mallocMatrix(int n,  int m,  int** rowptr, int** colidx,
+                  int nn, int mm, Float** vals,
+                  int nnz) {
+  *rowptr = static_cast<int*>(simit::ffi::simit_malloc((n/nn+1) * sizeof(int)));
+  *colidx = static_cast<int*>(simit::ffi::simit_malloc(nnz * sizeof(int)));
+  *vals = static_cast<Float*>(simit::ffi::simit_malloc(nnz * sizeof(Float)));
+}
+
 #ifdef EIGEN
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
-template<typename Float, int Major=Eigen::RowMajor>
+template <typename Float, int Major=Eigen::RowMajor>
 Eigen::SparseMatrix<Float,Major>
 csr2eigen(int n, int m, int* rowptr, int* colidx, int nn, int mm, Float* vals) {
   int nnz = rowptr[n/nn];
@@ -41,9 +50,7 @@ void eigen2csr(Eigen::SparseMatrix<Float,Major> mat,
   mat.makeCompressed();
 
   auto nnz = mat.nonZeros();
-  *rowptr =   static_cast<int*>(simit::ffi::simit_malloc((n+1) * sizeof(int)));
-  *colidx =   static_cast<int*>(simit::ffi::simit_malloc(nnz * sizeof(int)));
-  *vals = static_cast<Float*>(simit::ffi::simit_malloc(nnz * sizeof(Float)));
+  mallocMatrix(n, m, rowptr, colidx, nn, mm, vals, nnz);
 
   // copy rowptr
   auto matrowptr = mat.outerIndexPtr();
