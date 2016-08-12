@@ -6,10 +6,11 @@ element Edge
 end
 
 extern V : set{Vertex};
-extern E : set{Edge}(V);
+extern E : set{Edge}(V, V);
 
-func asm(e : Edge, v : (Vertex*1)) -> (R : vector[V](int))
-  R(v(0)) = 1;
+func asm(e : Edge, v : (Vertex*2)) -> (A : vector[V](int))
+  A(v(0)) = 1;
+  A(v(1)) = 1;
 end
 
 export func main()

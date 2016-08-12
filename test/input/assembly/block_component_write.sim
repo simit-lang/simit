@@ -1,0 +1,17 @@
+element Vertex
+  a : tensor[2](int);
+end
+
+element Edge
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(s : Edge, p : (Vertex*2)) -> (a : tensor[V](tensor[2](int)))
+  a(p(0))(0) = 1; 
+end
+
+proc main
+  V.a = map f to E reduce +;
+end

@@ -1,0 +1,15 @@
+element Vertex
+  a : int;
+  b : int;
+end
+
+extern V : set{Vertex};
+
+func asm(v : Vertex) -> (f : tensor[V](int))
+  f(v) = v.a + v.a;
+end
+
+proc main
+  V.b = map asm to V;
+end
+
