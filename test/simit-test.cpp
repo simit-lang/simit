@@ -57,7 +57,8 @@ int main(int argc, char **argv) {
   if (argc > 1 &&
       (lastArgLen == 1 ||
        (lastArgLen >= 2 && 
-        (std::string(argv[argc-1]).substr(0,2) != "--" || simit::util::split(argv[argc-1],"=")[0] == "--profile")))) {
+        (std::string(argv[argc-1]).substr(0,2) != "--" ||
+         simit::util::split(argv[argc-1],"=")[0] == "--profile")))) {
       filter = std::string(argv[1]);
 
       char *dotPtr = strchr(argv[1], '.');

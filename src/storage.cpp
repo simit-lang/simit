@@ -427,7 +427,7 @@ private:
         iassert(storage->hasStorage(operand))
             << operand << "does not have a storage descriptor";
 
-        const TensorStorage operandStorage  = storage->getStorage(operand);
+        auto operandStorage  = storage->getStorage(operand);
         auto operandStorageKind = operandStorage.getKind();
         auto tensorStorageKind = tensorStorage.getKind();
 
@@ -437,7 +437,10 @@ private:
               tensorStorage = TensorStorage(TensorStorage::Dense);
               break;
             case TensorStorage::Indexed: {
-              auto index = getTensorIndex(var);
+              auto operandIndex = operandStorage.getTensorIndex();
+              auto index = operandIndex.getPathExpression().defined()
+                  ? getTensorIndex(var)
+                  : TensorIndex(var.getName()+"_index", pe::PathExpression());
               tensorStorage = TensorStorage(TensorStorage::Indexed, index);
               break;
             }

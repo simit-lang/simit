@@ -14,16 +14,39 @@ namespace ir {
 
 Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
                          Environment* env, Storage* storage) {
+  auto tensorStorage = storage->getStorage(target);
+
+  iassert(isa<Mul>(indexExpression->value)) << "expr is not a multiplication";
+
+  if (!tensorStorage.getTensorIndex().getPathExpression().defined()) {
+    Func spmm = Func("spmm", {Var(), Var()}, {Var()}, Stmt(), Func::External);
+
+    auto mulExpr = to<Mul>(indexExpression->value);
+    iassert(isa<IndexedTensor>(mulExpr->a))
+        << mulExpr->a << " is not an indexed tensor";
+    iassert(isa<IndexedTensor>(mulExpr->b))
+        << mulExpr->b << " is not an indexed tensor";
+
+    auto a = to<IndexedTensor>(mulExpr->a)->tensor;
+    auto b = to<IndexedTensor>(mulExpr->b)->tensor;
+    iassert(isa<VarExpr>(a)) << a << " is not a var";
+    iassert(isa<VarExpr>(b)) << b << " is not a var";
+
+    Stmt matmultCall = CallStmt::make({target}, spmm, {a, b});
+    return matmultCall;
+  }
+
   iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
   tassert(type->order() == 2)
-    << "lowerMatrixMultiply does not support non-matrix tensors";
+      << "lowerMatrixMultiply does not support non-matrix tensors";
   Type targetBlockType = type->getBlockType();
+
   // Check no blocking or single blocking
   tassert(targetBlockType.isTensor() &&
           (targetBlockType.toTensor()->order() == 0 ||
            targetBlockType.toTensor()->getBlockType().toTensor()->order() == 0))
-    << "lowerMatrixMultiply does not support multiply levels of blocking";
+      << "lowerMatrixMultiply does not support multiply levels of blocking";
 
   // Build a dense row workspace for per-row reductions
   Var workspace;
