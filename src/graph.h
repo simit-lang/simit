@@ -86,30 +86,36 @@ private:
 };
 
 
-// Base class for Sets
-// Sets are used to represent collections within C++,
-// and can be passed as bound inputs to Simit programs.
+/// Base class for Sets. Sets are used to represent collections within C++, and
+/// can be passed as bound inputs to Simit programs.
 class Set {
 public:
   enum Kind {Unstructured, LatticeLink};
 
-  /// UNSTRUCTURED constructors
+  /// Construct a normal named set with no endpoints.
   Set(const std::string &name) : Set(name, Unstructured) {}
 
+  /// Construct a named edge set with n endpoints.
   template <typename ...Sets>
-  Set(const char *name, const Sets& ...sets)
+  Set(const char *name, const Sets& ...endpoints)
       : Set(std::string(name), Unstructured) {
     static_assert(util::areSame<Set, Sets...>{},
         "Set constructor takes an optional name followed by zero or more Sets");
-    this->endpointSets = {&sets...};
+    this->endpointSets = {&endpoints...};
     this->endpoints    = (int*)calloc(sizeof(int), capacity * getCardinality());
   }
 
+  /// Construct a named edge set with n endpoints.
   template <typename ...Sets>
-  Set(std::string name, const Sets& ...sets) : Set(name.c_str(), sets...) {}
+  Set(std::string name, const Sets& ...endpoints)
+      : Set(name.c_str(), endpoints...) {}
 
+  /// Construct an edge set with n endpoints.
   template <typename ...Sets>
-  Set(const Sets& ...sets) : Set("", sets...) {}
+  Set(const Sets& ...endpoints) : Set("", endpoints...) {}
+
+  /// Construct an edge set with one endpoint.
+  Set(const Set& endpoint) : Set("", endpoint) {}
 
   /// LATTICE LINK constructors
   Set(const char *name, Set& points, std::vector<int> dims)
@@ -629,8 +635,7 @@ private:
   std::map<std::string, int> fieldNames;     // name to field lookups
   std::vector<FieldData*> fields;            // fields of elements in the set
 
-  /// disable copy constructors
-  Set(const Set& s);
+  /// disable copy
   Set& operator=(const Set& s);
 
   /// increase capacity of all fields
