@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+using namespace Eigen;
 #endif
 
 extern "C" {
@@ -148,11 +149,51 @@ double simitClock() {
 }
 } // extern "C"
 
-// Solvers
-#ifdef EIGEN
-using namespace Eigen;
-#endif
 
+/// Temporary external spmm implementation until Simit supports assembling
+/// matrix indices during computation.
+template <typename Float>
+int spmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+         int Bnn, int Bmm, Float* Bvals,
+         int Cn,  int Cm,  int* Crowptr, int* Ccolidx,
+         int Cnn, int Cmm, Float* Cvals,
+         int An,  int Am,  int** Arowptr, int** Acolidx,
+         int Ann, int Amm, Float** Avals) {
+#ifdef EIGEN
+  auto B = csr2eigen<Float,RowMajor>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+  auto C = csr2eigen<Float,RowMajor>(Cn, Cm, Crowptr, Ccolidx, Cnn, Cmm, Cvals);
+
+  SparseMatrix<Float,RowMajor> A(An, Am);
+  A = B*C;
+  eigen2csr(A, An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
+#else
+  ierror << "extern spmm requires Eigen";
+#endif
+  return 0;
+}
+extern "C" int sspmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                     int Bnn, int Bmm, float* Bvals,
+                     int Cn,  int Cm,  int* Crowptr, int* Ccolidx,
+                     int Cnn, int Cmm, float* Cvals,
+                     int An,  int Am,  int** Arowptr, int** Acolidx,
+                     int Ann, int Amm, float** Avals) {
+  return spmm(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
+              Cn, Cm, Crowptr, Ccolidx, Cnn, Cmm, Cvals,
+              An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
+}
+extern "C" int dspmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                     int Bnn, int Bmm, double* Bvals,
+                     int Cn,  int Cm,  int* Crowptr, int* Ccolidx,
+                     int Cnn, int Cmm, double* Cvals,
+                     int An,  int Am,  int** Arowptr, int** Acolidx,
+                     int Ann, int Amm, double** Avals) {
+  return spmm(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
+              Cn, Cm, Crowptr, Ccolidx, Cnn, Cmm, Cvals,
+              An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
+}
+
+
+// Solvers
 #define SOLVER_ERROR                                            \
 do {                                                            \
   ierror << "Solvers require that Simit was built with Eigen."; \
@@ -162,7 +203,7 @@ template <typename Float>
 void solve(int n,  int m,  int* rowptr, int* colidx,
            int nn, int mm, Float* Avals, Float* xvals, Float* bvals) {
 #ifdef EIGEN
-  auto A = csr2eigen<Float, Eigen::ColMajor>(n, m, rowptr, colidx, nn, mm, Avals);
+  auto A = csr2eigen<Float,ColMajor>(n, m, rowptr, colidx, nn, mm, Avals);
   auto b = new Map<Matrix<Float,Dynamic,1>>(bvals, n);
   auto x = new Map<Matrix<Float,Dynamic,1>>(xvals, m);
 
@@ -174,16 +215,13 @@ void solve(int n,  int m,  int* rowptr, int* colidx,
   SOLVER_ERROR;
 #endif
 }
-
-extern "C" {
-void cMatSolve_f64(int n,  int m,  int* rowptr, int* colidx,
-                   int nn, int mm, double* A, double* x, double* b) {
+extern "C" void cMatSolve_f64(int n,  int m,  int* rowptr, int* colidx,
+                              int nn, int mm, double* A, double* x, double* b) {
   return solve(n, m, rowptr, colidx, nn, mm, A, x, b);
 }
-void cMatSolve_f32(int n,  int m,  int* rowptr, int* colidx,
-                   int nn, int mm, float* A, float* x, float* b) {
+extern "C" void cMatSolve_f32(int n,  int m,  int* rowptr, int* colidx,
+                              int nn, int mm, float* A, float* x, float* b) {
   return solve(n, m, rowptr, colidx, nn, mm, A, x, b);
-}
 }
 
 /// Cholesky factorization. Returns a solver object that can be used with
@@ -204,17 +242,15 @@ int chol(int An,  int Am,  int* Arowptr, int* Acolidx,
 #endif
   return 0;
 }
-extern "C" {
-int schol(int An,  int Am,  int* Arowptr, int* Acolidx,
-          int Ann, int Amm, float* Avals,
-          void** solver) {
+extern "C" int schol(int An,  int Am,  int* Arowptr, int* Acolidx,
+                     int Ann, int Amm, float* Avals,
+                     void** solver) {
   return chol(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
 }
-int dchol(int An,  int Am,  int* Arowptr, int* Acolidx,
-          int Ann, int Amm, double* Avals,
-          void** solver) {
+extern "C" int dchol(int An,  int Am,  int* Arowptr, int* Acolidx,
+                     int Ann, int Amm, double* Avals,
+                     void** solver) {
   return chol(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
-}
 }
 
 /// Free a Cholesky solver.
@@ -228,13 +264,11 @@ int cholfree(void** solverPtr) {
 #endif
   return 0;
 }
-extern "C" {
-int scholfree(void** solverPtr) {
+extern "C" int scholfree(void** solverPtr) {
   return cholfree<float>(solverPtr);
 }
-int dcholfree(void** solverPtr){
+extern "C" int dcholfree(void** solverPtr){
   return cholfree<double>(solverPtr);
-}
 }
 
 /// Solve `t=L^{-1}*b` and `x=L'^{-1}*t`, where `A=LL'` is the matrix that was
@@ -283,23 +317,21 @@ int lltmatsolve(void** solverPtr,
 #endif
   return 0;
 }
-extern "C" {
-int slltmatsolve(void** solverPtr,
-                  int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-                  int Bnn, int Bmm, float* Bvals,
-                  int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
-                  int Xnn, int Xmm, float** Xvals) {
+extern "C" int slltmatsolve(void** solverPtr,
+                            int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                            int Bnn, int Bmm, float* Bvals,
+                            int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                            int Xnn, int Xmm, float** Xvals) {
   return lltmatsolve(solverPtr,
                       Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
                       Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
 }
-int dlltmatsolve(void** solverPtr,
-                  int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-                  int Bnn, int Bmm, double* Bvals,
-                  int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
-                  int Xnn, int Xmm, double** Xvals) {
+extern "C" int dlltmatsolve(void** solverPtr,
+                            int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                            int Bnn, int Bmm, double* Bvals,
+                            int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                            int Xnn, int Xmm, double** Xvals) {
   return lltmatsolve(solverPtr,
                       Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
                       Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
-}
 }

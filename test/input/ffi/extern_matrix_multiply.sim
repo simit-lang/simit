@@ -1,0 +1,12 @@
+element Vertex
+  a : float;
+  b : float;
+end
+extern V : set{Vertex};
+
+extern func getMat() -> (B : matrix[V,V](float));
+
+export func main()
+  A = getMat() * getMat();
+  V.a = A * V.b;
+end

@@ -18,6 +18,41 @@ using namespace simit;
 using namespace simit::ir;
 using namespace simit::ffi;
 
+// Helper functions
+template<typename Float>
+void getMat(int n,  int m,  int** rowptr, int** colidx,
+            int nn, int mm, Float** vals) {
+  mallocMatrix(n, m, rowptr, colidx, nn, mm, vals, 6);
+  (*rowptr)[0] = 0;
+  (*rowptr)[1] = 2;
+  (*rowptr)[2] = 4;
+  (*rowptr)[3] = 6;
+
+  (*colidx)[0] = 0;
+  (*colidx)[1] = 1;
+  (*colidx)[2] = 0;
+  (*colidx)[3] = 1;
+  (*colidx)[4] = 0;
+  (*colidx)[5] = 2;
+
+  (*vals)[0] = 10.0;
+  (*vals)[1] = 1.0;
+  (*vals)[2] = 20.0;
+  (*vals)[3] = 1.0;
+  (*vals)[4] = 30.0;
+  (*vals)[5] = 2.0;
+}
+extern "C"
+void sgetMat(int n,  int m, int** rowptr, int** colidx,
+             int nn, int mm, float** vals) {
+  getMat(n, m, rowptr, colidx, nn, mm, vals);
+}
+extern "C"
+void dgetMat(int n,  int m,  int** rowptr, int** colidx,
+             int nn, int mm, double** vals) {
+  getMat(n, m, rowptr, colidx, nn, mm, vals);
+}
+
 static bool noargsVisited = false;
 extern "C" int snoargs() {
   noargsVisited = true;
@@ -606,4 +641,27 @@ TEST(ffi, matrix_neg_generics) {
   ASSERT_EQ(-3.0,  (double)a(v0));
   ASSERT_EQ(-13.0, (double)a(v1));
   ASSERT_EQ(-10.0, (double)a(v2));
+}
+
+TEST(ffi, extern_matrix_multiply) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1.0;
+  b(v1) = 1.0;
+  b(v2) = 1.0;
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(131.0, (double)a(v0));
+  ASSERT_EQ(241.0, (double)a(v1));
+  ASSERT_EQ(394.0, (double)a(v2));
 }
