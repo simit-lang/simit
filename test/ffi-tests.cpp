@@ -643,6 +643,7 @@ TEST(ffi, matrix_neg_generics) {
   ASSERT_EQ(-10.0, (double)a(v2));
 }
 
+#ifdef EIGEN
 TEST(ffi, extern_matrix_multiply) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
@@ -665,3 +666,4 @@ TEST(ffi, extern_matrix_multiply) {
   ASSERT_EQ(241.0, (double)a(v1));
   ASSERT_EQ(394.0, (double)a(v2));
 }
+#endif
