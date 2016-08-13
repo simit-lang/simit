@@ -1,0 +1,17 @@
+element Vertex
+end
+
+element Edge
+  a : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(inout e : Edge)
+  e.a = 2 * e.a;
+end
+
+export func main()
+  apply f to E; 
+end
