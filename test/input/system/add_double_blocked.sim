@@ -51,7 +51,7 @@ func sum_vectors(Y : tensor[V](tensor[2](tensor[2](float))), v : Vertex) -> (y :
   y(v) = sum;
 end
 
-proc main
+export func main()
   B = map f to V reduce +;
   C = map g to E reduce +;
   A = B + C;

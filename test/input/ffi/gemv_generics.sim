@@ -23,7 +23,7 @@ func dist_a<T>(s : Spring, p : (Point*2)) -> (A : tensor[T,T](float))
   A(p(1),p(1)) = s.a;
 end
 
-proc main
+export func main()
   A_points = map dist_a to springs reduce +;
   A_particles = map dist_a to connections reduce +;
   

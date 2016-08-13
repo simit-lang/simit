@@ -5,7 +5,7 @@ end
 
 extern points : set{Point};
 
-proc main 
+export func main()
   s = points.x' * points.x;
   points.z = s + points.z;
 end

@@ -8,6 +8,6 @@ func f(inout v : Vertex)
   v.a = 2 * v.a;
 end
 
-proc main 
+export func main()
   apply f to V;
 end

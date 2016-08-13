@@ -19,7 +19,7 @@ func f(s : Edge, p : (Vertex*2)) -> (b : tensor[V](int), A : tensor[V,V](int))
   A(p(1),p(1)) = 7 * s.a;
 end
 
-proc main 
+export func main()
   b, A = map f to E reduce +;
   V.b = A * b;
 end

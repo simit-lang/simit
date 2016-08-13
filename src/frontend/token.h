@@ -36,7 +36,6 @@ public:
     CONST,
     EXTERN,
     EXPORT,
-    PROC,
     FUNC,
     INOUT,
     APPLY,

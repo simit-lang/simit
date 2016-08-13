@@ -15,7 +15,7 @@ func dist(t : Edge, v : (Vertex*3)) -> (a : tensor[V](int))
   a(v(2)) = t.a;
 end
 
-proc main
+export func main()
   V.b = map dist to E reduce +;
 end
 

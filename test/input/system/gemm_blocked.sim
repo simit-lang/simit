@@ -18,7 +18,7 @@ func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](tensor[2,2]
   A(p(1),p(1)) = s.a + p(1).d;
 end
 
-proc main
+export func main()
   A = map dist_a to springs reduce +;
   B = A*A;
   points.c = B * points.b;

@@ -10,7 +10,7 @@ func dist_a(p : Point) -> (A : tensor[points,points](tensor[2,2](float)))
   A(p,p) = p.a * p.a';
 end
 
-proc main 
+export func main()
   A = map dist_a to points reduce +;
   points.c = A * points.b;
 end

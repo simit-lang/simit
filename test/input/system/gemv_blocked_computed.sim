@@ -18,7 +18,7 @@ func dist_a(s : Spring, p : (Point*2)) ->
   M(p(1),p(1)) = p(0).x * p(1).x';
 end
 
-proc main 
+export func main()
   A = map dist_a to springs reduce +;
   points.c = A * points.b;
 end

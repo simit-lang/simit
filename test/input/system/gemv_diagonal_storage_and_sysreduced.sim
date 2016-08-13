@@ -27,7 +27,7 @@ func dist_a(p : Point) -> (A : tensor[points,points](tensor[2,2](float)))
   end
 end
 
-proc main 
+export func main()
   A = map dist_a  to points  reduce +;
   B = map dist_a2 to springs reduce +;
   C = A + B;

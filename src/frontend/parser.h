@@ -39,7 +39,6 @@ private:
   fir::ExternDecl::Ptr                   parseExternDecl();
   fir::FuncDecl::Ptr                     parseExternFuncDecl();
   fir::FuncDecl::Ptr                     parseFuncDecl();
-  fir::FuncDecl::Ptr                     parseProcDecl();
   std::vector<fir::GenericParam::Ptr>    parseGenericParams();
   fir::GenericParam::Ptr                 parseGenericParam();
   std::vector<fir::Argument::Ptr>        parseArguments();

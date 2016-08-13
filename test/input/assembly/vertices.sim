@@ -9,7 +9,7 @@ func asm(v : Vertex) -> (f : tensor[V](int))
   f(v) = v.a + v.a;
 end
 
-proc main
+export func main()
   V.b = map asm to V;
 end
 
