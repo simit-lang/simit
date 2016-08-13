@@ -1,0 +1,21 @@
+element Edge
+  a : int;
+end
+
+element Vertex
+  b : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V, V, V);
+
+func dist(t : Edge, v : (Vertex*3)) -> (a : tensor[V](int))
+  a(v(0)) = t.a;
+  a(v(1)) = t.a;
+  a(v(2)) = t.a;
+end
+
+proc main
+  V.b = map dist to E reduce +;
+end
+

@@ -1,0 +1,16 @@
+element Vertex
+  a : int;
+  b : int;
+end
+
+extern V : set{Vertex};
+
+func f(p : Vertex) -> (b : tensor[V](int), A : tensor[V,V](int))
+  b(p)   = 2 * p.a;
+  A(p,p) = 3 * p.a;
+end
+
+proc main 
+  b, A = map f to V;
+  V.b = A * b;
+end
