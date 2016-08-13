@@ -26,10 +26,6 @@ end
 func f(inout p : tensor[3](float))
 end
 
-%%% proc
-proc main
-end
-
 %%% export-func
 export func main()
 end

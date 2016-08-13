@@ -30,7 +30,7 @@ func vonNeumann(g00 : Point,
     vnMat(g00,g[-1,0]) = l[0,0;-1,0].a;
 end
 
-proc main
+export func main()
   A = map f to springs2 reduce +;
   B = map vonNeumann to points through springs;
   C = A + B;

@@ -40,7 +40,7 @@ fir::Program::Ptr Parser::parseProgram() {
 }
 
 // program_element: element_type_decl | extern_decl | const_decl
-//                | func_decl | proc_decl | test
+//                | func_decl | test
 fir::FIRNode::Ptr Parser::parseProgramElement() {
   try {
     switch (peek().type) {
@@ -49,8 +49,6 @@ fir::FIRNode::Ptr Parser::parseProgramElement() {
       case Token::Type::EXPORT:
       case Token::Type::FUNC:
         return parseFuncDecl();
-      case Token::Type::PROC:
-        return parseProcDecl();
       case Token::Type::ELEMENT:
         return parseElementTypeDecl();
       case Token::Type::EXTERN:
@@ -63,9 +61,8 @@ fir::FIRNode::Ptr Parser::parseProgramElement() {
         break;
     }
   } catch (const SyntaxError &) {
-    skipTo({Token::Type::TEST, Token::Type::FUNC, Token::Type::PROC, 
-            Token::Type::EXPORT, Token::Type::ELEMENT, Token::Type::EXTERN, 
-            Token::Type::CONST});
+    skipTo({Token::Type::TEST, Token::Type::FUNC, Token::Type::EXPORT,
+            Token::Type::ELEMENT, Token::Type::EXTERN, Token::Type::CONST});
     
     return fir::FIRNode::Ptr();
   }
@@ -212,58 +209,6 @@ fir::FuncDecl::Ptr Parser::parseFuncDecl() {
     funcDecl->setEndLoc(endToken);
   
     return funcDecl;
-  } catch (const SyntaxError &) {
-    while (decls.levels() != originalLevel) {
-      decls.unscope();
-    }
-
-    throw;
-  }
-}
-
-// proc_decl: 'proc' ident [arguments results] stmt_block 'end'
-fir::FuncDecl::Ptr Parser::parseProcDecl() {
-  const unsigned originalLevel = decls.levels();
-
-  try {
-    auto procDecl = std::make_shared<fir::FuncDecl>();
-    procDecl->type = fir::FuncDecl::Type::EXPORTED;
-  
-    const Token procToken = consume(Token::Type::PROC);
-    procDecl->setBeginLoc(procToken);
-  
-    procDecl->name = parseIdent();
-    
-    decls.insert(procDecl->name->ident, IdentType::FUNCTION);
-    decls.scope();
-    
-    if (peek().type == Token::Type::LP) {
-      switch (peek(1).type) {
-        case Token::Type::IDENT:
-          if (peek(2).type != Token::Type::COL) {
-            break;
-          }
-        case Token::Type::RP:
-        case Token::Type::INOUT:
-          procDecl->genericParams = parseGenericParams();
-          procDecl->args = parseArguments();
-          procDecl->results = parseResults();
-          break;
-        default:
-          break;
-      }
-    }
-
-    decls.scope();
-    procDecl->body = parseStmtBlock();
-    decls.unscope();
-    
-    decls.unscope();
-    
-    const Token endToken = consume(Token::Type::BLOCKEND);
-    procDecl->setEndLoc(endToken);
-  
-    return procDecl;
   } catch (const SyntaxError &) {
     while (decls.levels() != originalLevel) {
       decls.unscope();

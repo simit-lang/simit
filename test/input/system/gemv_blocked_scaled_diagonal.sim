@@ -10,7 +10,7 @@ func fd(p : Point) -> (A : tensor[points,points](tensor[2,2](float)))
   A(p,p) = p.a * p.a';
 end
 
-proc main 
+export func main()
   h = 10.0;
   A = map fd to points reduce +;
   T = h * A;

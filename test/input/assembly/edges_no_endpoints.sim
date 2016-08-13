@@ -13,6 +13,6 @@ func f(e : Edge) -> (a : tensor[E](int))
   a(e) = 2 * e.a;
 end
 
-proc main 
+export func main()
   E.b = map f to E; 
 end

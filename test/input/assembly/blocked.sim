@@ -41,7 +41,7 @@ func sum_vectors(y : tensor[V](tensor[3](tensor[3](int))), point : Vertex)
   z(point) = sum;
 end
 
-proc main
+export func main()
   X = map build_blocked to V;
   vecx = map promote to V;
   y = X * vecx;

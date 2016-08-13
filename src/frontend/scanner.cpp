@@ -26,7 +26,6 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "const") return Token::Type::CONST;
   if (token == "extern") return Token::Type::EXTERN;
   if (token == "export") return Token::Type::EXPORT;
-  if (token == "proc") return Token::Type::PROC;
   if (token == "func") return Token::Type::FUNC;
   if (token == "inout") return Token::Type::INOUT;
   if (token == "apply") return Token::Type::APPLY;

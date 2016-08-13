@@ -11,7 +11,7 @@ func dist_mass(p : Point) -> (A : tensor[points,points](float))
   A(p,p) = p.a; 
 end
 
-proc mul
+export func mul()
   A = map dist_mass to points reduce +;
   points.c = A * points.b;
 end
@@ -29,7 +29,7 @@ func dist_mass(zz : float, p : Point) -> (A : tensor[points,points](float))
   A(p,p) = zz; 
 end
 
-proc mul
+export func mul()
   A = map dist_mass(2.0) to points reduce +;
   points.c = A * points.b;
 end
@@ -52,7 +52,7 @@ func dist_mass(s : Spring, p : subsetof points{2}) -> (A : tensor[points,points]
   A(p(0), p(1)) = s.a;
 end
 
-proc mul
+export func mul()
   A = map dist_mass to springs with points reduce +;
   points.c = A * points.b;
 end

@@ -13,6 +13,6 @@ func f(inout e : Edge, v : (Vertex*2))
   e.b = v(0).a + v(1).a;
 end
 
-proc main 
+export func main()
   apply f to E; 
 end

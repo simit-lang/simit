@@ -12,6 +12,6 @@ func f(s : Edge, p : (Vertex*2)) -> (a : tensor[V](tensor[2](int)))
   a(p(0))(0) = 1; 
 end
 
-proc main
+export func main()
   V.a = map f to E reduce +;
 end

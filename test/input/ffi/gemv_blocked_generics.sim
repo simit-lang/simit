@@ -23,7 +23,7 @@ func dist_a<S>(s : Spring, p : (Point*2)) -> (M : tensor[S,S](tensor[2,2](float)
   M(p(1),p(1)) = s.a;
 end
 
-proc main 
+export func main()
   A_points = map dist_a to springs reduce +;
   points.c = gemv(A_points, points.b);
   
