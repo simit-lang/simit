@@ -1,0 +1,25 @@
+element Vertex
+  b : int;
+end
+
+element Edge
+  a : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(s : Edge, p : (Vertex*2)) -> (b : tensor[V](int), A : tensor[V,V](int))
+  b(p(0)) = 2 * s.a;
+  b(p(1)) = 3 * s.a;
+
+  A(p(0),p(0)) = 4 * s.a;
+  A(p(0),p(1)) = 5 * s.a;
+  A(p(1),p(0)) = 6 * s.a;
+  A(p(1),p(1)) = 7 * s.a;
+end
+
+proc main 
+  b, A = map f to E reduce +;
+  V.b = A * b;
+end

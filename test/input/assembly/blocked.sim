@@ -1,0 +1,49 @@
+element Vertex
+  x : int;
+  z : int;
+end
+
+extern V : set{Vertex};
+
+func sum_vector(vec : tensor[3](tensor[3](int))) -> (out : int)
+  out = 0;
+  for ii in 0:3
+    for jj in 0:3
+      out = out + vec(ii)(jj);
+    end
+  end
+end
+
+func build_blocked(point : Vertex)
+    -> (X : tensor[V,V](tensor[3,3](tensor[3,3](int))))
+  for ii in 0:3
+    for jj in 0:3
+      for i2 in 0:3
+        for j2 in 0:3
+          X(point,point)(ii,jj)(i2,j2) = point.x;
+        end
+      end
+    end
+  end
+end
+
+func promote(point : Vertex) -> (x : tensor[V](tensor[3](tensor[3](int))))
+  for ii in 0:3
+    for jj in 0:3
+      x(point)(ii)(jj) = point.x;
+    end
+  end
+end
+
+func sum_vectors(y : tensor[V](tensor[3](tensor[3](int))), point : Vertex)
+    -> (z : tensor[V](int))
+  var sum : int = sum_vector(y(point));
+  z(point) = sum;
+end
+
+proc main
+  X = map build_blocked to V;
+  vecx = map promote to V;
+  y = X * vecx;
+  V.z = map sum_vectors(y) to V;
+end

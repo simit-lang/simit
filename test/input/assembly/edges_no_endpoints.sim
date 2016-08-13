@@ -1,0 +1,18 @@
+element Vertex
+end
+
+element Edge
+  a : int;
+  b : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(e : Edge) -> (a : tensor[E](int))
+  a(e) = 2 * e.a;
+end
+
+proc main 
+  E.b = map f to E; 
+end
