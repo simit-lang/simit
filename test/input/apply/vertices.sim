@@ -1,0 +1,13 @@
+element Vertex
+  a : int;
+end
+
+extern V : set{Vertex};
+
+func f(inout v : Vertex)
+  v.a = 2 * v.a;
+end
+
+proc main 
+  apply f to V;
+end

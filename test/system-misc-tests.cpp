@@ -103,38 +103,6 @@ TEST(system, map_triangle) {
   SIMIT_ASSERT_FLOAT_EQ(0.1, b.get(v3));
 }
 
-TEST(system, map_assemble_from_literal_vector) {
-  // Points
-  Set points;
-  FieldRef<simit_float> x = points.addField<simit_float>("x");
-
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
-
-  x.set(p0, 0.0);
-  x.set(p1, 0.0);
-
-  // Springs
-  Set springs(points,points);
-
-  springs.add(p0,p1);
-  springs.add(p1,p2);
-
-  // Compile program and bind arguments
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-
-  func.bind("points", &points);
-  func.bind("springs", &springs);
-
-  func.runSafe();
-
-  // Check that outputs are correct
-  ASSERT_EQ(1.0, x.get(p0));
-  ASSERT_EQ(1.0, x.get(p1));
-}
-
 TEST(system, map_assemble_blocked) {
   // Points
   Set points;
@@ -187,64 +155,6 @@ TEST(system, map_env_folding) {
   SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p0));
   SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p1));
   SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p2));
-}
-
-TEST(system, map_no_results_one_set) {
-  // Points
-  Set points;
-  FieldRef<simit_float> a = points.addField<simit_float>("a");
-
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
-
-  a.set(p0, 1.0);
-  a.set(p1, 2.0);
-  a.set(p2, 3.0);
-
-  // Compile program and bind arguments
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-
-  func.bind("points", &points);
-
-  func.runSafe();
-
-  // Check that outputs are correct
-  ASSERT_EQ(2.0, (simit_float)a.get(p0));
-  ASSERT_EQ(4.0, (simit_float)a.get(p1));
-  ASSERT_EQ(6.0, (simit_float)a.get(p2));
-}
-
-TEST(system, map_no_results_two_sets) {
-  // Points
-  Set points;
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
-
-  // Springs
-  Set springs(points,points);
-  FieldRef<simit_float> a = springs.addField<simit_float>("a");
-
-  ElementRef s0 = springs.add(p0,p1);
-  ElementRef s1 = springs.add(p1,p2);
-
-  a.set(s0, 1.0);
-  a.set(s1, 2.0);
-
-  // Compile program and bind arguments
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-
-  func.bind("points", &points);
-  func.bind("springs", &springs);
-
-  func.runSafe();
-
-  // Check that outputs are correct
-  ASSERT_EQ(2.0, (simit_float)a.get(s0));
-  ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
 TEST(system, map_two_results_one_set) {
@@ -307,37 +217,6 @@ TEST(system, map_two_results_two_sets) {
   ASSERT_EQ(43.0, (simit_float)b.get(p0));
   ASSERT_EQ(177.0, (simit_float)b.get(p1));
   ASSERT_EQ(168.0, (simit_float)b.get(p2));
-}
-
-TEST(system, map_edgeset_no_endpoints) {
-  // Points
-  Set points;
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
-
-  // Springs
-  Set springs(points,points);
-  FieldRef<simit_float> a = springs.addField<simit_float>("a");
-
-  ElementRef s0 = springs.add(p0,p1);
-  ElementRef s1 = springs.add(p1,p2);
-
-  a.set(s0, 1.0);
-  a.set(s1, 2.0);
-
-  // Compile program and bind arguments
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-
-  func.bind("points", &points);
-  func.bind("springs", &springs);
-
-  func.runSafe();
-
-  // Check that outputs are correct
-  ASSERT_EQ(2.0, (simit_float)a.get(s0));
-  ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
 TEST(system, map_edgeset_no_endpoints_results) {
@@ -470,30 +349,6 @@ TEST(system, slice) {
   ASSERT_EQ(0.0, d.get(p0));
   ASSERT_EQ(2.0, d.get(p1));
   ASSERT_EQ(2.0, d.get(p2));
-}
-
-TEST(system, map_norm) {
-  Set points;
-  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
-  FieldRef<simit_float> y = points.addField<simit_float>("y");
-  
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
-
-  x.set(p0, {1.0, 2.0, 3.0});
-  x.set(p1, {4.0, 5.0, 6.0});
-  x.set(p2, {7.0, 8.0, 9.0});
-
-  // Compile program and bind arguments
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-  func.bind("points", &points);
-  func.runSafe();
-
-  SIMIT_ASSERT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
-  SIMIT_ASSERT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
-  SIMIT_ASSERT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
 
 TEST(system, map_pass_field) {

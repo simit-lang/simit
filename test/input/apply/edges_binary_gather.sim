@@ -1,0 +1,18 @@
+element Vertex
+  a : int;
+end
+
+element Edge
+  b : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(inout e : Edge, v : (Vertex*2))
+  e.b = v(0).a + v(1).a;
+end
+
+proc main 
+  apply f to E; 
+end
