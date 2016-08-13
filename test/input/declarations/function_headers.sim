@@ -6,6 +6,10 @@ end
 func f(p : tensor(int)) -> (r : int)
 end
 
+%%% scalar-optional-results-parentheses
+func f(p : tensor(int)) -> r : int
+end
+
 %%% scalars
 func f(p1 : tensor(int), p2 : tensor(int)) -> (r1 : tensor(int), r2 : tensor(int))
 end

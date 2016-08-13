@@ -345,17 +345,21 @@ fir::Argument::Ptr Parser::parseArgumentDecl() {
   return argDecl;
 }
 
-// results: ['->' '(' ident_decl {',' ident_decl} ')']
+// results: ['->' (ident_decl | ('(' ident_decl {',' ident_decl} ')')]
 std::vector<fir::IdentDecl::Ptr> Parser::parseResults() {
   std::vector<fir::IdentDecl::Ptr> results;
 
   if (tryconsume(Token::Type::RARROW)) {
-    consume(Token::Type::LP);
-    do {
+    if (tryconsume(Token::Type::LP)) {
+      do {
+        const fir::IdentDecl::Ptr result = parseIdentDecl();
+        results.push_back(result);
+      } while (tryconsume(Token::Type::COMMA));
+      consume(Token::Type::RP);
+    } else {
       const fir::IdentDecl::Ptr result = parseIdentDecl();
       results.push_back(result);
-    } while (tryconsume(Token::Type::COMMA));
-    consume(Token::Type::RP);
+    }
   }
 
   return results;
@@ -833,15 +837,11 @@ fir::MapExpr::Ptr Parser::parseMapExpr() {
   const fir::SetIndexSet::Ptr target = parseSetIndexSet();
 
   fir::SetIndexSet::Ptr through;
-
-  if (peek().type == Token::Type::THROUGH) {
-    consume(Token::Type::THROUGH);
+  if (tryconsume(Token::Type::THROUGH)) {
     through = parseSetIndexSet();
   }
- 
-  if (peek().type == Token::Type::REDUCE) {
-    consume(Token::Type::REDUCE);
-    
+
+  if (tryconsume(Token::Type::REDUCE)) {
     const auto mapExpr = std::make_shared<fir::ReducedMapExpr>();
     mapExpr->setBeginLoc(mapToken);
     

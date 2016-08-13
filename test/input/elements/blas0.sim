@@ -1,60 +1,60 @@
 %%% neg
 %! neg(42.0) == -42.0;
 %! neg(0.0) == -0.0;
-func neg(a : float) -> (c : float)
+func neg(a : float) -> c : float
   c = -a;
 end
 
 %%% neg-int
 %! negi(42) == -42;
-func negi(a : int) -> (c : int)
+func negi(a : int) -> c : int
   c = -a;
 end
 
 %%% neg-literal
 %! neg() == -1.0;
-func neg() -> (c : float)
+func neg() -> c : float
   c = --+-1.0;
 end
 
 %%% neg-int-literal
 %! neg() == -1;
-func neg() -> (c : int)
+func neg() -> c : int
   c = --+-1;
 end
 
 %%% add
 %! add(3.0, 2.0) == 5.0;
-func add(a : float, b : float) -> (c : float)
+func add(a : float, b : float) -> c : float
   c = a + b;
 end
 
 %%% sub
 %! sub(3.0, 2.0) == 1.0;
-func sub(a : float, b : float) -> (c : float)
+func sub(a : float, b : float) -> c : float
   c = a - b;
 end
 
 %%% sub 2
 %- sub(3.0, 2.0, 1.0) == 0.0;
-func sub(a : float, b : float, d:float) -> (c : float)
+func sub(a : float, b : float, d:float) -> c : float
   c = a - b - c;
 end
 
 %%% mul
 %! mul(3.0, 2.0) == 6.0;
-func mul(a : float, b : float) -> (c : float)
+func mul(a : float, b : float) -> c : float
   c = a * b;
 end
 
 %%% div
 %! div(6.0, 2.0) == 3.0;
-func div(a : float, b : float) -> (c : float)
+func div(a : float, b : float) -> c : float
   c = a / b;
 end
 
 %%% transpose
 %! transpose(42.0) == 42.0;
-func transpose(a : tensor(float)) -> (c : tensor(float))
+func transpose(a : tensor(float)) -> c : tensor(float)
   c = a';
 end
