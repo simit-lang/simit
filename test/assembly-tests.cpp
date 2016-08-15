@@ -171,7 +171,33 @@ TEST(assembly, edges_two_results) {
   ASSERT_EQ(168, (int)b(v2));
 }
 
-TEST(DISABLED_assembly, matrix_rectangular) {
+TEST(assembly, matrix_vv) {
+  Set V;
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  FieldRef<int> a = V.addField<int>("a");
+  FieldRef<int> b = V.addField<int>("b");
+  a(v0) = 1;
+  a(v1) = 1;
+  a(v2) = 1;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(2, (int)b(v0));
+  ASSERT_EQ(4, (int)b(v1));
+  ASSERT_EQ(2, (int)b(v2));
+}
+
+TEST(DISABLED_assembly, matrix_ev) {
   Set V;
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
