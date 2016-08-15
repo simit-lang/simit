@@ -1,0 +1,22 @@
+element Vertex
+  a : int;
+  b : int;
+end
+
+element Edge
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(s : Edge, p : (Vertex*2)) -> A : tensor[V,V](int)
+  A(p(0),p(0)) = 1;
+  A(p(0),p(1)) = 1;
+  A(p(1),p(0)) = 1;
+  A(p(1),p(1)) = 1;
+end
+
+export func main()
+  A = map f to E reduce +;
+  V.b = A * V.a;
+end
