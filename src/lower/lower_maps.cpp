@@ -33,6 +33,22 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
 }
 
 class LowerMapFunctionRewriter : public MapFunctionRewriter {
+
+  /// Change assignments to result to compound  assignments, using the map
+  /// reduction operator.
+  Stmt makeCompoundTensorWrite(Expr tensor, vector<Expr> indices, Expr value) {
+    switch (reduction.getKind()) {
+      case ReductionOperator::Sum: {
+        return TensorWrite::make(tensor, indices, value, CompoundOperator::Add);
+      }
+      case ReductionOperator::Undefined: {
+        return TensorWrite::make(tensor, indices, value);
+      }
+    }
+    unreachable;
+    return Stmt();
+  }
+
   using MapFunctionRewriter::visit;
 
   void visit(const TensorWrite *op) {
@@ -56,6 +72,7 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
 
     if (isResult(targetVar)) {
       Var mapVar = getMapVar(targetVar);
+      auto tensorStorage = storage->getStorage(mapVar);
       if (clocs.size() > 0) {
         iassert(op->indices.size() == 2);
         // Row index must be normalized to zero
@@ -78,24 +95,10 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
         else {
           unreachable;
         }
-
-        // Change assignments to result to compound  assignments, using the map
-        // reduction operator.
-        switch (reduction.getKind()) {
-          case ReductionOperator::Sum: {
-            stmt = TensorWrite::make(rewrite(op->tensor), {index},
-                                     rewrite(op->value), CompoundOperator::Add);
-            break;
-          }
-          case ReductionOperator::Undefined: {
-            stmt = TensorWrite::make(rewrite(op->tensor), {index},
-                                     rewrite(op->value));
-            break;
-          }
-        }
+        stmt = makeCompoundTensorWrite(rewrite(op->tensor), {index},
+                                       rewrite(op->value));
       }
-      else if (storage->getStorage(mapVar).getKind() ==
-               TensorStorage::Kind::Indexed) {
+      else if (tensorStorage.getKind() == TensorStorage::Indexed) {
         iassert(locs.defined());
         iassert(op->indices.size() == 2);
         iassert(endpoints.defined());
@@ -105,37 +108,12 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
           indices.push_back(to<TupleRead>(index)->index);
         }
         Expr index = TensorRead::make(locs, indices);
-
-        // Change assignments to result to compound  assignments, using the map
-        // reduction operator.
-        switch (reduction.getKind()) {
-          case ReductionOperator::Sum: {
-            stmt = TensorWrite::make(rewrite(op->tensor), {index},
-                                     rewrite(op->value), CompoundOperator::Add);
-            break;
-          }
-          case ReductionOperator::Undefined: {
-            stmt = TensorWrite::make(rewrite(op->tensor), {index},
-                                     rewrite(op->value));
-            break;
-          }
-        }
+        stmt = makeCompoundTensorWrite(rewrite(op->tensor), {index},
+                                       rewrite(op->value));
       }
       else {
-        // Change assignments to result to compound  assignments, using the map
-        // reduction operator.
-        switch (reduction.getKind()) {
-          case ReductionOperator::Sum: {
-            stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
-                                     tensorWrite->value, CompoundOperator::Add);
-            break;
-          }
-          case ReductionOperator::Undefined: {
-            stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
-                                     tensorWrite->value);
-            break;
-          }
-        }
+        stmt = makeCompoundTensorWrite(tensorWrite->tensor,tensorWrite->indices,
+                                       tensorWrite->value);
         iassert(stmt.defined());
       }
     }
