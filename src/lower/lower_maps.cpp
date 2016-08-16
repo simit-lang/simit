@@ -165,8 +165,8 @@ private:
 };
 
 Func lowerMaps(Func func) {
-  Stmt body = LowerMaps(&func.getStorage(),&func.getEnvironment())
-      .rewrite(func.getBody());
+  LowerMaps rewriter(&func.getStorage(),&func.getEnvironment());
+  Stmt body = rewriter.rewrite(func.getBody());
   func = Func(func, body);
   func = insertVarDecls(func);
   return func;
