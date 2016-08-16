@@ -7,7 +7,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_CODE})
 
 # Simit include files and library
 if (NOT DEFINED ENV{SIMIT_INCLUDE_DIR} OR NOT DEFINED ENV{SIMIT_LIBRARY_DIR})
-  message(FATAL_ERROR "Set the environment variables SIMIT_INCLUDE_DIR and SIMIT_LIB_DIR")
+  message(FATAL_ERROR "Set the environment variables SIMIT_INCLUDE_DIR and SIMIT_LIBRARY_DIR")
 endif ()
 include_directories($ENV{SIMIT_INCLUDE_DIR})
 find_library(simit simit $ENV{SIMIT_LIBRARY_DIR})
