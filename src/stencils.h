@@ -43,6 +43,8 @@ public:
   /// Fully resolved form of layout
   map<vector<int>, int> getLayout() const;
   map<int, vector<int>> getLayoutReversed() const;
+
+  bool hasLatticeSet() const;
   Var getLatticeSet() const;
 };
 

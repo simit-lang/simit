@@ -29,13 +29,22 @@ map<int, vector<int>> StencilLayout::getLayoutReversed() const {
   return reversed;
 }
 
+bool StencilLayout::hasLatticeSet() const {
+  return ptr->latticeSet.defined();
+}
+
 Var StencilLayout::getLatticeSet() const {
   iassert(ptr->latticeSet.defined());
   return ptr->latticeSet;
 }
 
 std::ostream& operator<<(std::ostream& os, const StencilLayout& stencil) {
-  os << "stencil(" << stencil.getLatticeSet() << ")" << endl;
+  os << "stencil";
+  if (stencil.hasLatticeSet()) {
+    os << "(" << stencil.getLatticeSet() << ")";
+  }
+  os << endl;
+
   if (stencil.defined()) {
     for (auto &kv : stencil.getLayout()) {
       os << "\t";
@@ -48,7 +57,6 @@ std::ostream& operator<<(std::ostream& os, const StencilLayout& stencil) {
       os << ": " << kv.second << endl;
     }
   }
-  os << "DONE" << endl;
   return os;
 }
 
