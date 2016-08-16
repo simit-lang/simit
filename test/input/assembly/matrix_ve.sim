@@ -9,12 +9,12 @@ end
 extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
-func asm(e : Edge, p : (Vertex*2)) -> A : tensor[E,V](int)
+func asm(e : Edge, p : (Vertex*2)) -> A : tensor[V,E](int)
   A(e, p(0)) = 1;
   A(e, p(1)) = 1;
 end
 
 export func main()
   A = map asm to E reduce +;
-  E.a = A * V.c;
+  V.c = A * E.a;
 end
