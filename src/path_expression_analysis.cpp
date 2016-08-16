@@ -69,10 +69,9 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
     }
 
     if (type->order() >= 2) {
-      tassert(type->order() == 2)
-          << "path expressions only supported for matrices";
-      pe::Var u = peVars[0];
-      pe::Var v = peVars[1];
+      tassert(type->order()==2)<<"path expressions only supported for matrices";
+      pe::Var v = peVars[0];
+      pe::Var u = peVars[1];
 
       // Make a stencil link if stencil is defined
       if (stencil.defined()) {
@@ -80,12 +79,29 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
         addPathExpression(var, vv);
       }
       else {
-        pe::PathExpression ve = Link::make(u, e, Link::ve, stencil);
-        pe::PathExpression ev = Link::make(e, v, Link::ev);
+        // Assemblies produce veu, ve and eu matrices
+        if (v.getSet() != e.getSet() && u.getSet() != e.getSet()) {
+          // veu (including v == u)
+          pe::PathExpression ve = Link::make(u, e, Link::ve);
+          pe::PathExpression ev = Link::make(e, v, Link::ev);
 
-        PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
-                                           ve(u,e), ev(e,v));
-        addPathExpression(var, vev);
+          PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
+                                             ve(u,e), ev(e,v));
+          addPathExpression(var, vev);
+        }
+        else if (v.getSet() == e.getSet()) {
+          // ev
+          pe::PathExpression ev = Link::make(e, u, Link::ev);
+          addPathExpression(var, ev);
+        }
+        else if (u.getSet() == e.getSet()) {
+          // ve
+          pe::PathExpression ve = Link::make(v, e, Link::ve);
+          addPathExpression(var, ve);
+        }
+        else {
+          unreachable;
+        }
       }
     }
   }
