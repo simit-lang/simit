@@ -204,9 +204,8 @@ struct Length : public ExprNode {
 
 /// An IndexRead retrieves an index from an edge set.  An example of an index
 /// is the endpoints of the edges in the set.
-/// TODO DEPRECATED: This node has been deprecated with the old lowering pass
 struct IndexRead : public ExprNode {
-  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2, LatticeDim=3 };
+  enum Kind { Endpoints, LatticeDim };
   Expr edgeSet;
   Kind kind;
   unsigned int index;

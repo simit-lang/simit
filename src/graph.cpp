@@ -1,7 +1,6 @@
 #include "graph.h"
 
 #include <iostream>
-#include "graph_indices.h"
 
 using namespace std;
 
@@ -14,8 +13,6 @@ Set::~Set() {
   free(endpoints);
   free(latticePoints);
   free(latticeLinks);
-
-  delete this->neighbors;
 }
 
 void Set::increaseCapacity() {
@@ -29,20 +26,6 @@ void Set::increaseCapacity() {
     }
   }
   capacity += capacityIncrement;
-}
-
-const internal::NeighborIndex *Set::getNeighborIndex() const {
-  iassert(getCardinality() > 0) << "Vertex sets have no neighbor index.";
-
-  tassert(isHomogeneous())
-      << "neighbor indices are currently only supported for homogeneous sets";
-
-  // Lazy allocation
-  if (this->neighbors == nullptr) {
-    this->neighbors = new internal::NeighborIndex(*this);
-  }
-
-  return this->neighbors;
 }
 
 

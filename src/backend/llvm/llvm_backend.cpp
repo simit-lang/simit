@@ -387,12 +387,6 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
     case ir::IndexRead::Endpoints:
       val = layout->getEpsArray();
       break;
-    case ir::IndexRead::NeighborsStart:
-      val = layout->getNbrsStartArray();
-      break;
-    case ir::IndexRead::Neighbors:
-      val = layout->getNbrsArray();
-      break;
     case ir::IndexRead::LatticeDim:
       iassert(indexRead.edgeSet.type().isLatticeLinkSet());
       val = layout->getSize(indexRead.index);

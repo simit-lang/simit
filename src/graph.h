@@ -525,11 +525,6 @@ public:
   /// Get an array containing, for each edge in a set, the elements it connects.
   int *getEndpointsData() { return endpoints; }
 
-  /// If this set is an edge set with cardinality 2 then return an index that
-  /// for each element in the first connected set contains it's neighbors in the
-  /// second connceted set. Otherwise, return nullptr.
-  const internal::NeighborIndex *getNeighborIndex() const;
-
   void setName(const std::string &name) { this->name = name; }
   std::string getName() const { return name; }
 
