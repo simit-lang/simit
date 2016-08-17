@@ -372,6 +372,11 @@ void IRRewriter::visit(const Comment *op) {
   if (commentedStmt == op->commentedStmt) {
     stmt = op;
   }
+  else if (op->commentedStmt.defined() && !commentedStmt.defined()) {
+    // If the comment was commenting a statement that was removed, then we
+    // remove the comment too
+    stmt = Stmt();
+  }
   else {
     stmt = Comment::make(op->comment, commentedStmt,
                          op->footerSpace, op->headerSpace);
