@@ -4,10 +4,9 @@
 #include "ir.h"
 #include "ir_rewriter.h"
 #include "storage.h"
+#include "tensor_index.h"
 #include <vector>
 #include <map>
-
-using namespace std;
 
 namespace simit {
 namespace ir {
@@ -20,7 +19,8 @@ public:
 
   Stmt inlineMapFunc(const Map *map, Var targetLoopVar,
                      Storage *storage,
-                     Var endpoints=Var(), Var locs=Var(),
+                     Var endpoints=Var(),
+                     std::map<TensorIndex,Var> locs=std::map<TensorIndex,Var>(),
                      std::map<vector<int>, Expr> clocs={},
                      vector<Var> latticeIndexVars={});
 
@@ -46,7 +46,8 @@ protected:
 
   // Compiled endpoints and locs arrays for matrix assembly
   Var endpoints;
-  Var locs;
+  std::map<TensorIndex,Var> locs;
+
   // Compile-time version of locs, used for generating stencil indices
   std::map<vector<int>, Expr> clocs;
 
