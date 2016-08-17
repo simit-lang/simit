@@ -5,6 +5,6 @@
 
 #define UNUSED(x) (void)(x)
 
-#define INTERNAL_PREFIX(name) (std::string("@") + name)
+#define INTERNAL_PREFIX(name) (std::string(".") + name)
 
 #endif
