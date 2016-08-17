@@ -8,6 +8,7 @@
 
 #include "path_expressions.h"
 #include "stencils.h"
+#include "interfaces/comparable.h"
 
 namespace simit {
 namespace pe {
@@ -25,7 +26,7 @@ class Var;
 /// cannot be pre-assembled and must be assembled by the user if they come
 /// from an extern function, or by Simit as they are computed.
 /// Note: only sparse matrix CSR indices are supported for now.
-class TensorIndex {
+class TensorIndex : public interfaces::Comparable<TensorIndex> {
 public:
   enum Kind {PExpr, Sten};
   
@@ -76,6 +77,14 @@ public:
 
   /// Defined if the tensor exists, false otherwise.
   bool defined() const {return content != nullptr;}
+
+  friend bool operator==(const TensorIndex& l, const TensorIndex& r) {
+    return l.content == r.content;
+  }
+
+  friend bool operator<(const TensorIndex& l, const TensorIndex& r) {
+    return l.content < r.content;
+  }
 
 private:
   struct Content;

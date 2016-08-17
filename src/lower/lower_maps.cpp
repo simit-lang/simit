@@ -99,7 +99,9 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
                                        rewrite(op->value));
       }
       else if (tensorStorage.getKind() == TensorStorage::Indexed) {
-        iassert(locs.defined());
+        auto index = tensorStorage.getTensorIndex();
+        iassert(util::contains(locs, index));
+
         iassert(op->indices.size() == 2);
         iassert(endpoints.defined());
         vector<Expr> indices;
@@ -107,8 +109,8 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
           iassert(isa<TupleRead>(index)) << index;
           indices.push_back(to<TupleRead>(index)->index);
         }
-        Expr index = TensorRead::make(locs, indices);
-        stmt = makeCompoundTensorWrite(rewrite(op->tensor), {index},
+        Expr indexExpr = TensorRead::make(locs[index], indices);
+        stmt = makeCompoundTensorWrite(rewrite(op->tensor), {indexExpr},
                                        rewrite(op->value));
       }
       else {
