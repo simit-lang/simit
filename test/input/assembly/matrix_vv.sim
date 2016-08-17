@@ -9,14 +9,14 @@ end
 extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
-func f(s : Edge, p : (Vertex*2)) -> A : tensor[V,V](int)
-  A(p(0),p(0)) = 1;
-  A(p(0),p(1)) = 1;
-  A(p(1),p(0)) = 1;
-  A(p(1),p(1)) = 1;
+func f(s : Edge, p : (Vertex*2)) -> Ae : tensor[V,V](int)
+  Ae(p(0),p(0)) = 1;
+  Ae(p(0),p(1)) = 1;
+  Ae(p(1),p(0)) = 1;
+  Ae(p(1),p(1)) = 1;
 end
 
 export func main()
-  A = map f to E reduce +;
-  V.b = A * V.a;
+  As = map f to E reduce +;
+  V.b = As * V.a;
 end

@@ -92,7 +92,7 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
     temporaryPtrs.insert({tmp.getName(), tmpPtr});
   }
 
-  // Initialize tensorIndex ptrs
+  // Initialize global tensorIndex ptrs
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
     uint64_t addr;
 
@@ -261,7 +261,7 @@ Function::FuncType LLVMFunction::init() {
   // Initialize indices
   initIndices(piBuilder, environment);
 
-  // Initialize temporaries
+  // Allocate memory for temporaries
   for (const Var& tmp : environment.getTemporaries()) {
     iassert(util::contains(temporaryPtrs, tmp.getName()));
     const Type& type = tmp.getType();
@@ -285,8 +285,9 @@ Function::FuncType LLVMFunction::init() {
         size_t blockSize = blockType.toTensor()->size();
         size_t componentSize = tensorType->getComponentType().bytes();
         iassert(environment.hasTensorIndex(tmp))
-          << "No tensor index for: " << tmp;
+            << "No tensor index for: " << tmp;
         const TensorIndex& ti = environment.getTensorIndex(tmp);
+
         if (ti.getKind() == TensorIndex::PExpr) {
           const pe::PathExpression& pexpr = ti.getPathExpression();
           iassert(util::contains(pathIndices, pexpr));
@@ -301,8 +302,8 @@ Function::FuncType LLVMFunction::init() {
               << "Stencil tensor index must be for a homogeneous matrix";
           size_t latticeSize = size(iss[0]);
           const StencilLayout& stencil = ti.getStencilLayout();
-          size_t matSize = stencil.getLayout().size() *
-              latticeSize * blockSize * componentSize;
+          size_t stensize = stencil.getLayout().size();
+          size_t matSize = stensize * latticeSize * blockSize * componentSize;
           *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
         }
         else {
@@ -438,7 +439,7 @@ void LLVMFunction::initIndices(pe::PathIndexBuilder& piBuilder,
       pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
       pathIndices.insert({pexpr, pidx});
 
-      pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
+      pair<const uint32_t**,const uint32_t**> ptrPair=tensorIndexPtrs.at(pexpr);
 
       if (isa<pe::SegmentedPathIndex>(pidx)) {
         const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
@@ -446,7 +447,7 @@ void LLVMFunction::initIndices(pe::PathIndexBuilder& piBuilder,
         *ptrPair.second = spidx->getSinkData();
       }
       else {
-        not_supported_yet << "doesn't know how to initialize this pathindex type";
+        not_supported_yet<<"doesn't know how to initialize this pathindex type";
       }
     }
     else if (tensorIndex.getKind() == TensorIndex::Sten) {

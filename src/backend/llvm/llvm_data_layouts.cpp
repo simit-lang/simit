@@ -96,23 +96,26 @@ llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
 
   // Set size
   setData.push_back(llvmInt(actual->getSize()));
+
   // Endpoints index
   setData.push_back(llvmPtr(LLVM_INT_PTR, actual->getEndpointsData()));
+
   // Neighbor indices
   const internal::NeighborIndex *nbrs = actual->getNeighborIndex();
   setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
   setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
+
   // Fields
   for (auto &field : setType->elementType.toElement()->fields) {
-    assert(field.type.isTensor());
+    iassert(field.type.isTensor());
     setData.push_back(llvmPtr(*field.type.toTensor(),
                               actual->getFieldData(field.name)));
   }
   return llvm::ConstantStruct::get(llvmSetType, setData);
 }
 
-void UnstructuredEdgeSetLayout::writeSet(
-    Set *actual, ir::Type type, void *externPtr) {
+void UnstructuredEdgeSetLayout::writeSet(Set *actual, ir::Type type,
+                                         void *externPtr) {
   iassert(actual->getKind() == Set::Unstructured);
 
   const ir::SetType *setType = type.toSet();
@@ -120,8 +123,10 @@ void UnstructuredEdgeSetLayout::writeSet(
   // Set size
   ((int*)externPtr)[0] = actual->getSize();
   int **externPtrCast = (int**)(((int*)externPtr)+1);
+
   // Endpoints index
   externPtrCast[0] = actual->getEndpointsData();
+
   // Neighbor indices
   const internal::NeighborIndex *nbrs = actual->getNeighborIndex();
   ((const int**)externPtrCast)[1] = nbrs->getStartIndex();
@@ -130,7 +135,7 @@ void UnstructuredEdgeSetLayout::writeSet(
   // Fields
   void **externPtrFieldCast = (void**)(externPtrCast+3);
   for (auto &field : setType->elementType.toElement()->fields) {
-    assert(field.type.isTensor());
+    iassert(field.type.isTensor());
     *externPtrFieldCast = actual->getFieldData(field.name);
     externPtrFieldCast++;
   }
