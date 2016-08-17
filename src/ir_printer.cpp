@@ -195,12 +195,6 @@ void IRPrinter::visit(const IndexRead *op) {
     case IndexRead::Endpoints:
       os << "endpoints";
       break;
-    case IndexRead::NeighborsStart:
-      os << "neighbors.start";
-      break;
-    case IndexRead::Neighbors:
-      os << "neighbors";
-      break;
     case IndexRead::LatticeDim:
       os << "latticedim[" << op->index << "]";
       break;
