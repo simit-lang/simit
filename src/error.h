@@ -95,15 +95,15 @@ public:
     return diags.size() > 0;
   }
 
-  std::string getMessage() const {
+  std::string getMessage(const std::string prefix = "") const {
     std::string result;
     auto it = diags.begin();
     if (it != diags.end()) {
-      result += it->getMessage();
+      result += prefix + it->getMessage();
       ++it;
     }
     while (it != diags.end()) {
-      result += "\n" + it->getMessage();
+      result += "\n" + prefix + it->getMessage();
       ++it;
     }
     return result;
