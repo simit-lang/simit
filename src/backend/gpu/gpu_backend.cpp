@@ -118,6 +118,20 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   }
   iassert(func);
 
+  // Function name sanitization pass
+  // This is easiest to do at the LLVM level, since the IR structures
+  // use references to a single llvm::Function object throughout.
+  for (auto &f : module->getFunctionList()) {
+    // Skip extern functions
+    if (f.hasExternalLinkage()) continue;
+    f.setName(cleaner.cleanImpl(f.getName()));
+  }
+
+  // Global managed annotations pass
+  for (auto &g : module->getGlobalList()) {
+    addNVVMAnnotation(&g, "managed", llvmInt(1), module);
+  }
+
   iassert(!llvm::verifyModule(*module))
       << "LLVM module does not pass verification";
 
@@ -967,39 +981,6 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 void GPUBackend::emitGlobals(const ir::Environment& env) {
   // emit globals non-packed (GPU requires memory alignment)
   LLVMBackend::emitGlobals(env, false);
-
-  // We must add the managed annotation to all globals
-  for (const ir::Var& ext : env.getExternVars()) {
-    llvm::Value *global = symtable.get(ext);
-    addNVVMAnnotation(global, "managed", llvmInt(1), module);
-  }
-  for (const ir::Var& tmp : env.getTemporaries()) {
-    llvm::Value *global = symtable.get(tmp);
-    addNVVMAnnotation(global, "managed", llvmInt(1), module);
-  }
-  for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
-    if (!tensorIndex.isComputed()) {
-      const ir::Var& rowptrArray = tensorIndex.getRowptrArray();
-      llvm::Value *global = symtable.get(rowptrArray);
-      addNVVMAnnotation(global, "managed", llvmInt(1), module);
-      const ir::Var& colidxArray = tensorIndex.getColidxArray();
-      global = symtable.get(colidxArray);
-      addNVVMAnnotation(global, "managed", llvmInt(1), module);
-    }
-  }
-
-  // We must add externs and temporaries to the list of globally
-  // allocated buffers, because the GPU backend does not simply
-  // map the pointer to host memory, but instead must allocate
-  // and copy the values back and forth.
-  // for (const ir::Var& ext : env.getExternVars()) {
-  //   llvm::Value *global = symtable.get(ext);
-  //   buffers.insert(std::pair<ir::Var, llvm::Value*>(ext, global));
-  // }
-  // for (const ir::Var& tmp : env.getTemporaries()) {
-  //   llvm::Value *global = symtable.get(tmp);
-  //   buffers.insert(std::pair<ir::Var, llvm::Value*>(tmp, global));
-  // }
 }
 
 void GPUBackend::emitPrintf(std::string format,
