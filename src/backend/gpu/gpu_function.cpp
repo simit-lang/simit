@@ -704,15 +704,19 @@ GPUFunction::init() {
   // libraries
   for (int i = 0; i < libPtxStrs.size(); ++i) {
     std::string cudaModuleName = "<compiled-ptx-lib-"+std::to_string(i)+">";
-    checkCudaErrors(cuLinkAddData(
-      linker, CU_JIT_INPUT_PTX, (void*)libPtxStrs[i].c_str(),
-      libPtxStrs[i].size(), cudaModuleName.c_str(), 0, NULL, NULL));
+    checkCudaErrorsExtra(
+        cuLinkAddData(
+            linker, CU_JIT_INPUT_PTX, (void*)libPtxStrs[i].c_str(),
+            libPtxStrs[i].size(), cudaModuleName.c_str(), 0, NULL, NULL),
+        std::string(linkerInfo) + "\n" + std::string(linkerErrors));
   }
 
   // main module
-  checkCudaErrors(cuLinkAddData(
-      linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
-      ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL));
+  checkCudaErrorsExtra(
+      cuLinkAddData(
+          linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
+          ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL),
+      std::string(linkerInfo) + "\n" + std::string(linkerErrors));
 
   void *cubin;
   size_t cubinSize;
