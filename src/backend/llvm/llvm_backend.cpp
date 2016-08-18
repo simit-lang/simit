@@ -63,10 +63,9 @@ shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
 
 LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmPrinters();
-    llvm::InitializeAllAsmParsers();
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
     llvmInitialized = true;
   }
 }

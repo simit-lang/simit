@@ -7,6 +7,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -43,7 +44,17 @@
 namespace simit {
 namespace backend {
 
-GPUBackend::GPUBackend() : LLVMBackend() {}
+GPUBackend::GPUBackend() : LLVMBackend() {
+  LLVMInitializeNVPTXTarget();
+  LLVMInitializeNVPTXTargetInfo();
+  LLVMInitializeNVPTXTargetMC();
+  LLVMInitializeNVPTXAsmPrinter();
+  std::string errStr;
+  uassert(llvm::TargetRegistry::lookupTarget(
+      "nvptx-nvidia-cuda", errStr) != nullptr)
+      << "No available target found for nvptx-nvidia-cuda, ensure LLVM is "
+      << "built with the NVPTX backend.";
+}
 
 Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   std::ofstream irFile("simit.sim", std::ofstream::trunc);
