@@ -654,7 +654,8 @@ GPUFunction::init() {
   llvm::Function *harness = createHarness(args, llvmFunc, module);
 
   // Validate LLVM module
-  iassert(!llvm::verifyModule(*module))
+  bool failed = llvm::verifyModule(*module);
+  iassert(!failed)
       << "LLVM module does not pass verification";
   maybeLogModule(module, "simit.ll");
 
