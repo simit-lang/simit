@@ -1,12 +1,12 @@
 %%% bad-add-1
-proc main
+export func main()
   var t : tensor[2](int) = [1 2];
   var v : tensor[2](float) = [3.0 4.0];
   t + v;
 end
 
 %%% bad-add-2
-proc main
+export func main()
   true - false;
 end
 
@@ -28,76 +28,76 @@ func foo<N,M>(A : matrix[N,N](float), B : matrix[M,M](float))
 end
 
 %%% bad-mul-1
-proc main
+export func main()
   t = [1 2];
   t * t;
 end
 
 %%% bad-mul-2
-proc main
+export func main()
   N = [1 2; 3 4];
   M * N;
 end
 
 %%% bad-mul-3
-proc main
+export func main()
   N = [1 2; 3 4];
   t = [1 2 3]';
   N * t;
 end
 
 %%% bad-mul-4
-proc main
+export func main()
   N = [1 2; 3 4];
   t = [1 2 3];
   t * N;
 end
 
 %%% bad-mul-5
-proc main
+export func main()
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
   M * M;
 end
 
 %%% bad-mul-6
-proc main
+export func main()
   true * false;
 end
 
 %%% bad-mul-7
-proc main
+export func main()
   1.0 * 2;
 end
 
 %%% bad-mul-8
-proc main
+export func main()
   [1 2] * [1 2 3]';
 end
 
 %%% bad-mul-9
-proc main
+export func main()
   [1 2; 3 4] * [1 2];
 end
 
 %%% bad-mul-10
-proc main
+export func main()
   [1 2]' * [1 2; 3 4];
 end
 
 %%% bad-mul-11
-proc main
+export func main()
   v = [1 2]';
   (v + v) * [1 2; 3 4];
 end
 
 %%% bad-div-1
-proc main
+export func main()
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
   M / true;
 end
 
 %%% bad-div-2
-proc main
+export func main()
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
   M / 2.0;
 end
@@ -133,7 +133,7 @@ extern U : set{E}(V,V);
 func f(v : E, u : (E * 1))
 end
 
-proc main
+export func main()
   map f to U;
 end
 
@@ -147,7 +147,7 @@ extern U : set{E}(V,V);
 func g(u : (E * 2))
 end
 
-proc main
+export func main()
   map g to U;
 end
 
@@ -161,7 +161,7 @@ extern U : set{E}(V,V);
 func h(f : float, v : E, u : (E * 2))
 end
 
-proc main
+export func main()
   map h to U;
 end
 
@@ -175,7 +175,7 @@ extern U : set{E}(V,V);
 func h(f : float, v : E, u : (E * 2))
 end
 
-proc main
+export func main()
   map h(1) to U;
 end
 
@@ -183,7 +183,7 @@ end
 func h(f : float)
 end
 
-proc main
+export func main()
   t = 1.0;
   map h to t; 
 end
@@ -229,28 +229,28 @@ export func main()
 end
 
 %%% bad-and
-proc main
+export func main()
   1 and 2;
 end
 
 %%% bad-eq-1
-proc main
+export func main()
   s = [1 2];
   s == s;
 end
 
 %%% bad-eq-2
-proc main
+export func main()
   1 == 2 == 2.0;
 end
 
 %%% bad-not
-proc main
+export func main()
   not 1;
 end
 
 %%% bad-neg
-proc main
+export func main()
   -true;
 end
 

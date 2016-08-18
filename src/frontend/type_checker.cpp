@@ -67,22 +67,6 @@ void TypeChecker::visit(ElementType::Ptr type) {
   // Check that element type has been previously declared.
   if (!env.hasElementType(type->ident)) {
     reportUndeclared("element type", type->ident, type);
-    return;
-  }
-
-  // If source set inference was able to infer element source, check that the 
-  // source set actually contains element of the same type.
-  if (type->source && !isa<GenericIndexSet>(type->source) && 
-      env.hasSetDefinition(type->source)) {
-    const SetType::Ptr sourceType = env.getSetDefinition(type->source);
-    const std::string sourceElemType = sourceType->element->ident;
-
-    if (sourceElemType != type->ident) {
-      std::stringstream errMsg;
-      errMsg << "element declared to be of type '" << type->ident 
-             << "' but inferred to be of type '" << sourceElemType << "'";
-      reportError(errMsg.str(), type);
-    }
   }
 }
 
@@ -1181,23 +1165,38 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
         reportError(errMsg.str(), index);
       }
     } else if (isa<SetIndexSet>(indexSet)) {
-      const std::string domain = to<SetIndexSet>(indexSet)->setName;
+      const auto setIndexSet = to<SetIndexSet>(indexSet);
+      const auto domainName = setIndexSet->setName;
 
       if (!isa<ElementType>(indexType.type[0])) {
         std::stringstream errMsg;
-        errMsg << "expected an element of set '" << domain << "' as index "
+        errMsg << "expected an element of set '" << domainName << "' as index "
                << "but got an index of type " << toString(indexType);
         reportError(errMsg.str(), index);
         continue;
       }
 
       const auto elemType = to<ElementType>(indexType.type[0]);
-      const auto elemSource = elemType->source;
+      const auto elemSource = elemType->source; 
+      const auto elemName = elemType->ident;
 
-      if (elemSource && !env.compareIndexSets(indexSet, elemSource)) {
+      const auto domainType = env.getSetDefinition(setIndexSet);
+      const auto domainElem = domainType->element;
+      const auto domainElemName = domainElem->ident;
+
+      if (!domainElemName.empty() && domainElemName != elemName) {
         std::stringstream errMsg;
-        errMsg << "expected an element of set '" << domain << "' as index but "
-               << "got an element of set '" << elemSource->setName << "'";
+        errMsg << "expected an element of type " << toString(domainElem) 
+               << " as index but got an element of type '" << elemName << "'";
+        reportError(errMsg.str(), index);
+        continue;
+      }
+
+      if (elemSource && !env.compareIndexSets(setIndexSet, elemSource)) {
+        std::stringstream errMsg;
+        errMsg << "expected an element of set '" << domainName 
+               << "' as index but got an element inferred to be of set '" 
+               << elemSource->setName << "'";
         reportError(errMsg.str(), index);
       }
     } else {
@@ -2375,6 +2374,7 @@ bool TypeChecker::Environment::compareIndexSets(IndexSet::Ptr l,
     
     SetType::Ptr lType = getSetDefinition(lSet);
     SetType::Ptr rType = getSetDefinition(rSet);
+
     if (isa<UnstructuredSetType>(lType)) {
       return lType == rType;
     }
@@ -2383,11 +2383,14 @@ bool TypeChecker::Environment::compareIndexSets(IndexSet::Ptr l,
       if (!isa<LatticeLinkSetType>(rType)) {
         return false;
       }
+
       auto lLatType = to<LatticeLinkSetType>(lType);
       auto rLatType = to<LatticeLinkSetType>(rType);
+
       if (lLatType->dimensions != rLatType->dimensions) {
         return false;
       }
+
       return compareIndexSets(lLatType->latticePointSet->set,
                               rLatType->latticePointSet->set);
     }

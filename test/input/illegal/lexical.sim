@@ -1,15 +1,15 @@
 %%% unrecog-sym-1
-proc main
+export func main()
   @t;
 end
 
 %%% unrecog-sym-2
-proc main
+export func main()
 !
 end
 
 %%% invalid-num
-proc main
+export func main()
   1.c;
 end
 

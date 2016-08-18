@@ -25,12 +25,12 @@ extern T : lattice[1]{E}(S);
 element E
 end
 
-proc main
+export func main()
   var t : tensor[E](int);
 end
 
 %%% bad-tensor-type-2
-proc main
+export func main()
   var t : tensor[2,2](int)';
 end
 
@@ -63,14 +63,14 @@ extern v : int;
 extern v : int;
 
 %%% redeclaration-3
-proc main
+export func main()
 end
 
-proc main
+export func main()
 end
 
 %%% redeclaration-4
-proc main
+export func main()
   var v : int;
   var v : int;
 end
@@ -120,27 +120,27 @@ export func foo<N>()
 end
 
 %%% undeclared-var
-proc main
+export func main()
   z * z - 2;
 end
 
 %%% bad-init
-proc main
+export func main()
   var t : int = 1.0;
 end
 
 %%% bad-dense-tensor-1
-proc main
+export func main()
   t = [1, 2; 3];
 end
 
 %%% bad-dense-tensor-2
-proc main
+export func main()
   t = [[1, 2], [1, 2; 3, 4]];
 end
 
 %%% bad-dense-tensor-3
-proc main
+export func main()
   t = [0 1; 2.0 3.0];
 end
 
