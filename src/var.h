@@ -37,12 +37,12 @@ public:
 class VarCleaner {
 public:
   // Default impl does nothing
-  virtual std::string cleanImpl(std::string name) const {return name;}
-  void clean(Var &inp) const {
+  virtual std::string cleanImpl(std::string name) {return name;}
+  void clean(Var &inp) {
     inp.ptr->name = cleanImpl(inp.ptr->name);
   }
   // Hack: break the const contract very specifically
-  void clean(const Var &inp) const {
+  void clean(const Var &inp) {
     Var &inpFree = const_cast<Var&>(inp);
     clean(inpFree);
   }

@@ -1,26 +1,16 @@
 #include "gpu_backend.h"
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
-
-#if LLVM_MAJOR_VERSION <=3 && LLVM_MINOR_VERSION <= 6
-#include "llvm/PassManager.h"
-#else
-#include "llvm/IR/LegacyPassManager.h"
-#endif
-
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-#include "llvm/Analysis/Verifier.h"
-#else
-#include "llvm/IR/Verifier.h"
-#endif
 
 #include <algorithm>
 #include <fstream>
@@ -29,7 +19,6 @@
 #include "error.h"
 #include "gpu_codegen.h"
 #include "gpu_function.h"
-#include "gpu_var_cleaner.h"
 #include "intrinsics.h"
 #include "ir.h"
 #include "ir_queries.h"
@@ -54,32 +43,7 @@
 namespace simit {
 namespace backend {
 
-namespace {
-// Helper to clean environment variables
-void cleanVars(const ir::Environment &env) {
-  ir::GpuVarCleaner cleaner;
-  for (auto &v : env.getExternVars()) {
-    cleaner.clean(v);
-  }
-  for (auto &v : env.getTemporaries()) {
-    cleaner.clean(v);
-  }
-  for (auto &ti : env.getTensorIndices()) {
-    if (!ti.isComputed()) {
-      cleaner.clean(ti.getRowptrArray());
-      cleaner.clean(ti.getColidxArray());
-    }
-  }
-}
-
-} // anonymous namespace
-
-GPUBackend::GPUBackend() : LLVMBackend() {
-  // Make sure NVPTX target is initialized
-  LLVMInitializeNVPTXTarget();
-  LLVMInitializeNVPTXTargetMC();
-  LLVMInitializeNVPTXAsmPrinter();
-}
+GPUBackend::GPUBackend() : LLVMBackend() {}
 
 Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   std::ofstream irFile("simit.sim", std::ofstream::trunc);
@@ -133,7 +97,10 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
     }
 
     compile(f.getBody());
-    cleanVars(f.getEnvironment());
+    // Clean all but the top-level func, because we already did that
+    if (f.getName() != irFunc.getName()) {
+      cleanVars(f.getEnvironment());
+    }
     builder->CreateRetVoid();
 
     symtable.unscope();
@@ -147,13 +114,8 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
-  llvm::FunctionPassManager fpm(module);
-  llvm::PassManager mpm;
-#else
   llvm::legacy::FunctionPassManager fpm(module);
   llvm::legacy::PassManager mpm;
-#endif
   llvm::PassManagerBuilder pmBuilder;
   
   pmBuilder.OptLevel = 3;
@@ -164,13 +126,7 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   pmBuilder.SLPVectorize = 1;
 
   llvm::DataLayout dataLayout(module);
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-  fpm.add(new llvm::DataLayout(dataLayout));
-#elif LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
-  fpm.add(new llvm::DataLayoutPass(dataLayout));
-#else
   module->setDataLayout(dataLayout);
-#endif
 
   pmBuilder.populateFunctionPassManager(fpm);
   pmBuilder.populateModulePassManager(mpm);
@@ -652,7 +608,7 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
 
   // Create LLVM func
   llvm::Function *kernel = emitEmptyFunction(
-      irFunc.getName() + "_nested_kernel", kernelArgs,
+      getUniqueName(irFunc.getName() + "_nested_kernel"), kernelArgs,
       kernelResults, true, false, false);
   builder->SetInsertPoint(&kernel->getEntryBlock());
 
@@ -738,35 +694,12 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
     }
     args.push_back(res);
   }
+
   emitKernelLaunch(kernel, args, kernelSharding);
-}
-
-namespace {
-
-// TODO(gkanwar): Do we need to clean attrs now that we are passing in BC?
-void cleanFuncAttrs(llvm::Function *func) {
-  // Clean attributes off of params
-  llvm::AttributeSet funcAttrs = func->getAttributes();
-  llvm::AttributeSet cleanAttrs;
-  for (unsigned slot = 0; slot < funcAttrs.getNumSlots(); ++slot) {
-    // Never add func attributes, because attribute groups are
-    // disallowed in NVVM. If left on, they trip up the parser
-    if (slot == 0) continue;
-    // Remove readonly from param attrs
-    int index = funcAttrs.getSlotIndex(slot);
-    llvm::AttributeSet cleanSlot = funcAttrs.removeAttribute(
-        LLVM_CTX, index, llvm::Attribute::ReadOnly);
-    cleanAttrs.addAttributes(LLVM_CTX, index, cleanSlot);
-  }
-
-  func->setAttributes(cleanAttrs);
-}
-
 }
 
 llvm::Value *GPUBackend::emitBarrier() {
   llvm::Function *func = getBuiltIn("llvm.nvvm.barrier0", LLVM_VOID, {});
-  cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
@@ -780,10 +713,8 @@ llvm::Value *GPUBackend::getTid(std::string name) {
   iassert(name == "x" || name == "y" || name == "z");
   llvm::Function *tidFunc = getBuiltIn(
       "llvm.nvvm.read.ptx.sreg.tid."+name, LLVM_INT, {});
-  cleanFuncAttrs(tidFunc);
   llvm::Function *bidFunc = getBuiltIn(
       "llvm.nvvm.read.ptx.sreg.ctaid."+name, LLVM_INT, {});
-  cleanFuncAttrs(bidFunc);
   auto tid = builder->CreateCall(tidFunc);
   auto bid = builder->CreateCall(bidFunc);
   int blockSize = (name == "x" ? xBlockSize :
@@ -813,7 +744,6 @@ llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
   llvm::Function *castFunc = getBuiltIn(
       "llvm.nvvm.ptr.global.to.gen.p0i8.p1i8",
       LLVM_INT8_PTR, { CUDA_INT8_PTR_GLOBAL });
-  cleanFuncAttrs(castFunc);
   llvm::Value *out = builder->CreateCall(castFunc, srcCast);
   llvm::Type *genTy = llvm::PointerType::getUnqual(srcPtrTy->getElementType());
   return builder->CreateBitCast(out, genTy);
@@ -821,7 +751,6 @@ llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
 
 void GPUBackend::emitThreadBarrier() {
   llvm::Function *func = getBuiltIn("llvm.nvvm.barrier0", LLVM_VOID, {});
-  cleanFuncAttrs(func);
   builder->CreateCall(func);
 }
 
@@ -886,7 +815,6 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
       ierror << "Unsupported addrspace for float load/add: " << addrspace;
   }
   llvm::Function *func = getBuiltIn(funcName, LLVM_FLOAT, argTys);
-  cleanFuncAttrs(func);
   std::vector<llvm::Value*> args = {ptr,value};
   builder->CreateCall(func, args);
 }
@@ -1174,7 +1102,6 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   llvm::Function *func = getBuiltIn(
       memcpyName, LLVM_VOID,
       {dstCastTy, srcCastTy, LLVM_INT, LLVM_INT, LLVM_BOOL});
-  cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
   llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
@@ -1212,7 +1139,6 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   llvm::Function *func = getBuiltIn(
       memsetName, LLVM_VOID,
       { dstCastTy, LLVM_INT8, LLVM_INT, LLVM_INT, LLVM_BOOL });
-  cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
   llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
@@ -1237,7 +1163,8 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   ir::Var targetArg("target", targetType);
   ir::Var lengthArg("length", ir::Int);
   llvm::Function *kernel = emitEmptyFunction(
-      "memset_kernel", {targetArg, lengthArg}, {},  true, false);
+      getUniqueName("memset_kernel"),
+      {targetArg, lengthArg}, {},  true, false);
   builder->SetInsertPoint(&kernel->getEntryBlock());
 
   // Kernel metadata
@@ -1372,9 +1299,19 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
   }
 }
 
+// Find unique name -- on a name collision, LLVM will use a "." which produces
+// incorrect PTX assembly.
+std::string GPUBackend::getUniqueName(std::string name) {
+  int index = 0;
+  while (module->getFunction(name+"_"+to_string(index))) {
+    ++index;
+  }
+  return name+"_"+to_string(index);
+}
+
+
 llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
   // Clean variable before emitting any code
-  ir::GpuVarCleaner cleaner;
   cleaner.clean(var);
 
   llvm::Value *llvmGlobal = LLVMBackend::makeGlobalTensor(var);
@@ -1401,6 +1338,22 @@ llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
   }
 
   return llvmTmp;
+}
+
+// Helper to clean environment variables
+void GPUBackend::cleanVars(const ir::Environment &env) {
+  for (auto &v : env.getExternVars()) {
+    cleaner.clean(v);
+  }
+  for (auto &v : env.getTemporaries()) {
+    cleaner.clean(v);
+  }
+  for (auto &ti : env.getTensorIndices()) {
+    if (!ti.isComputed()) {
+      cleaner.clean(ti.getRowptrArray());
+      cleaner.clean(ti.getColidxArray());
+    }
+  }
 }
 
 }

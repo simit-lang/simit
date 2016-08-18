@@ -13,14 +13,13 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-
-#include "llvm_versions.h"
 
 #include "llvm_types.h"
 #include "llvm_codegen.h"
@@ -58,14 +57,16 @@ bool LLVMBackend::llvmInitialized = false;
 
 shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
   shared_ptr<llvm::EngineBuilder> engineBuilder(
-      new llvm::EngineBuilder(LLVM_MOD_WRAP(module)));
+      new llvm::EngineBuilder(std::unique_ptr<llvm::Module>(module)));
   return engineBuilder;
 }
 
 LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
+    llvm::InitializeAllAsmParsers();
     llvmInitialized = true;
   }
 }
@@ -222,8 +223,8 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
-  FunctionPassManager fpm(module);
-  PassManager mpm;
+  llvm::legacy::FunctionPassManager fpm(module);
+  llvm::legacy::PassManager mpm;
   llvm::PassManagerBuilder pmBuilder;
   
   pmBuilder.OptLevel = 3;
@@ -1516,7 +1517,7 @@ llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
   std::vector<llvm::Constant*> idx;
   idx.push_back(zero);
   idx.push_back(zero);
-  return LLVMgetGetElementPtr(strGlobal, idx);
+  return llvm::ConstantExpr::getGetElementPtr(nullptr, strGlobal, idx);
 }
 
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,

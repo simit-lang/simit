@@ -6,6 +6,7 @@
 
 #include "ir_visitor.h"
 #include "gpu_ir.h"
+#include "gpu_var_cleaner.h"
 
 #define CUDA_GENERIC_ADDRSPACE 0
 #define CUDA_GLOBAL_ADDRSPACE 1
@@ -41,9 +42,10 @@ public:
   ~GPUBackend() {}
 
 protected:
-  // CUDA variables
-  int cuDevMajor, cuDevMinor;
-  
+  // Global Var cleaner, to allow maintaining state
+  ir::GpuVarCleaner cleaner;
+
+  // For now: Constant GPU blocking
   const int xBlockSize = 16;
   const int yBlockSize = 16;
   const int zBlockSize = 16;
@@ -144,7 +146,11 @@ protected:
                    unsigned align,
                    bool alignToArgSize);
 
+  std::string getUniqueName(std::string name);
+
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
+
+  void cleanVars(const ir::Environment &env);
 };
 
 }
