@@ -3,20 +3,18 @@
 #include <string>
 #include <vector>
 
-/// LLVM version branching
-
-
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 #include "llvm_types.h"
 #include "llvm_codegen.h"
 #include "llvm_data_layouts.h"
-#include "llvm_versions.h"
 
 #include "backend/actual.h"
 #include "graph.h"
@@ -36,16 +34,22 @@ typedef void (*FuncPtrType)();
 
 LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
                            llvm::Function* llvmFunc, llvm::Module* module,
-                           std::shared_ptr<llvm::EngineBuilder> engineBuilder)
+                           std::shared_ptr<llvm::EngineBuilder> engineBuilder,
+                           bool skipEEInit)
     : Function(func), initialized(false), llvmFunc(llvmFunc), module(module),
       harnessModule(new llvm::Module("simit_harness", LLVM_CTX)),
       storage(storage),
       engineBuilder(engineBuilder),
-      harnessEngineBuilder(new llvm::EngineBuilder(LLVM_MOD_WRAP(harnessModule))),
+      harnessEngineBuilder(new llvm::EngineBuilder(
+          std::unique_ptr<llvm::Module>(harnessModule))),
       deinit(nullptr) {
 
-  LLVM_EB_WRAP(engineBuilder);
-  LLVM_EB_WRAP(harnessEngineBuilder);
+  // Not all derivative backends can use execution engines to finalize code
+  // (see GPU for example). As a result, this provides a shortcut to skip any
+  // execution engine initialization. The derivative backend is then expected
+  // to set up global, temporary, and tensor index pointers themselves.
+  if (skipEEInit) return;
+
   engineBuilder->setEngineKind(llvm::EngineKind::JIT);
   harnessEngineBuilder->setEngineKind(llvm::EngineKind::JIT);
   std::string errStr;
@@ -69,7 +73,7 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
     // Store a pointer to each of the bindable's extern in externPtrs
     vector<void**> extPtrs;
     for (const Var& ext : externMapping.getMappings()) {
-      uint64_t addr = getGlobalAddr(ext.getName(), module, executionEngine);
+      uint64_t addr = executionEngine->getGlobalValueAddress(ext.getName());
       void** extPtr = (void**)addr;
       *extPtr = nullptr;
       extPtrs.push_back(extPtr);
@@ -82,7 +86,7 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   for (const Var& tmp : env.getTemporaries()) {
     iassert(tmp.getType().isTensor())
         << "Only support tensor temporaries";
-    uint64_t addr = getGlobalAddr(tmp.getName(), module, executionEngine);
+    uint64_t addr = executionEngine->getGlobalValueAddress(tmp.getName());
     void** tmpPtr = (void**)addr;
     *tmpPtr = nullptr;
     temporaryPtrs.insert({tmp.getName(), tmpPtr});
@@ -94,12 +98,12 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
 
     if (tensorIndex.getKind() == TensorIndex::PExpr) {
       const Var& rowptr = tensorIndex.getRowptrArray();
-      addr = getGlobalAddr(rowptr.getName(), module, executionEngine);
+      addr = executionEngine->getGlobalValueAddress(rowptr.getName());
       const uint32_t** rowptrPtr = (const uint32_t**)addr;
       *rowptrPtr = nullptr;
 
       const Var& colidx = tensorIndex.getColidxArray();
-      addr = getGlobalAddr(colidx.getName(), module, executionEngine);
+      addr = executionEngine->getGlobalValueAddress(colidx.getName());
       const uint32_t** colidxPtr = (const uint32_t**)addr;
       *colidxPtr = nullptr;
 
@@ -382,7 +386,6 @@ Function::FuncType LLVMFunction::init() {
     llvm::Function *funcHarness =
         createHarness(funcName, args, &funcProto);
 
-#ifdef LLVM_USE_MCJIT
     // Calling main module functions from the harness requires the
     // symbols to be loaded into the memory manager ahead of finalization
     llvm::sys::DynamicLibrary::AddSymbol(
@@ -394,14 +397,6 @@ Function::FuncType LLVMFunction::init() {
     llvm::sys::DynamicLibrary::AddSymbol(
         funcName,
         (void*) executionEngine->getFunctionAddress(funcName));
-#else
-    harnessExecEngine->addGlobalMapping(
-        initProto, executionEngine->getPointerToFunction(getInitFunc()));
-    harnessExecEngine->addGlobalMapping(
-        deinitProto, executionEngine->getPointerToFunction(getDeinitFunc()));
-    harnessExecEngine->addGlobalMapping(
-        funcProto, executionEngine->getPointerToFunction(llvmFunc));
-#endif
     
     // Finalize harness module
     harnessExecEngine->finalizeObject();

@@ -7,14 +7,9 @@
 #include "cuda.h"
 #include "nvvm.h"
 
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-#include "llvm/Analysis/Verifier.h"
-#else
-#include "llvm/IR/Verifier.h"
-#endif
-
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "error.h"
@@ -27,7 +22,7 @@
 #include "path_indices.h"
 #include "backend/actual.h"
 #include "backend/llvm/llvm_codegen.h"
-#include "backend/llvm/llvm_versions.h"
+#include "backend/llvm/llvm_util.h"
 #include "util/collections.h"
 
 using namespace std;
@@ -41,8 +36,10 @@ static CUdeviceptr getGlobalDevPtr(CUmodule& cudaModule, std::string name,
                                    size_t expectedSize) {
   CUdeviceptr globalPtr;
   size_t globalPtrSize;
-  checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
-                                    cudaModule, name.data()));
+  checkCudaErrorsExtra(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
+                                         cudaModule, name.data()),
+                       "Locating global: " + name + ", expected size: "
+                       + to_string(expectedSize));
   iassert(globalPtrSize == expectedSize)
       << "Global pointer for " << name << " is wrong size. Got "
       << globalPtrSize << ", but expected " << expectedSize;
@@ -61,8 +58,54 @@ GPUFunction::GPUFunction(
     llvm::Module *module,
     std::shared_ptr<llvm::EngineBuilder> engineBuilder,
     const ir::Storage& storage)
-    : LLVMFunction(simitFunc, storage, llvmFunc, module, engineBuilder),
+    : LLVMFunction(simitFunc, storage, llvmFunc, module, engineBuilder, true),
       cudaModule(nullptr) {
+
+  // Subset of LLVMFunction init:
+  const ir::Environment& env = getEnvironment();
+  // Initialize extern pointers
+  for (const ir::VarMapping& externMapping : env.getExterns()) {
+    ir::Var bindable = externMapping.getVar();
+    vector<void**> extPtrs;
+    for (const ir::Var& ext : externMapping.getMappings()) {
+      // Allocate space for a pointer host-side
+      void **extPtr = new void*;
+      *extPtr = nullptr;
+      extPtrs.push_back(extPtr);
+    }
+    iassert(!util::contains(this->externPtrs, bindable.getName()));
+    this->externPtrs.insert({bindable.getName(), extPtrs});
+  }
+  // Initialize temporary pointers
+  for (const ir::Var& tmp : env.getTemporaries()) {
+    iassert(tmp.getType().isTensor())
+        << "Cannot handle non-tensor temporary: " << tmp;
+    // Allocate space for a pointer host-side
+    // TODO: CLEANUP!
+    void **tmpPtr = new void*;
+    *tmpPtr = nullptr;
+    temporaryPtrs.insert({tmp.getName(), tmpPtr});
+  }
+  // Initialize tensorIndex ptrs
+  for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
+    if (tensorIndex.getKind() == ir::TensorIndex::PExpr) {
+      const ir::Var& rowptr = tensorIndex.getRowptrArray();
+      const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
+      const uint32_t **rowptrPtr = (const uint32_t**)new uint32_t*;
+      *rowptrPtr = nullptr;
+      const uint32_t **colidxPtr = (const uint32_t**)new uint32_t*;
+      *colidxPtr = nullptr;
+      tensorIndexPtrs.insert({pexpr, {rowptrPtr, colidxPtr}});
+    }
+    else if (tensorIndex.getKind() == ir::TensorIndex::Sten) {
+      // No in-memory structures
+    }
+    else {
+      not_supported_yet;
+    }
+  }
+
+
   // CUDA runtime
   CUdevice device;
   int devCount;
@@ -234,8 +277,6 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
         endpoints, endpointBuffer, size);
     pushedBufs.push_back(endpointsHandle);
     data.endpoints = endpointsHandle;
-    // setData.push_back(llvmPtr(LLVM_INT_PTR,
-    //                           reinterpret_cast<void*>(*endpointBuffer)));
 
     // Neighbor index
     const internal::NeighborIndex *nbrs = set->getNeighborIndex();
@@ -260,8 +301,6 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
         const_cast<int*>(startIndex), startBuffer, startSize);
     pushedBufs.push_back(startIndexHandle);
     data.startIndex = startIndexHandle;
-    // setData.push_back(llvmPtr(LLVM_INT_PTR,
-    //                           reinterpret_cast<void*>(*startBuffer)));
 
     iassert(nbrSize != 0)
         << "Cannot allocate edge set with zero-sized neighbor array: "
@@ -273,8 +312,6 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
         const_cast<int*>(nbrIndex), nbrBuffer, nbrSize);
     pushedBufs.push_back(nbrIndexHandle);
     data.nbrIndex = nbrIndexHandle;
-    // setData.push_back(llvmPtr(LLVM_INT_PTR,
-    //                           reinterpret_cast<void*>(*nbrBuffer)));
   }
   else if (setType->isa<ir::LatticeLinkSetType>()) {
     // Lattice link set type format leaves room for eps, nbrs_start and nbrs
@@ -614,10 +651,10 @@ llvm::Function *GPUFunction::createHarness(
   llvm::ReturnInst::Create(LLVM_CTX, entry);
 
   // Kernel metadata
-  LLVM_Metadata *mdVals[] = {
-    LLVM_MD_WRAP(harness),
+  llvm::Metadata *mdVals[] = {
+    llvm::ValueAsMetadata::get(harness),
     llvm::MDString::get(LLVM_CTX, "kernel"),
-    LLVM_MD_WRAP(llvmInt(1))
+    llvm::ValueAsMetadata::get(llvmInt(1))
   };
   llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CTX, mdVals);
   llvm::NamedMDNode *nvvmAnnot = module
@@ -665,19 +702,26 @@ GPUFunction::init() {
   // Validate LLVM module
   iassert(!llvm::verifyModule(*module))
       << "LLVM module does not pass verification";
+  maybeLogModule(module, "simit.ll");
 
   // Generate harness PTX
 #ifdef SIMIT_DEBUG
   std::cout << "Create PTX" << std::endl;
 #endif
-  std::string ptxStr = generatePtx(
-      module, cuDevMajor, cuDevMinor,
-      module->getModuleIdentifier().c_str());
+  std::string ptxStr = generatePtx(module, cuDevMajor, cuDevMinor);
+  std::vector<std::string> libPtxStrs =
+      generateLibraryPtx(cuDevMajor, cuDevMinor);
 
 #ifdef SIMIT_DEBUG
   std::ofstream ptxFile("simit.ptx", std::ofstream::trunc);
   ptxFile << ptxStr << std::endl;
   ptxFile.close();
+  for (int i = 0; i < libPtxStrs.size(); ++i) {
+    std::ofstream ptxLibFile(
+      "simit-lib-"+std::to_string(i)+".ptx", std::ofstream::trunc);
+    ptxLibFile << libPtxStrs[i] << std::endl;
+    ptxLibFile.close();
+  }
 #endif
 
   // JIT linker and final CUBIN
@@ -697,23 +741,33 @@ GPUFunction::init() {
     reinterpret_cast<void*>(16384),
     reinterpret_cast<void*>(1)
   };
-
   checkCudaErrors(cuLinkCreate(5, linkerOptions, linkerOptionValues, &linker));
-  checkCudaErrors(cuLinkAddData(
-      linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
-      ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL));
+
   // libcudadevrt.a
   checkCudaErrors(cuLinkAddFile(linker, CU_JIT_INPUT_LIBRARY,
                                 LIBCUDADEVRT, 0, NULL, NULL));
+  // libraries
+  for (int i = 0; i < libPtxStrs.size(); ++i) {
+    std::string cudaModuleName = "<compiled-ptx-lib-"+std::to_string(i)+">";
+    checkCudaErrors(cuLinkAddData(
+      linker, CU_JIT_INPUT_PTX, (void*)libPtxStrs[i].c_str(),
+      libPtxStrs[i].size(), cudaModuleName.c_str(), 0, NULL, NULL));
+  }
+
+  // main module
+  checkCudaErrors(cuLinkAddData(
+      linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
+      ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL));
 
   void *cubin;
   size_t cubinSize;
-  checkCudaErrors(cuLinkComplete(linker, &cubin, &cubinSize));
+  auto errCode = cuLinkComplete(linker, &cubin, &cubinSize);
 
   std::ofstream linkerLog("simit.linker.log", std::ofstream::trunc);
   linkerLog << linkerInfo << std::endl
             << linkerErrors << std::endl;
   linkerLog.close();
+  checkCudaErrors(errCode);
 
   // Create CUDA module for binary object, possibly removing previous module
   if (cudaModule) {

@@ -33,7 +33,8 @@ class LLVMFunction : public backend::Function {
  public:
   LLVMFunction(ir::Func func, const ir::Storage &storage,
                llvm::Function* llvmFunc, llvm::Module* module,
-               std::shared_ptr<llvm::EngineBuilder> engineBuilder);
+               std::shared_ptr<llvm::EngineBuilder> engineBuilder,
+               bool skipEEInit = false);
   virtual ~LLVMFunction();
 
   virtual void bind(const std::string& name, simit::Set* set);
@@ -75,14 +76,14 @@ class LLVMFunction : public backend::Function {
            std::pair<const uint32_t**,const uint32_t**>> tensorIndexPtrs;
   std::map<pe::PathExpression, pe::PathIndex>            pathIndices;
 
+  /// Temporaries
+  std::map<std::string, void**> temporaryPtrs;
+
  private:
   std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
   std::unique_ptr<llvm::EngineBuilder>   harnessEngineBuilder;
   std::unique_ptr<llvm::ExecutionEngine> harnessExecEngine;
-
-  /// Temporaries
-  std::map<std::string, void**> temporaryPtrs;
 
   FuncType deinit;
 
