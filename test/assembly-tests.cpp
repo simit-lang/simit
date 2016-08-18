@@ -196,7 +196,7 @@ TEST(DISABLED_assembly, matrix_ve) {
   ASSERT_EQ((int)c(v2), 2);
 }
 
-TEST(DISABLED_assembly, matrix_ev) {
+TEST(assembly, matrix_ev) {
   Set V;
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();

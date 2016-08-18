@@ -206,9 +206,32 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       switch (link->getType()) {
         case Link::ev: {
           const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
-          iassert(edgeSet.getCardinality() > 0)
-              << "not an edge set" << edgeSet.getName();
-          pi = new SetEndpointPathIndex(edgeSet);
+
+          int cardinality = edgeSet.getCardinality();
+          iassert(cardinality > 0) << "not an edge set" << edgeSet.getName();
+
+          // TODO: Replace rest of this case with this when we want to support a
+          //       mix of segmented and set endpoint indices.
+          // pi = new SetEndpointPathIndex(edgeSet);
+
+          size_t n   = edgeSet.getSize();
+          size_t nnz = edgeSet.getSize() * cardinality;
+
+          uint32_t* ptr = (uint32_t*)malloc((n+1)*sizeof(uint32_t));
+          uint32_t* idx = (uint32_t*)malloc(nnz*sizeof(uint32_t));
+
+          for (size_t i=0; i<=n; ++i) {
+            ptr[i] = i*cardinality;
+          }
+
+          for (auto e : edgeSet) {
+            for (int i=0; i<cardinality; ++i) {
+              int ep = edgeSet.getEndpoint(e,i).getIdent();
+              idx[e.getIdent()*cardinality + i] = ep;
+            }
+          }
+
+          pi = new SegmentedPathIndex(n, ptr, idx);;
           break;
         }
         case Link::ve: {
