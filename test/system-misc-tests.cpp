@@ -121,3 +121,54 @@ TEST(system, slice) {
   ASSERT_EQ(2.0, d.get(p1));
   ASSERT_EQ(2.0, d.get(p2));
 }
+
+TEST(DISABLED_system, transpose) {
+  Set V;
+  FieldRef<int> b = V.addField<int>("b");
+  FieldRef<int> c = V.addField<int>("c");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1;
+  b(v1) = 2;
+  b(v2) = 3;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(4,  c(v0));
+  ASSERT_EQ(10, c(v1));
+  ASSERT_EQ(4,  c(v2));
+}
+
+TEST(DISABLED_system, transpose_rectangular) {
+  Set V;
+  FieldRef<int> b = V.addField<int>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+
+  Set E(V);
+  ElementRef e0 = E.add(v0);
+  ElementRef e1 = E.add(v2);
+  FieldRef<int> a = E.addField<int>("a");
+  a(e0) = 1;
+  a(e1) = 2;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(1.0, b(v0));
+  ASSERT_EQ(0.0, b(v1));
+  ASSERT_EQ(2.0, b(v2));
+}
