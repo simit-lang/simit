@@ -93,7 +93,7 @@ Func lower(Func func, std::ostream* os, bool time) {
   // Rewrite system assignments
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, rewriteSystemAssigns);
-    printCallGraph("Rewrite System Assigns (GPU)", func, print);
+    printCallGraph("Rewrite System Assigns (GPU)", func, os);
   }
 #endif
 
@@ -141,7 +141,7 @@ Func lower(Func func, std::ostream* os, bool time) {
   // GPU backend wants memsets as loops over set domains
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, rewriteMemsets);
-    printCallGraph("Rewrite Memsets (GPU)", func, print);
+    printCallGraph("Rewrite Memsets (GPU)", func, os);
   }
 #endif
 
@@ -163,7 +163,7 @@ Func lower(Func func, std::ostream* os, bool time) {
 #if GPU
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, rewriteCompoundOps);
-    printCallGraph("Rewrite Compound Ops (GPU)", func, print);
+    printCallGraph("Rewrite Compound Ops (GPU)", func, os);
     func = rewriteCallGraph(func, shardLoops);
     printCallGraph("Shard Loops", func, os);
     func = rewriteCallGraph(func, rewriteVarDecls);
