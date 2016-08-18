@@ -517,8 +517,9 @@ public:
     return Endpoints(this, edge);
   }
 
-  void *getFieldData(const std::string &fieldName) {
-    iassert(fieldNames.find(fieldName) != fieldNames.end());
+  void* getFieldData(const std::string &fieldName) {
+    uassert(fieldNames.find(fieldName) != fieldNames.end())
+        << "Cannot find " << fieldName;
     return fields[fieldNames.at(fieldName)]->data;
   }
 
