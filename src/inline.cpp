@@ -313,10 +313,10 @@ static Stmt gatherVVLocs(TensorIndex index, int cardinality, Var eps,
 
   Var i("i", Int);
   Var j("j", Int);
+
   Var locVar(INTERNAL_PREFIX("locVar"), Int);
   Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
-                                {Load::make(eps,i), Load::make(eps,j),
-                                  ptr, idx});
+                                {Load::make(eps,i),Load::make(eps,j),ptr, idx});
   Stmt locsInit = Block::make({locStmt, TensorWrite::make(locs,{i,j}, locVar)});
 
   Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
@@ -326,11 +326,52 @@ static Stmt gatherVVLocs(TensorIndex index, int cardinality, Var eps,
 
 /// Emit code to gather the locations of the result vv matrices:
 /// ~~~~~~~~~~~~~~~
-///   for s in E
+///   for e in E
+///     ...
 ///     % Gather locs from As_index
 ///     var .As_index_locs : tensor[0:2](int);
 ///     for i in 0:2
-///       .As_index_locs(i) = .eps[i];
+///       for j in 0:2
+///         var .locVar : int;
+///         .locVar = __loc(.eps[i], e, As_index.coords, As_index.sinks);
+///         .As_index_locs(i) = .locVar;
+///       end
+///     ...
+///   end
+/// ~~~~~~~~~~~~~~~
+/// (Locations for matrices with the same index are only computed once.)
+static Stmt gatherVELocs(TensorIndex index, int cardinality, Var eps, Var lv,
+                         std::map<TensorIndex,Var>* indexToLocs) {
+  Type locsType = TensorType::make(ScalarType::Int, {IndexDomain(cardinality)});
+  Var locs(INTERNAL_PREFIX(index.getName() + LOCS_POSTFIX), locsType);
+  (*indexToLocs)[index] = locs;
+
+  Stmt locsDecl = VarDecl::make(locs);
+
+  Expr ptr = index.getRowptrArray();
+  Expr idx = index.getColidxArray();
+
+  Var i("i", Int);
+
+  Var locVar(INTERNAL_PREFIX("locVar"), Int);
+  Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
+                                {Load::make(eps,i), lv, ptr, idx});
+  Stmt locsInit = Block::make({locStmt, TensorWrite::make(locs,{i}, locVar)});
+
+//  Stmt locsInit = TensorWrite::make(locs, {i}, lv*cardinality+i);
+  Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
+
+  return Block::make(locsDecl, locsInitLoop);
+}
+
+/// Emit code to gather the locations of the result vv matrices:
+/// ~~~~~~~~~~~~~~~
+///   for e in E
+///     ...
+///     % Gather locs from A_index
+///     var .A_index_locs : tensor[0:2](int)';
+///     for i in 0:2
+///       .A_index_locs(i) = (e * 2) + i;
 ///     end
 ///     ...
 ///   end
@@ -415,13 +456,13 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
           // vv matrix
           gatherLocs = gatherVVLocs(index, cardinality, eps, &indexToLocs);
         }
+        else if (dims[0] != target && dims[1] == target) {
+          // ve matrix
+          gatherLocs = gatherVELocs(index, cardinality, eps, lv, &indexToLocs);
+        }
         else if (dims[0] == target && dims[1] != target) {
           // ev matrix
           gatherLocs = gatherEVLocs(index, cardinality, eps, lv, &indexToLocs);
-        }
-        else if (dims[0] != target && dims[1] == target) {
-          // ve matrix
-          terror;
         }
         else {
           unreachable;

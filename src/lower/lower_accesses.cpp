@@ -145,8 +145,7 @@ private:
         reverse(indices.begin(), indices.end());
         reverse(outerSizes.begin(), outerSizes.end());
         iassert(indices.size() == outerSizes.size())
-            << "Must index completely into tensor block to generate "
-            << "a flattened access: " << tensor;
+            << "Incorrect number of indices";
 
         index = rewrite(indices[0]);
         Expr subSize = outerSizes[0];

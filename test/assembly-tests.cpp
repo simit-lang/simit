@@ -171,7 +171,7 @@ TEST(assembly, edges_two_results) {
   ASSERT_EQ(168, (int)b(v2));
 }
 
-TEST(DISABLED_assembly, matrix_ve) {
+TEST(assembly, matrix_ve) {
   Set V;
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
