@@ -296,7 +296,7 @@ private:
       }
 
       bool hasSetDefinition(SetIndexSet::Ptr set) const {
-        return (bool)(set->setDef);
+        return (bool)set->setDef;
       }
 
       bool hasSetDefinition(GenericParam::Ptr set) const {

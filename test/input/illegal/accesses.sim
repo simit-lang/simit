@@ -1,5 +1,5 @@
 %%% bad-tensor-read
-proc main
+export func main()
   var t : tensor[1](int);
   t(1.0);
 end
@@ -8,7 +8,7 @@ end
 func fizz()
 end
 
-proc main
+export func main()
   var t : tensor[1](int);
   t(fizz());
 end
@@ -17,13 +17,13 @@ end
 func buzz() -> (i : int, j : int)
 end
 
-proc main
+export func main()
   var t : tensor[1](int);
   t(buzz());
 end
 
 %%% bad-tensor-read-4
-proc main
+export func main()
   var t : tensor[1](float);
   t(1,2);
 end
@@ -107,7 +107,7 @@ end
 
 extern x : set{E};
 
-proc main
+export func main()
   x(1);
 end
 
@@ -115,7 +115,7 @@ end
 func buzz() -> (i : int, j : int)
 end
 
-proc main
+export func main()
   buzz().t;
 end
 
@@ -123,7 +123,7 @@ end
 func bar() -> (i : int)
 end
 
-proc main
+export func main()
   bar().t;
 end
 
@@ -142,7 +142,7 @@ end
 
 extern S : set{G};
 
-proc main
+export func main()
   S.f;
 end
 
