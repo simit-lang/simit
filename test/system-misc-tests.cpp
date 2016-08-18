@@ -122,7 +122,7 @@ TEST(system, slice) {
   ASSERT_EQ(2.0, d.get(p2));
 }
 
-TEST(DISABLED_system, transpose) {
+TEST(system, transpose) {
   Set V;
   FieldRef<int> b = V.addField<int>("b");
   FieldRef<int> c = V.addField<int>("c");
