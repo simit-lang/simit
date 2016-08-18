@@ -106,8 +106,11 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
         iassert(endpoints.defined());
         vector<Expr> indices;
         for (auto& index : op->indices) {
-          iassert(isa<TupleRead>(index)) << index;
-          indices.push_back(to<TupleRead>(index)->index);
+          iassert(isa<TupleRead>(index) || isa<VarExpr>(index))
+              << index << " is not a tuple read or a var expr";
+          if (isa<TupleRead>(index)) {
+            indices.push_back(to<TupleRead>(index)->index);
+          }
         }
         Expr indexExpr = TensorRead::make(locs[index], indices);
         stmt = makeCompoundTensorWrite(rewrite(op->tensor), {indexExpr},
