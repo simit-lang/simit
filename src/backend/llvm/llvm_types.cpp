@@ -88,16 +88,7 @@ llvm::StructType *llvmType(const ir::UnstructuredSetType& setType,
   // Edge indices (if the set is an edge set)
   if (setType.endpointSets.size() > 0) {
     // Endpoints
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-
-    // Neighbor Index
-    // row starts (block row)
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-    // col indexes (block column)
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+    llvmFieldTypes.push_back(llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
   }
 
   // Fields
@@ -118,13 +109,6 @@ llvm::StructType *llvmType(const ir::LatticeLinkSetType& setType,
       llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
 
   // Endpoints
-  llvmFieldTypes.push_back(
-      llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-  // Neighbor Index
-  // row starts (block row)
-  llvmFieldTypes.push_back(
-      llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-  // col indexes (block column)
   llvmFieldTypes.push_back(
       llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
 

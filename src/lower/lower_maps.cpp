@@ -99,16 +99,21 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
                                        rewrite(op->value));
       }
       else if (tensorStorage.getKind() == TensorStorage::Indexed) {
-        iassert(locs.defined());
+        auto index = tensorStorage.getTensorIndex();
+        iassert(util::contains(locs, index));
+
         iassert(op->indices.size() == 2);
         iassert(endpoints.defined());
         vector<Expr> indices;
         for (auto& index : op->indices) {
-          iassert(isa<TupleRead>(index)) << index;
-          indices.push_back(to<TupleRead>(index)->index);
+          iassert(isa<TupleRead>(index) || isa<VarExpr>(index))
+              << index << " is not a tuple read or a var expr";
+          if (isa<TupleRead>(index)) {
+            indices.push_back(to<TupleRead>(index)->index);
+          }
         }
-        Expr index = TensorRead::make(locs, indices);
-        stmt = makeCompoundTensorWrite(rewrite(op->tensor), {index},
+        Expr indexExpr = TensorRead::make(locs[index], indices);
+        stmt = makeCompoundTensorWrite(rewrite(op->tensor), {indexExpr},
                                        rewrite(op->value));
       }
       else {
@@ -165,8 +170,8 @@ private:
 };
 
 Func lowerMaps(Func func) {
-  Stmt body = LowerMaps(&func.getStorage(),&func.getEnvironment())
-      .rewrite(func.getBody());
+  LowerMaps rewriter(&func.getStorage(),&func.getEnvironment());
+  Stmt body = rewriter.rewrite(func.getBody());
   func = Func(func, body);
   func = insertVarDecls(func);
   return func;

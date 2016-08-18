@@ -1,0 +1,20 @@
+element Vertex
+  b : int;
+end
+
+element Edge 
+  a : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V);
+
+func asm(e : Edge, v : (Vertex*1)) -> R : matrix[E,V](int)
+  R(e, v(0)) = 1;
+end
+
+export func main()
+  R = map asm to E reduce +;
+  Rt = R';
+  V.b = Rt * E.a;
+end

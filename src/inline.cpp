@@ -9,7 +9,6 @@
 #include "intrinsics.h"
 #include "ir_codegen.h"
 #include "lattice_ops.h"
-#include "tensor_index.h"
 #include "stencils.h"
 
 using namespace std;
@@ -22,7 +21,8 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
 
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
                                         Storage *storage,
-                                        Var endpoints, Var locs,
+                                        Var endpoints,
+                                        std::map<TensorIndex,Var> locs,
                                         std::map<vector<int>, Expr> clocs,
                                         vector<Var> latticeIndexVars) {
   this->endpoints = endpoints;
@@ -260,17 +260,157 @@ StencilContent* buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
   return content;
 }
 
+/// Emit code to store the endpoints of the edge set. This avoids
+/// index computations in the locs loops
+/// ~~~~~~~~~~~~~~~
+///   % Gather endpoints
+///   var .eps : tensor[0:2](int)';
+///   for i in 0:2
+///     .eps(i) = E.endpoints[(s * 2) + i];
+///   end
+/// ~~~~~~~~~~~~~~~
+static Stmt gatherEps(Expr target, int cardinality, Var lv, Var* eps) {
+  Var i("i", Int);
+  Type type      = TensorType::make(ScalarType::Int,{IndexDomain(cardinality)});
+  *eps           = Var(INTERNAL_PREFIX("eps"), type);
+  Stmt epsDelc   = VarDecl::make(*eps);
+  Expr epsRead   = IndexRead::make(target, IndexRead::Endpoints);
+  Expr epLoc     = Add::make(Mul::make(lv, cardinality), i);
+  Expr ep        = Load::make(epsRead, epLoc);
+  Stmt gatherEp  = TensorWrite::make(*eps, {i}, ep);
+  Stmt loop      = ForRange::make(i, 0, cardinality, gatherEp);
+  Stmt gatherEps = Block::make(epsDelc, loop);
+  return Comment::make("Gather endpoints", gatherEps, true);
+}
+
+static const string LOCS_POSTFIX = "_locs";
+
+/// Emit code to gather the locations of the result vv matrices:
+/// ~~~~~~~~~~~~~~~
+///   % Gather locs from As_index
+///   var .As_index_locs : tensor[0:2,0:2](int);
+///   for i in 0:2
+///     for j in 0:2
+///       var .locVar : int;
+///       .locVar = __loc(.eps[i], .eps[j], As_index.coords, As_index.sinks);
+///       .As_index_locs(i,j) = .locVar;
+///     end
+///   end
+/// ~~~~~~~~~~~~~~~
+/// (Locations for matrices with the same index are only computed once.)
+static Stmt gatherVVLocs(TensorIndex index, int cardinality, Var eps,
+                         std::map<TensorIndex,Var>* indexToLocs) {
+  Type locsType = TensorType::make(ScalarType::Int,
+                                   {IndexDomain(cardinality),
+                                     IndexDomain(cardinality)});
+  Var locs(INTERNAL_PREFIX(index.getName() + LOCS_POSTFIX), locsType);
+  (*indexToLocs)[index] = locs;
+
+  Stmt locsDecl = VarDecl::make(locs);
+
+  Expr ptr = index.getRowptrArray();
+  Expr idx = index.getColidxArray();
+
+  Var i("i", Int);
+  Var j("j", Int);
+
+  Var locVar(INTERNAL_PREFIX("locVar"), Int);
+  Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
+                                {Load::make(eps,i),Load::make(eps,j),ptr, idx});
+  Stmt locsInit = Block::make({locStmt, TensorWrite::make(locs,{i,j}, locVar)});
+
+  Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
+  locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
+  return Block::make(locsDecl, locsInitLoop);
+}
+
+/// Emit code to gather the locations of the result vv matrices:
+/// ~~~~~~~~~~~~~~~
+///   for e in E
+///     ...
+///     % Gather locs from As_index
+///     var .As_index_locs : tensor[0:2](int);
+///     for i in 0:2
+///       for j in 0:2
+///         var .locVar : int;
+///         .locVar = __loc(.eps[i], e, As_index.coords, As_index.sinks);
+///         .As_index_locs(i) = .locVar;
+///       end
+///     ...
+///   end
+/// ~~~~~~~~~~~~~~~
+/// (Locations for matrices with the same index are only computed once.)
+static Stmt gatherVELocs(TensorIndex index, int cardinality, Var eps, Var lv,
+                         std::map<TensorIndex,Var>* indexToLocs) {
+  Type locsType = TensorType::make(ScalarType::Int, {IndexDomain(cardinality)});
+  Var locs(INTERNAL_PREFIX(index.getName() + LOCS_POSTFIX), locsType);
+  (*indexToLocs)[index] = locs;
+
+  Stmt locsDecl = VarDecl::make(locs);
+
+  Expr ptr = index.getRowptrArray();
+  Expr idx = index.getColidxArray();
+
+  Var i("i", Int);
+
+  Var locVar(INTERNAL_PREFIX("locVar"), Int);
+  Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
+                                {Load::make(eps,i), lv, ptr, idx});
+  Stmt locsInit = Block::make({locStmt, TensorWrite::make(locs,{i}, locVar)});
+
+//  Stmt locsInit = TensorWrite::make(locs, {i}, lv*cardinality+i);
+  Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
+
+  return Block::make(locsDecl, locsInitLoop);
+}
+
+/// Emit code to gather the locations of the result vv matrices:
+/// ~~~~~~~~~~~~~~~
+///   for e in E
+///     ...
+///     % Gather locs from A_index
+///     var .A_index_locs : tensor[0:2](int)';
+///     for i in 0:2
+///       .A_index_locs(i) = (e * 2) + i;
+///     end
+///     ...
+///   end
+/// ~~~~~~~~~~~~~~~
+/// (Locations for matrices with the same index are only computed once.)
+static Stmt gatherEVLocs(TensorIndex index, int cardinality, Var eps, Var lv,
+                         std::map<TensorIndex,Var>* indexToLocs) {
+  Type locsType = TensorType::make(ScalarType::Int, {IndexDomain(cardinality)});
+  Var locs(INTERNAL_PREFIX(index.getName() + LOCS_POSTFIX), locsType);
+  (*indexToLocs)[index] = locs;
+
+  Stmt locsDecl = VarDecl::make(locs);
+
+  Var i("i", Int);
+
+  Stmt locsInit = TensorWrite::make(locs, {i}, lv*cardinality+i);
+  Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
+
+  return Block::make(locsDecl, locsInitLoop);
+}
+
 /// Inlines the mapped function with respect to the given loop variable over
 /// the target set, using the given rewriter.
 Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
                        MapFunctionRewriter &rewriter, Storage* storage) {
   // Compute locations of the mapped edge
   bool returnsMatrix = false;
-  for (auto& result : map->function.getResults()) {
+
+  auto vars    = map->vars;
+  auto results = map->function.getResults();
+  iassert(results.size() == vars.size())
+      << "Should be same number of results as assigned to vars";
+  for (size_t i=0; i<results.size(); ++i) {
+    auto var = vars[i];
+    auto result = results[i];
+
     Type type = result.getType();
     if (type.isTensor() && type.toTensor()->order() == 2) {
       returnsMatrix = true;
-      break;
     }
   }
 
@@ -280,66 +420,63 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
   // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
     iassert(ivs.size() == 0);
-    // Computes the return matrix locations of the endpoints of the edge being
-    // assembled.  These are stored in an array and used when storing values to
-    // the return matrix.
-    /* Build IR for locs and eps:
-       var i : int;
-       var j : int;
-       var eps : tensor[card](int);
-       for i in 0:card
-         eps(i) = target.endpoints[lv*card + i];
-       end;
+    std::map<TensorIndex, Var> indexToLocs;
+    vector<Stmt> initLocs;
 
-       var locs : tensor[card,card](int);
-       for i in 0:card
-         for j in 0:card
-           locs(i,j) = loc(eps(i),eps(j),target.nbrs_start,target.nbrs);
-         end
-       end
-     */
+    Var eps;
+    initLocs.push_back(gatherEps(target, cardinality, lv, &eps));
 
-    Var i("i", Int);
-    Var j("j", Int);
+    for (size_t i=0; i<results.size(); ++i) {
+      auto var = vars[i];
+      iassert(storage->hasStorage(var));
+      auto varStorage = storage->getStorage(var);
+      if (varStorage.getKind() == TensorStorage::Indexed) {
+        iassert(varStorage.getTensorIndex().defined());
 
-    Var eps(INTERNAL_PREFIX("eps"), TensorType::make(ScalarType::Int,
-                                                     {IndexDomain(cardinality)}));
-    Expr endpoints = IndexRead::make(target, IndexRead::Endpoints);
-    Expr epLoc = Add::make(Mul::make(lv, cardinality), i);
-    Expr ep = Load::make(endpoints, epLoc);
-    Stmt epsInit = TensorWrite::make(eps, {i}, ep);
-    Stmt epsInitLoop = ForRange::make(i, 0, cardinality, epsInit);
+        auto result = results[i];
+        auto index  = varStorage.getTensorIndex();
 
-    Var locs(INTERNAL_PREFIX("locs"), TensorType::make(ScalarType::Int,
-                                                       {IndexDomain(cardinality),
-                                                        IndexDomain(cardinality)}));
+        if (util::contains(indexToLocs, index)) continue;
+        if (!result.getType().isTensor()) continue;
 
-    Expr nbrs_start = IndexRead::make(target, IndexRead::NeighborsStart);
-    Expr nbrs = IndexRead::make(target, IndexRead::Neighbors);
+        auto type = result.getType().toTensor();
+        tassert(type->order() == 2) << "Only matrix indices supported";
 
-    Var locVar(INTERNAL_PREFIX("locVar"), Int);
-    Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
-                                  {Load::make(eps,i),
-                                   Load::make(eps,j),
-                                   nbrs_start, nbrs});
+        auto dims = type->getOuterDimensions();
 
-    Stmt locsInit = Block::make({locStmt,
-                                TensorWrite::make(locs, {i,j}, locVar)});
+        // Compute locations to use to index into the result matrix. E.g.:
+        // ~~~~~~~~~~~~~~~
+        //   As(.As_index_locs(0,0)) += 1;
+        //   As(.As_index_locs(0,1)) += 1;
+        //   As(.As_index_locs(1,0)) += 1;
+        //   As(.As_index_locs(1,1)) += 1;
+        // ~~~~~~~~~~~~~~~
+        Stmt gatherLocs;
+        if (dims[0] != target && dims[1] != target) {
+          // vv matrix
+          gatherLocs = gatherVVLocs(index, cardinality, eps, &indexToLocs);
+        }
+        else if (dims[0] != target && dims[1] == target) {
+          // ve matrix
+          gatherLocs = gatherVELocs(index, cardinality, eps, lv, &indexToLocs);
+        }
+        else if (dims[0] == target && dims[1] != target) {
+          // ev matrix
+          gatherLocs = gatherEVLocs(index, cardinality, eps, lv, &indexToLocs);
+        }
+        else {
+          unreachable;
+        }
+        initLocs.push_back(Comment::make("Gather locs from " + index.getName(),
+                                         gatherLocs, true));
+      }
+    }
 
-    Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
-    locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
-
-    Stmt computeLocs = Block::make({VarDecl::make(eps),
-                                    epsInitLoop,
-                                    VarDecl::make(locs),
-                                    locsInitLoop});
-
-    return Block::make(computeLocs,
-                       rewriter.inlineMapFunc(map, lv, storage, eps, locs));
+    return Block::make(Block::make(initLocs),
+                       rewriter.inlineMapFunc(map,lv,storage,eps,indexToLocs));
   }
-  // Map through local coordinate structure to build matrix
-  // TODO: This branching should be handled in a less ad-hoc manner
   else if (returnsMatrix && map->through.defined()) {
+    // Map through local coordinate structure to build matrix
     // If we're assemblying using local coordinate structure, we can build
     // locs at compile time (clocs) and use this in lowering the map to generate
     // the proper indices.
@@ -376,7 +513,8 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
       storage->getStorage(mapVar).getTensorIndex().setStencilLayout(s);
     }
     iassert(ivs.size() > 0);
-    return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
+    return rewriter.inlineMapFunc(map, lv, storage, Var(),
+                                  std::map<TensorIndex,Var>(), clocs, ivs);
   }
   else {
     return rewriter.inlineMapFunc(map, lv, storage);

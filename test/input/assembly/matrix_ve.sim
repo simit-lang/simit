@@ -1,0 +1,20 @@
+element Vertex
+  c : int;
+end
+
+element Edge
+  a : int;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func asm(e : Edge, p : (Vertex*2)) -> A : tensor[V,E](int)
+  A(p(0), e) = 1;
+  A(p(1), e) = 1;
+end
+
+export func main()
+  A = map asm to E reduce +;
+  V.c = A * E.a;
+end

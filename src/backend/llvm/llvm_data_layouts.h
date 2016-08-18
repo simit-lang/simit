@@ -28,10 +28,6 @@ public:
   virtual llvm::Value* getTotalSize() = 0;
   /// Get the endpoints array
   virtual llvm::Value* getEpsArray() = 0;
-  /// Get the neighbors starts array
-  virtual llvm::Value* getNbrsStartArray() = 0;
-  /// Get the neighbors array
-  virtual llvm::Value* getNbrsArray() = 0;
   /// Get the offset to the fields pointers
   virtual int getFieldsOffset() = 0;
 };
@@ -44,8 +40,6 @@ public:
   virtual llvm::Value* getTotalSize();
 
   inline virtual llvm::Value* getEpsArray() {unreachable; return nullptr;}
-  inline virtual llvm::Value* getNbrsStartArray() {unreachable; return nullptr;}
-  inline virtual llvm::Value* getNbrsArray() {unreachable; return nullptr;}
 
   virtual int getFieldsOffset();
 
@@ -68,8 +62,6 @@ private:
 class UnstructuredEdgeSetLayout : public UnstructuredSetLayout {
 public:
   virtual llvm::Value* getEpsArray();
-  virtual llvm::Value* getNbrsStartArray();
-  virtual llvm::Value* getNbrsArray();
 
   virtual int getFieldsOffset();
 
@@ -95,8 +87,6 @@ public:
   virtual llvm::Value* getSize(unsigned i);
   virtual llvm::Value* getTotalSize();
   virtual llvm::Value* getEpsArray();
-  virtual llvm::Value* getNbrsStartArray();
-  virtual llvm::Value* getNbrsArray();
   virtual int getFieldsOffset();
 
   static llvm::Value* makeSet(Set *actual, ir::Type type);

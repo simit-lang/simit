@@ -55,7 +55,7 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
       } else {
         (*msg) << "Error";
       }
-      (*msg) << " in " << func << " in file " << file << ":" << line;
+      (*msg) << " in " << func << " in file " << file << ":" << line << endl;
       break;
     case Internal:
       (*msg) << "Internal ";
@@ -66,15 +66,18 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
       }
       (*msg) << " at " << file << ":" << line << " in " << func;
       if (conditionString) {
-        (*msg)  << endl << " Condition failed: " << conditionString << endl;
+        (*msg)  << endl << " Condition failed: " << conditionString;
       }
+      (*msg) << endl;
       break;
     case Temporary:
       (*msg) << "Temporary assumption broken";
-      (*msg) << " at " << file << ":" << line;
+      (*msg) << " at " << file << ":" << line << endl;
+      (*msg) << " Not supported yet, but planned for the future";
       if (conditionString) {
-        (*msg) << endl << " Condition failed: " << conditionString << endl;
+        (*msg) << endl << " Condition failed: " << conditionString;
       }
+      (*msg) << endl;
       break;
   }
   (*msg) << " ";
@@ -82,6 +85,8 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
 
 // Force the classes to exist, even if exceptions are off
 void ErrorReport::explode() {
+//   assert(false);  // Uncomment to trigger an abort debuggers can break at
+
   // TODO: Add an option to error out on warnings too
   if (warning) {
     std::cerr << msg->str();
@@ -89,7 +94,7 @@ void ErrorReport::explode() {
     return;
   }
 
-  std::cerr << msg->str() << "\n";
+  std::cerr << msg->str() << endl;
   delete msg;
   throw SimitException();
   exit(1);

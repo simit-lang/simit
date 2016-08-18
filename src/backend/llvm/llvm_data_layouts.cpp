@@ -6,7 +6,6 @@
 #include "llvm_types.h"
 #include "types.h"
 #include "graph.h"
-#include "graph_indices.h"
 
 #include "llvm/IR/Value.h"
 #include "llvm/IR/IRBuilder.h"
@@ -26,7 +25,7 @@ llvm::Value* UnstructuredSetLayout::getTotalSize() {
 }
 
 int UnstructuredSetLayout::getFieldsOffset() {
-  // Always only the set size to skip
+  // Must skip size
   return 1;
 }
 
@@ -72,19 +71,9 @@ llvm::Value* UnstructuredEdgeSetLayout::getEpsArray() {
       value, {1}, util::toString(set)+".eps()");
 }
 
-llvm::Value* UnstructuredEdgeSetLayout::getNbrsStartArray() {
-  return builder->CreateExtractValue(
-      value, {2}, util::toString(set)+".nbrs_start()");
-}
-
-llvm::Value* UnstructuredEdgeSetLayout::getNbrsArray() {
-  return builder->CreateExtractValue(
-      value, {3}, util::toString(set)+".nbrs()");
-}
-
 int UnstructuredEdgeSetLayout::getFieldsOffset() {
-  // Must skip size, eps, nbrs_start, and nbrs
-  return 4;
+  // Must skip size, eps
+  return 2;
 }
 
 llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
@@ -96,23 +85,21 @@ llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
 
   // Set size
   setData.push_back(llvmInt(actual->getSize()));
+
   // Endpoints index
   setData.push_back(llvmPtr(LLVM_INT_PTR, actual->getEndpointsData()));
-  // Neighbor indices
-  const internal::NeighborIndex *nbrs = actual->getNeighborIndex();
-  setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
-  setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
+
   // Fields
   for (auto &field : setType->elementType.toElement()->fields) {
-    assert(field.type.isTensor());
+    iassert(field.type.isTensor());
     setData.push_back(llvmPtr(*field.type.toTensor(),
                               actual->getFieldData(field.name)));
   }
   return llvm::ConstantStruct::get(llvmSetType, setData);
 }
 
-void UnstructuredEdgeSetLayout::writeSet(
-    Set *actual, ir::Type type, void *externPtr) {
+void UnstructuredEdgeSetLayout::writeSet(Set *actual, ir::Type type,
+                                         void *externPtr) {
   iassert(actual->getKind() == Set::Unstructured);
 
   const ir::SetType *setType = type.toSet();
@@ -120,17 +107,14 @@ void UnstructuredEdgeSetLayout::writeSet(
   // Set size
   ((int*)externPtr)[0] = actual->getSize();
   int **externPtrCast = (int**)(((int*)externPtr)+1);
+
   // Endpoints index
   externPtrCast[0] = actual->getEndpointsData();
-  // Neighbor indices
-  const internal::NeighborIndex *nbrs = actual->getNeighborIndex();
-  ((const int**)externPtrCast)[1] = nbrs->getStartIndex();
-  ((const int**)externPtrCast)[2] = nbrs->getNeighborIndex();
 
   // Fields
   void **externPtrFieldCast = (void**)(externPtrCast+3);
   for (auto &field : setType->elementType.toElement()->fields) {
-    assert(field.type.isTensor());
+    iassert(field.type.isTensor());
     *externPtrFieldCast = actual->getFieldData(field.name);
     externPtrFieldCast++;
   }
@@ -163,23 +147,9 @@ llvm::Value* LatticeEdgeSetLayout::getEpsArray() {
       value, {1}, util::toString(set)+".eps()");
 }
 
-llvm::Value* LatticeEdgeSetLayout::getNbrsStartArray() {
-  iassert(!kIndexlessStencils)
-      << "Neighbors start array undefined when in indexless mode";
-  return builder->CreateExtractValue(
-      value, {2}, util::toString(set)+".nbrs_start()");
-}
-
-llvm::Value* LatticeEdgeSetLayout::getNbrsArray() {
-  iassert(!kIndexlessStencils)
-      << "Neighbors array undefined when in indexless mode";
-  return builder->CreateExtractValue(
-      value, {3}, util::toString(set)+".nbrs()");
-}
-
 int LatticeEdgeSetLayout::getFieldsOffset() {
-  // Must skip size, eps, nbrs_start, and nbrs
-  return 4;
+  // Must skip size, eps
+  return 2;
 }
 
 llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
@@ -201,18 +171,12 @@ llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
   // CSR data: only set if kIndexlessStencils is false, otherwise
   // we set these to NULL.
   if (kIndexlessStencils) {
-    // Three NULL pointers for endpoints, nbrs_start, and nbrs
-    setData.push_back(llvmPtr(LLVM_INT_PTR, NULL));
-    setData.push_back(llvmPtr(LLVM_INT_PTR, NULL));
+    // NULL pointers for endpoints
     setData.push_back(llvmPtr(LLVM_INT_PTR, NULL));
   }
   else {
     // Endpoints index
     setData.push_back(llvmPtr(LLVM_INT_PTR, actual->getEndpointsData()));
-    // Neighbor indices
-    const internal::NeighborIndex *nbrs = actual->getNeighborIndex();
-    setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
-    setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
   }
     
   // Fields
@@ -245,10 +209,6 @@ void LatticeEdgeSetLayout::writeSet(Set *actual, ir::Type type, void *externPtr)
   else {
     // Endpoints index
     externPtrCast[1] = actual->getEndpointsData();
-    // Neighbor indices
-    const internal::NeighborIndex *nbrs = actual->getNeighborIndex();
-    ((const int**)externPtrCast)[2] = nbrs->getStartIndex();
-    ((const int**)externPtrCast)[3] = nbrs->getNeighborIndex();
   }
 
   void **externPtrFieldCast = (void**)(externPtrCast+4);

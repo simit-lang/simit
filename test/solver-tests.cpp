@@ -19,142 +19,97 @@ using namespace simit;
 using namespace simit::ir;
 
 TEST(solver, solve) {
-  // Points
-  Set points;
-  FieldRef<simit_float> b = points.addField<simit_float>("b");
-  FieldRef<simit_float> c = points.addField<simit_float>("c");
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<simit_float> c = V.addField<simit_float>("c");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b.set(v0, 2.0);
+  b.set(v1, 1.0);
+  b.set(v2, 4.0);
 
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
+  Set E(V,V);
+  FieldRef<simit_float> a = E.addField<simit_float>("a");
+  ElementRef e0 = E.add(v0,v1);
+  ElementRef e1 = E.add(v1,v2);
+  a.set(e0, 2.0);
+  a.set(e1, 1.0);
 
-  b.set(p0, 2.0);
-  b.set(p1, 1.0);
-  b.set(p2, 4.0);
-
-  // Taint c
-  c.set(p0, 42.0);
-  c.set(p2, 42.0);
-
-  // Springs
-  Set springs(points,points);
-  FieldRef<simit_float> a = springs.addField<simit_float>("a");
-
-  ElementRef s0 = springs.add(p0,p1);
-  ElementRef s1 = springs.add(p1,p2);
-
-  a.set(s0, 2.0);
-  a.set(s1, 1.0);
-
-  // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
-
-  func.bind("points", &points);
-  func.bind("springs", &springs);
-
+  func.bind("V", &V);
+  func.bind("E", &E);
   func.runSafe();
 
-  // Check that inputs are preserved
-  SIMIT_ASSERT_FLOAT_EQ(2.0, b.get(p0));
-  SIMIT_ASSERT_FLOAT_EQ(1.0, b.get(p1));
-  SIMIT_ASSERT_FLOAT_EQ(4.0, b.get(p2));
-
-  // Check that outputs are correct
-  ASSERT_NEAR(2.0, (double)c.get(p0), 0.00001);
-  ASSERT_NEAR(1.0, (double)c.get(p1), 0.00001);
-  ASSERT_NEAR(4.0, (double)c.get(p2), 0.00001);
+  ASSERT_NEAR(2.0, (double)c.get(v0), 0.00001);
+  ASSERT_NEAR(1.0, (double)c.get(v1), 0.00001);
+  ASSERT_NEAR(4.0, (double)c.get(v2), 0.00001);
 }
 
 TEST(solver, solve_blocked) {
-  // Points
-  Set points;
-  FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
-  FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
+  Set V;
+  FieldRef<simit_float,2> b = V.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> c = V.addField<simit_float,2>("c");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b.set(v0, {1.0, 3.0});
+  b.set(v1, {5.0, 7.0});
+  b.set(v2, {2.0, 4.0});
 
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
+  Set E(V,V);
+  FieldRef<simit_float,2,2> a = E.addField<simit_float,2,2>("a");
+  ElementRef e0 = E.add(v0,v1);
+  ElementRef e1 = E.add(v1,v2);
+  a.set(e0, {1.0, 2.0, 3.0, 4.0});
+  a.set(e1, {5.0, 6.0, 7.0, 8.0});
 
-  b.set(p0, {1.0, 3.0});
-  b.set(p1, {5.0, 7.0});
-  b.set(p2, {2.0, 4.0});
-
-  // Taint c
-  c.set(p0, {1.0, 1.0});
-  c.set(p2, {1.0, 1.0});
-
-  // Springs
-  Set springs(points,points);
-  FieldRef<simit_float,2,2> a = springs.addField<simit_float,2,2>("a");
-
-  ElementRef s0 = springs.add(p0,p1);
-  ElementRef s1 = springs.add(p1,p2);
-
-  a.set(s0, {1.0, 2.0, 3.0, 4.0});
-  a.set(s1, {5.0, 6.0, 7.0, 8.0});
-
-  // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
-
-  func.bind("points", &points);
-  func.bind("springs", &springs);
-
+  func.bind("V", &V);
+  func.bind("E", &E);
   func.runSafe();
 
-  // Check that outputs are correct
-  // They're not going to be very close because the matrix is sucky for solves
-  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
-  TensorRef<simit_float,2> c0 = c.get(p0);
+  TensorRef<simit_float,2> c0 = c.get(v0);
   ASSERT_NEAR(1.0, c0(0), 1.0);
   ASSERT_NEAR(3.0, c0(1), 1.0);
 
-  TensorRef<simit_float,2> c1 = c.get(p1);
+  TensorRef<simit_float,2> c1 = c.get(v1);
   ASSERT_NEAR(5.0, c1(0), 1.0);
   ASSERT_NEAR(7.0, c1(1), 1.0);
 
-  TensorRef<simit_float,2> c2 = c.get(p2);
+  TensorRef<simit_float,2> c2 = c.get(v2);
   ASSERT_NEAR(2.0, c2(0), 1.0);
   ASSERT_NEAR(4.0, c2(1), 1.0);
 }
 
 TEST(solver, chol) {
-  // Points
-  Set points;
-  FieldRef<simit_float> b = points.addField<simit_float>("b");
-  FieldRef<simit_float> x = points.addField<simit_float>("x");
-  FieldRef<bool> fixed = points.addField<bool>("fixed");
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 10.0;
+  b(v1) = 20.0;
+  b(v2) = 30.0;
+  fixed(v0) = true;
 
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
 
-  b(p0) = 10.0;
-  b(p1) = 20.0;
-  b(p2) = 30.0;
-
-  fixed(p0) = true;
-
-  // Springs
-  Set springs(points,points);
-
-  springs.add(p0,p1);
-  springs.add(p1,p2);
-
-  // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
-
-  func.bind("points",  &points);
-  func.bind("springs", &springs);
-
+  func.bind("V", &V);
+  func.bind("E", &E);
   func.runSafe();
 
-  // Check results
-  SIMIT_ASSERT_FLOAT_EQ( 20.0, x(p0));
-  SIMIT_ASSERT_FLOAT_EQ(-30.0, x(p1));
-  SIMIT_ASSERT_FLOAT_EQ( 60.0, x(p2));
+  SIMIT_ASSERT_FLOAT_EQ( 20.0, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-30.0, x(v1));
+  SIMIT_ASSERT_FLOAT_EQ( 60.0, x(v2));
 }
 
 template<typename Float>
@@ -181,41 +136,31 @@ void dgetB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
 }
 
 TEST(solver, cholmat) {
-  // Points
-  Set points;
-  FieldRef<simit_float> b = points.addField<simit_float>("b");
-  FieldRef<simit_float> x = points.addField<simit_float>("x");
-  FieldRef<bool> fixed = points.addField<bool>("fixed");
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1.0;
+  b(v1) = 1.0;
+  b(v2) = 1.0;
+  fixed(v0) = true;
 
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
 
-  b(p0) = 1.0;
-  b(p1) = 1.0;
-  b(p2) = 1.0;
-
-  fixed(p0) = true;
-
-  // Springs
-  Set springs(points,points);
-
-  springs.add(p0,p1);
-  springs.add(p1,p2);
-
-  // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
-
-  func.bind("points",  &points);
-  func.bind("springs", &springs);
-
+  func.bind("V", &V);
+  func.bind("E", &E);
   func.runSafe();
 
-  // Check results
-  SIMIT_ASSERT_FLOAT_EQ( 22.0, x(p0));
-  SIMIT_ASSERT_FLOAT_EQ(-33.0, x(p1));
-  SIMIT_ASSERT_FLOAT_EQ( 65.0, x(p2));
+  SIMIT_ASSERT_FLOAT_EQ( 22.0, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-33.0, x(v1));
+  SIMIT_ASSERT_FLOAT_EQ( 65.0, x(v2));
 }
 
 #endif

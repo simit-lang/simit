@@ -318,7 +318,7 @@ private:
         const TensorType* type = var.getType().toTensor();
 
         if (type->order() < 2) {
-          // Dense
+          // Scalars and vectors are dense
           storage->add(var, TensorStorage(TensorStorage::Dense));
         }
         else if (op->through.defined()) {
@@ -329,8 +329,8 @@ private:
             storage->add(var, TensorStorage(TensorStorage::Stencil, index));
           }
           else {
-            peBuilder.computePathExpression(op);
             // Indexed Stencil
+            peBuilder.computePathExpression(op);
             auto index = getTensorIndex(var);
             storage->add(var, TensorStorage(TensorStorage::Indexed, index));
           }
@@ -347,8 +347,8 @@ private:
       for (const Var& var : op->vars) {
         Type type = var.getType();
         if (type.isTensor() && !isScalar(type)) {
-          // For now we'll store all assembled vectors as dense and other tensors
-          // as system reduced
+          // For now we'll store all assembled vectors as dense and other
+          // tensors as system reduced
           TensorStorage tensorStorage;
           const TensorType* tensorType = type.toTensor();
           if (tensorType->order() == 1) {
