@@ -10,8 +10,8 @@ extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
 func asm(e : Edge, p : (Vertex*2)) -> A : tensor[V,E](int)
-  A(e, p(0)) = 1;
-  A(e, p(1)) = 1;
+  A(p(0), e) = 1;
+  A(p(1), e) = 1;
 end
 
 export func main()
