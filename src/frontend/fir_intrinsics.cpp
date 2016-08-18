@@ -67,21 +67,33 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
   threeByThreeTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   threeByThreeTensorType->indexSets = {threeDim, threeDim};
 
-  auto genericParam = std::make_shared<fir::GenericParam>();
-  genericParam->type = fir::GenericParam::Type::UNKNOWN;
-  genericParam->name = "N";
+  auto N = std::make_shared<fir::GenericParam>();
+  N->type = fir::GenericParam::Type::UNKNOWN;
+  N->name = "N";
+
+  auto M = std::make_shared<fir::GenericParam>();
+  M->type = fir::GenericParam::Type::UNKNOWN;
+  M->name = "M";
 
   const auto nDim = std::make_shared<fir::GenericIndexSet>();
   nDim->type = fir::GenericIndexSet::Type::UNKNOWN;
-  nDim->setName = "N";
+  nDim->setName = N->name;
+
+  const auto mDim = std::make_shared<fir::GenericIndexSet>();
+  mDim->type = fir::GenericIndexSet::Type::UNKNOWN;
+  mDim->setName = M->name;
 
   const auto nVectorType = std::make_shared<NDTensorType>();
   nVectorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   nVectorType->indexSets = {nDim};
 
-  const auto nMatrixType = std::make_shared<NDTensorType>();
-  nMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
-  nMatrixType->indexSets = {nDim, nDim};
+  const auto nnMatrixType = std::make_shared<NDTensorType>();
+  nnMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  nnMatrixType->indexSets = {nDim, nDim};
+
+  const auto nmMatrixType = std::make_shared<NDTensorType>();
+  nmMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  nmMatrixType->indexSets = {nDim, mDim};
 
   const auto opaqueType = std::make_shared<OpaqueType>();
 
@@ -160,9 +172,9 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                {makeTensorType(ScalarType::Type::FLOAT)});
   addIntrinsic(&intrinsics,
                ir::intrinsics::chol().getName(),
-               {nMatrixType},
+               {nnMatrixType},
                {opaqueType},
-               {genericParam});
+               {N});
   addIntrinsic(&intrinsics,
                ir::intrinsics::cholfree().getName(),
                {opaqueType},
@@ -172,12 +184,12 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                ir::intrinsics::lltsolve().getName(),
                {opaqueType, nVectorType},
                {nVectorType},
-               {genericParam});
+               {N});
   addIntrinsic(&intrinsics,
                ir::intrinsics::lltmatsolve().getName(),
-               {opaqueType, nMatrixType},
-               {nMatrixType},
-               {genericParam});
+               {opaqueType, nmMatrixType},
+               {nmMatrixType},
+               {N, M});
 
   // Complex numbers
   addScalarIntrinsic(&intrinsics,
