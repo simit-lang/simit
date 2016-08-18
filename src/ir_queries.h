@@ -42,9 +42,8 @@ inline std::vector<Stmt> splitOnPredicate(
   const T* found = nullptr;
   Stmt foundStmt;
   // Find the first op that matches the given predicate. If this operation
-  // lives inside any conditionals, keep it wrapped in those. If it lives
-  // inside any while loops, throw an error (don't know how to handle these
-  // without changing semantics).
+  // lives inside any conditionals, keep it wrapped in those. Similarly for
+  // while loops.
   class SearchVisitor : public IRVisitor {
   public:
     SearchVisitor(std::function<bool(const T*)> pred)
@@ -78,7 +77,14 @@ inline std::vector<Stmt> splitOnPredicate(
       }
     }
 
-    void visit(const While* op) { not_supported_yet; }
+    void visit(const While* op) {
+      if (foundStmt.defined()) return;
+
+      op->body.accept(this);
+      if (foundStmt.defined()) {
+        foundStmt = While::make(op->condition, foundStmt);
+      }
+    }
   };
   SearchVisitor searchVisitor(pred);
   stmt.accept(&searchVisitor);

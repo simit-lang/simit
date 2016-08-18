@@ -47,7 +47,7 @@ static CUdeviceptr getGlobalDevPtr(CUmodule& cudaModule, std::string name,
   unsigned int attrVal;
   checkCudaErrors(cuPointerGetAttribute(
       &attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
-  iassert(attrVal == 1);
+  iassert(attrVal == 1) << "Non-managed memory for global: " << name;
 
   return globalPtr;
 }
