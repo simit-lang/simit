@@ -14,7 +14,6 @@
 
 #include "error.h"
 #include "graph.h"
-#include "graph_indices.h"
 #include "ir.h"
 #include "stencils.h"
 #include "tensor_index.h"
@@ -252,8 +251,6 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
         (const void*)nullptr, nullDevPtr, 0);
     pushedBufs.push_back(nullHandle);
     data.endpoints = nullHandle;
-    data.startIndex = nullHandle;
-    data.nbrIndex = nullHandle;
     return data;
   }
 
@@ -277,41 +274,6 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
         endpoints, endpointBuffer, size);
     pushedBufs.push_back(endpointsHandle);
     data.endpoints = endpointsHandle;
-
-    // Neighbor index
-    const internal::NeighborIndex *nbrs = set->getNeighborIndex();
-    const int *startIndex = nbrs->getStartIndex();
-    size_t startSize = (set->getEndpointSet(0)->getSize()+1) * sizeof(int);
-    const int *nbrIndex = nbrs->getNeighborIndex();
-    size_t nbrSize = nbrs->getSize() * sizeof(int);
-    // Sentinel is present and correct
-    iassert(startIndex[set->getEndpointSet(0)->getSize()] == nbrs->getSize())
-        << "Sentinel: " << startIndex[set->getEndpointSet(0)->getSize()]
-        << " does not match neighbor size: " << nbrs->getSize();
-    CUdeviceptr *startBuffer = new CUdeviceptr();
-    CUdeviceptr *nbrBuffer = new CUdeviceptr();
-
-    iassert(startSize != 0)
-        << "Cannot allocate edge set with zero-sized start array: "
-        << set->getName();
-    checkCudaErrors(cuMemAlloc(startBuffer, startSize));
-    checkCudaErrors(cuMemcpyHtoD(*startBuffer, startIndex, startSize));
-    // Pushed bufs expects non-const pointers, because some are written to.
-    DeviceDataHandle *startIndexHandle = new DeviceDataHandle(
-        const_cast<int*>(startIndex), startBuffer, startSize);
-    pushedBufs.push_back(startIndexHandle);
-    data.startIndex = startIndexHandle;
-
-    iassert(nbrSize != 0)
-        << "Cannot allocate edge set with zero-sized neighbor array: "
-        << set->getName();
-    checkCudaErrors(cuMemAlloc(nbrBuffer, nbrSize));
-    checkCudaErrors(cuMemcpyHtoD(*nbrBuffer, nbrIndex, nbrSize));
-    // Pushed bufs expects non-const pointers, because some are written to.
-    DeviceDataHandle *nbrIndexHandle = new DeviceDataHandle(
-        const_cast<int*>(nbrIndex), nbrBuffer, nbrSize);
-    pushedBufs.push_back(nbrIndexHandle);
-    data.nbrIndex = nbrIndexHandle;
   }
   else if (setType->isa<ir::LatticeLinkSetType>()) {
     // Lattice link set type format leaves room for eps, nbrs_start and nbrs
@@ -321,8 +283,6 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
         (const void*)nullptr, nullDevPtr, 0);
     pushedBufs.push_back(nullHandle);
     data.endpoints = nullHandle;
-    data.startIndex = nullHandle;
-    data.nbrIndex = nullHandle;
   }
 
   // Fields
@@ -555,14 +515,8 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
     }
     // Edge set
     if (pushedData.endpoints != nullptr) {
-      iassert(pushedData.startIndex != nullptr);
-      iassert(pushedData.nbrIndex != nullptr);
       setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
           *(pushedData.endpoints->devBuffer))));
-      setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
-          *(pushedData.startIndex->devBuffer))));
-      setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
-          *(pushedData.nbrIndex->devBuffer))));
     }
     // Fields
     ir::Type ety = setType->elementType;
@@ -880,14 +834,8 @@ GPUFunction::init() {
         setData.resize(setData.size() + 3*sizeof(void*));
         memcpy(setData.data()+idx, (void*)(pushedData.endpoints->devBuffer), sizeof(void*));
         idx += sizeof(void*);
-        memcpy(setData.data()+idx, (void*)(pushedData.startIndex->devBuffer), sizeof(void*));
-        idx += sizeof(void*);
-        memcpy(setData.data()+idx, (void*)(pushedData.nbrIndex->devBuffer), sizeof(void*));
-        idx += sizeof(void*);
         iassert(idx == setData.size());
         handleVec.push_back(pushedData.endpoints);
-        handleVec.push_back(pushedData.startIndex);
-        handleVec.push_back(pushedData.nbrIndex);
       }
       // Fields
       // NOTE: This code assumes the width of void* is the same as

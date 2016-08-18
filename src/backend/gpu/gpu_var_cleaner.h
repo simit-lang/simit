@@ -12,6 +12,10 @@ class GpuVarCleaner : public VarCleaner {
 private:
   std::set<std::string> seenNames;
   std::string makeUniqueName(std::string name) {
+    if (!util::contains(seenNames, name)) {
+      seenNames.insert(name);
+      return name;
+    }
     int index = 0;
     while (util::contains(seenNames, name + "_" + std::to_string(index))) {
       ++index;

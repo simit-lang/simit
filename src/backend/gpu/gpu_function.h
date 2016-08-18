@@ -90,8 +90,6 @@ class GPUFunction : public LLVMFunction {
 
     // Only included if this is an edge set
     DeviceDataHandle *endpoints;
-    DeviceDataHandle *startIndex; // row starts
-    DeviceDataHandle *nbrIndex; // col indexes
 
     // Fields
     std::vector<DeviceDataHandle*> fields;
