@@ -21,6 +21,9 @@
 #include "backend/llvm/llvm_codegen.h"
 #include "backend/llvm/llvm_util.h"
 
+std::string libdevicePtxCache;
+std::string intrinsicsPtxCache;
+
 /// Declare method in the NVPTX LLVM library
 namespace llvm {
 ModulePass *createNVVMReflectPass(const StringMap<int>& Mapping);
@@ -138,6 +141,11 @@ extern "C" unsigned char simit_gpu_intrinsics[];
 extern "C" int simit_gpu_intrinsics_length;
 
 std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
+  if (libdevicePtxCache.size() > 0 &&
+      intrinsicsPtxCache.size() > 0) {
+    return {libdevicePtxCache, intrinsicsPtxCache};
+  }
+
   // Build libdevice (math libraries, etc.) module
   //
   // Reference:
@@ -187,6 +195,10 @@ std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
   setNVVMModuleProps(intrinsicsModule.get());
   maybeLogModule(intrinsicsModule.get(), "simit-intrinsics.ll");
   std::string intrinsicsPtx = generatePtx(intrinsicsModule.get(), devMajor, devMinor);
+
+  // Cache the compiled libries
+  libdevicePtxCache = libdevicePtx;
+  intrinsicsPtxCache = intrinsicsPtx;
 
   return {libdevicePtx, intrinsicsPtx};
 }
