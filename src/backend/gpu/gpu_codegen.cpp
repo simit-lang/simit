@@ -118,8 +118,9 @@ std::string generatePtx(llvm::Module *module, int devMajor, int devMinor) {
   llvm::SmallString<8> ptxStr;
   llvm::raw_svector_ostream outStream(ptxStr);
   outStream.SetUnbuffered();
-  iassert(!targetMachine->addPassesToEmitFile(
-      pm, outStream, targetMachine->CGFT_AssemblyFile, false));
+  bool failed = targetMachine->addPassesToEmitFile(
+      pm, outStream, targetMachine->CGFT_AssemblyFile, false);
+  iassert(!failed);
 
   pm.run(*module);
   outStream.flush();
