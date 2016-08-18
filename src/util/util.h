@@ -63,6 +63,9 @@ std::string indent(std::string str, unsigned int num);
 std::vector<std::string> split(const std::string &str, const std::string &delim,
                                bool keepDelim = false);
 
+/// Print string with escaped characters.
+std::string escape(const std::string &str);
+
 /// Load text from file, returning 0 if succesfull, false otherwise.
 int loadText(const std::string &file, std::string *text);
 

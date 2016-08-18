@@ -90,6 +90,11 @@ export func main()
   print ; 
 end
 
+%%% bad-print
+export func main()
+  print "a" "\n";
+end
+
 %%% bad-assign-1
 export func main()
   = 1;
