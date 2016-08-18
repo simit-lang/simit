@@ -72,7 +72,8 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
       break;
     case Temporary:
       (*msg) << "Temporary assumption broken";
-      (*msg) << " at " << file << ":" << line;
+      (*msg) << " at " << file << ":" << line << endl;
+      (*msg) << " Not supported yet, but planned for the future";
       if (conditionString) {
         (*msg) << endl << " Condition failed: " << conditionString;
       }

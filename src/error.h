@@ -190,18 +190,8 @@ struct ErrorReport {
   #define ierror simit::internal::Dummy()
 #endif
 
-#define tassert(c)                                                             \
-  simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,      \
-                               simit::internal::ErrorReport::Temporary, false)
-#define terror                                                                 \
-  simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,  \
-                               simit::internal::ErrorReport::Temporary, false)
-
 #define unreachable                                                            \
   ierror << "reached unreachable location"
-
-#define not_supported_yet                                                      \
-  ierror << "Not supported yet, but planned for the future\n "
 
 // internal assert helpers
 #define iassert_scalar(a)                                                      \
@@ -229,6 +219,17 @@ struct ErrorReport {
 #define uwarning                                                               \
   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__, false, nullptr, \
                                simit::internal::ErrorReport::User, true)
+
+// Temporary assertions (planned for the future)
+#define tassert(c)                                                             \
+  simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,      \
+                               simit::internal::ErrorReport::Temporary, false)
+#define terror                                                                 \
+  simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,  \
+                               simit::internal::ErrorReport::Temporary, false)
+
+#define not_supported_yet terror
+
 }}
 
 #endif
