@@ -956,7 +956,7 @@ Expr IndexedTensor::make(Expr tensor, std::vector<IndexVar> indexVars) {
   for (size_t i=0; i < indexVars.size(); ++i) {
     iassert(indexVars[i].getDomain() == dimensions[i])
         << "IndexVar domain does not match tensor dimension "
-        << "for var " << indexVars[i]
+        << "for var " << indexVars[i] << ": "
         << indexVars[i].getDomain() << " != " << dimensions[i];
   }
 #endif

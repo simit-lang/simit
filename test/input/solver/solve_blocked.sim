@@ -1,16 +1,16 @@
-element Point
+element Vertex
   b : tensor[2](float);
   c : tensor[2](float);
 end
 
-element Spring
+element Edge
   a : tensor[2,2](float);
 end
 
-extern points  : set{Point};
-extern springs : set{Spring}(points,points);
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
 
-func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](tensor[2,2](float)))
+func dist_a(s : Edge, p : (Vertex*2)) -> (A : tensor[V,V](tensor[2,2](float)))
   A(p(0),p(0)) = 15.0 * s.a;
   A(p(0),p(1)) = s.a;
   A(p(1),p(0)) = s.a;
@@ -18,7 +18,7 @@ func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](tensor[2,2]
 end
 
 export func main()
-  A = map dist_a to springs reduce +;
-  c = A \ points.b;
-  points.c = A * c;
+  A = map dist_a to E reduce +;
+  c = A \ V.b;
+  V.c = A * c;
 end

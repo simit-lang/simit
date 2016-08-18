@@ -336,7 +336,9 @@ Function::FuncType LLVMFunction::init() {
     llvm::SmallVector<llvm::Value*, 8> args;
     auto llvmArgIt = llvmFunc->getArgumentList().begin();
     for (const std::string& formal : formals) {
-      iassert(util::contains(arguments, formal));
+      uassert(util::contains(arguments, formal))
+          << "Could not find formal argument " << formal <<  " in "
+          << llvmFunc->getName().str();
 
       llvm::Argument* llvmFormal = llvmArgIt++;
       Actual* actual = arguments.at(formal).get();

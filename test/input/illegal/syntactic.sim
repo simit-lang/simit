@@ -16,8 +16,6 @@ end
 %%% bad-func-decl
 func foo
 end
-proc bar
-end
 
 %%% inout-result
 func foo(i : int) -> (inout r : int)
@@ -27,7 +25,7 @@ end
 extern inout i : int;
 
 %%% var-tuple
-proc main
+export func main()
   var t : int;
   var u : (int * 2);
 end
@@ -37,7 +35,7 @@ const c : int;
 const d : int = 1;
 
 %%% bad-whiles
-proc main
+export func main()
   while while
   end
   while while
@@ -45,7 +43,7 @@ proc main
 end
 
 %%% bad-do-whiles
-proc main
+export func main()
   do
     i = 1;
   end while =
@@ -55,7 +53,7 @@ proc main
 end
 
 %%% bad-ifs
-proc main
+export func main()
   if set
   end
   if int
@@ -63,7 +61,7 @@ proc main
 end
 
 %%% bad-elifs
-proc main
+export func main()
   if true
     i = 1;
   elif =
@@ -72,14 +70,14 @@ proc main
 end
 
 %%% bad-if-elif
-proc main
+export func main()
   if set
   elif set
   end
 end
 
 %%% bad-fors
-proc main
+export func main()
   for i 1:2
   end
   for i 1:2
@@ -87,28 +85,23 @@ proc main
 end
 
 %%% bad-prints
-proc main
+export func main()
   print ; 
   print ; 
 end
 
 %%% bad-assign-1
-proc main
+export func main()
   = 1;
 end
 
-%%% bad-assign-2
-proc
-  () = 1;
-end
-
 %%% bad-expr-1
-proc main
+export func main()
   1 + * 2;
 end
 
 %%% bad-expr-2
-proc main
+export func main()
   1 and or 2;
 end
 
@@ -117,32 +110,32 @@ func f(a : 1)
 end
 
 %%% bad-tensor-type-1
-proc main
+export func main()
   var a : 1;
 end
 
 %%% bad-tensor-type-2
-proc main
+export func main()
   var a : tensor(tensor);
 end
 
 %%% bad-vector-type-1
-proc main
+export func main()
   var a : vector[2,2](int);
 end
 
 %%% bad-vector-type-2
-proc main
+export func main()
   var a : vector[2](tensor[2,2](float));
 end
 
 %%% bad-matrix-type-1
-proc main
+export func main()
   var a : matrix[2](int);
 end
 
 %%% bad-matrix-type-2
-proc main
+export func main()
   var a : matrix[2,2](tensor[2](float));
 end
 
@@ -167,7 +160,7 @@ func f(a : (E * E))
 end
 
 %%% bad-tensor-lit
-proc main
+export func main()
   v = [1 2[;
 end
 
@@ -180,6 +173,6 @@ extern S : set{V};
 func f(inout v : V)
 end
 
-proc main
+export func main()
   apply f to S reduce +;
 end

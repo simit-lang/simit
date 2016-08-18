@@ -404,7 +404,7 @@ TEST(system, add_twice) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
-TEST(system, gemm_simple) {
+TEST(system, gemm) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");

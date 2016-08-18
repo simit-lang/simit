@@ -132,7 +132,7 @@ public:
   }
 
   ir::Func getFunction(const std::string &name) {
-    iassert(containsFunction(name));
+    iassert(containsFunction(name)) << "Could not find function " << name;
     return functions[name];
   }
 

@@ -6,6 +6,7 @@
 
 #include "lower_indexexprs.h"
 #include "lower_scatter_workspace.h"
+#include "lower_transpose.h"
 #include "lower_matrix_multiply.h"
 
 #include "path_expressions.h"
@@ -99,6 +100,24 @@ inline bool isElwise(const IndexExpr* iexpr) {
   );
 
   return result;
+}
+
+inline bool isTranspose(const IndexExpr* iexpr) {
+  auto outvars  = iexpr->resultVars;
+  if (outvars.size() != 2) {
+    return false;
+  }
+  if (!isa<IndexedTensor>(iexpr->value)) {
+    return false;
+  }
+  auto invars = to<IndexedTensor>(iexpr->value)->indexVars;
+  if (invars.size() !=2) {
+    return false;
+  }
+  if (outvars[0] != invars[1] || outvars[1] != invars[0]) {
+    return false;
+  }
+  return true;
 }
 
 inline bool isGemm(const IndexExpr* iexpr) {
@@ -200,7 +219,7 @@ Func lowerIndexExpressions(Func func) {
       // Dispatch the index expression lowering to the correct lowering pass.
       enum Kind {Unknown, DenseResult, MatrixScale,
                  MatrixElwiseWithSameStructureOrDiagonal, MatrixElwise,
-                 MatrixMultiply};
+                 MatrixTranspose, MatrixMultiply};
       Kind kind = Unknown;
 
       iassert(iexpr->type.isTensor());
@@ -219,6 +238,9 @@ Func lowerIndexExpressions(Func func) {
                ? MatrixElwiseWithSameStructureOrDiagonal
                : MatrixElwise;
       }
+      else if (isTranspose(iexpr)) {
+        kind = MatrixTranspose;
+      }
       else if (isGemm(iexpr)) {
         kind = MatrixMultiply;
       }
@@ -236,14 +258,18 @@ Func lowerIndexExpressions(Func func) {
         case MatrixElwise:
           stmt = lowerScatterWorkspace(op->var, iexpr, &environment, storage);
           break;
+        case MatrixTranspose:
+          stmt = lowerTranspose(op->var, iexpr, &environment, storage);
+          break;
         case MatrixMultiply:
           stmt = lowerMatrixMultiply(op->var, iexpr, &environment, storage);
           break;
         case Unknown:
-          ierror << "unknown matrix expression";
+          unreachable << "unknown matrix expression";
           break;
       }
       iassert(stmt.defined());
+      stmt = Comment::make(util::toString(*op), stmt, false, true);
     }
 
     void visit(const FieldWrite *op) {
@@ -252,6 +278,10 @@ Func lowerIndexExpressions(Func func) {
         return;
       }
       stmt = lowerIndexStatement(op, &environment, *storage);
+
+      if (isa<IndexExpr>(op->value)) {
+        stmt = Comment::make(util::toString(*op), stmt, false, true);
+      }
     }
 
     void visit(const TensorWrite *op) {
@@ -260,6 +290,9 @@ Func lowerIndexExpressions(Func func) {
         return;
       }
       stmt = lowerIndexStatement(op, &environment, *storage);
+      if (isa<IndexExpr>(op->value)) {
+        stmt = Comment::make(util::toString(*op), stmt, false, true);
+      }
     }
 
     void visit(const IndexExpr *op) {

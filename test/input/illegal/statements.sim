@@ -47,7 +47,7 @@ end
 func foo(i : int)
 end
 
-proc main
+export func main()
   foo(:);
 end
 
@@ -55,7 +55,7 @@ end
 func foo(i : int)
 end
 
-proc main
+export func main()
   foo();
 end
 
@@ -63,7 +63,7 @@ end
 func foo(i : int)
 end
 
-proc main
+export func main()
   foo(1.0);
 end
 
@@ -77,29 +77,29 @@ end
 func bazz()
 end
 
-proc main
+export func main()
   foo(bar()) + foo(bazz());
 end
 
 %%% bad-call-5
-proc main
+export func main()
   cos(2.0, 3.0);
 end
 
 %%% bad-call-6
-proc main
+export func main()
   var t : matrix[2,2](float);
   norm(t);
 end
 
 %%% bad-call-7
-proc main
+export func main()
   var t : matrix[2,2](float);
   dot(t, t);
 end
 
 %%% bad-call-8
-proc main
+export func main()
   var u : vector[3](float);
   var v : vector[2](float);
   dot(u, v);
@@ -112,7 +112,7 @@ end
 
 const x : tensor[1](int) = [1];
 
-proc main
+export func main()
   g(x);
 end
 
@@ -148,18 +148,18 @@ export func main()
 end
 
 %%% bad-assign-1
-proc main
+export func main()
   1 = 1;
 end
 
 %%% bad-assign-2
-proc main
+export func main()
   const x : int = 1;
   x = 2;
 end
 
 %%% bad-assign-3
-proc main
+export func main()
   const x : tensor[1](int) = [1];
   x(0) = 2;
 end
@@ -170,7 +170,7 @@ end
 
 extern elems : set{E};
 
-proc main
+export func main()
   for e in elems
     ep = e;
   end
@@ -180,7 +180,7 @@ end
 func bar() -> (i : int)
 end
 
-proc main
+export func main()
   var t : float;
   t = bar();
 end
@@ -189,7 +189,7 @@ end
 func bazz() -> (i : int, j : int)
 end
 
-proc main
+export func main()
   t = bazz();
 end
 
@@ -210,24 +210,24 @@ extern S : set{V};
 func f(inout v : V) -> (r : int)
 end
 
-proc main
+export func main()
   apply f to S;
 end
 
 %%% bad-cond-1
-proc main
+export func main()
   while 1
   end
 end
 
 %%% bad-cond-2
-proc main
+export func main()
   if 1
   end
 end
 
 %%% bad-cond-3
-proc main
+export func main()
   if true
   elif 1.0
   elif 1.0 + 2.0
@@ -235,14 +235,14 @@ proc main
 end
 
 %%% bad-range-1
-proc main
+export func main()
   var r : int;
   for i in r
   end
 end
 
 %%% bad-range-2
-proc main
+export func main()
   for i in true:false
   end
 end
@@ -253,7 +253,7 @@ end
 
 extern x : set{E};
 
-proc main
+export func main()
   print x;
 end
 
