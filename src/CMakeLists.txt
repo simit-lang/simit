@@ -71,7 +71,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
 execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE)
 include_directories("${LLVM_INCLUDES}")
 
-set(LLVM_COMPONENTS "${LLVM_COMPONENTS}" core bitwriter x86 ipo)
+set(LLVM_COMPONENTS "${LLVM_COMPONENTS}" core bitwriter x86 ipo bitreader asmparser irreader mirparser)
 if (LLVM_VERSION LESS 35)
   list(APPEND LLVM_COMPONENTS jit)
 else()
