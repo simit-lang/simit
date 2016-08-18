@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
@@ -234,7 +235,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   pmBuilder.SLPVectorize = 1;
 
   llvm::DataLayout dataLayout(module);
-  setDataLayout(fpm, dataLayout, module);
+  module->setDataLayout(dataLayout);
 
   pmBuilder.populateFunctionPassManager(fpm);
   pmBuilder.populateModulePassManager(mpm);
