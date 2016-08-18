@@ -14,7 +14,7 @@ using namespace simit;
 using namespace simit::pe;
 using namespace std;
 
-TEST(PathIndex, Link) {
+TEST(pathindex, link) {
   PathIndexBuilder builder;
 
   simit::Set V;
@@ -75,7 +75,7 @@ TEST(PathIndex, Link) {
 }
 
 
-TEST(PathIndex, And) {
+TEST(pathindex, and) {
   PathIndexBuilder builder;
 
   simit::Set V;
@@ -113,7 +113,7 @@ TEST(PathIndex, And) {
 }
 
 
-TEST(PathIndex, Or) {
+TEST(pathindex, or) {
   PathIndexBuilder builder;
 
   simit::Set V;
@@ -152,7 +152,7 @@ TEST(PathIndex, Or) {
 }
 
 
-TEST(PathIndex, ExistAnd) {
+TEST(pathindex, exist_and) {
   PathIndexBuilder builder;
 
   simit::Set V;
@@ -232,7 +232,7 @@ TEST(PathIndex, ExistAnd) {
   VERIFY_INDEX(vevgvIndex, nbrs({{0,2}, {0,2}, {0,2}}));
 }
 
-TEST(PathIndex, ExistOr) {
+TEST(pathindex, exist_or) {
   PathIndexBuilder builder;
 
   simit::Set V;
@@ -306,7 +306,7 @@ TEST(PathIndex, ExistOr) {
                                  {3,4}, {3,4}}));
 }
 
-TEST(PathIndex, Alias) {
+TEST(pathindex, alias) {
   simit::Set V;
   simit::Set E(V,V);
 
@@ -331,7 +331,7 @@ TEST(PathIndex, Alias) {
   VERIFY_INDEX(index, vector<vector<unsigned>>({{0,1}, {0,1}}));
 }
 
-TEST(PathIndex, Hypergraph) {
+TEST(pathindex, hypergraph) {
 
   Var vi("vi");
   Var e("e");
