@@ -447,7 +447,7 @@ void LLVMFunction::initIndices(pe::PathIndexBuilder& piBuilder,
         *ptrPair.second = spidx->getSinkData();
       }
       else {
-        not_supported_yet<<"doesn't know how to initialize this pathindex type";
+        not_supported_yet<<"Doesn't know how to initialize this pathindex type";
       }
     }
     else if (tensorIndex.getKind() == TensorIndex::Sten) {
