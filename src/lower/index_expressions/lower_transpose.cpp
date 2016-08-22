@@ -24,7 +24,7 @@ Stmt lowerTranspose(Var target, const IndexExpr* iexpr,
 
   Var locVar(INTERNAL_PREFIX("locVar"), Int);
   Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
-                                {i, Load::make(sourceIndex.getColidxArray(),ij),
+                                {Load::make(sourceIndex.getColidxArray(),ij), i,
                                  targetIndex.getRowptrArray(),
                                  targetIndex.getColidxArray()});
   Stmt store = Store::make(target, locVar, Load::make(source, ij));
