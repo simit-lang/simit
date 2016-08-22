@@ -143,9 +143,10 @@ static PathExpression andPathExpressions(PathExpression a, PathExpression b,
 
 void PathExpressionBuilder::computePathExpression(Var target,
                                                   const IndexExpr* iexpr){
+  auto resultVars = iexpr->resultVars;
   vector<pe::Var> peVars;
   map<IndexVar,pe::Var> peVarMap;
-  for (const IndexVar& indexVar : iexpr->resultVars) {
+  for (const IndexVar& indexVar : resultVars) {
     pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
     peVars.push_back(peVar);
     peVarMap.insert({indexVar, peVar});
@@ -156,6 +157,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
 
   match(Expr(iexpr),
     function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
+      auto indexVars = op->indexVars;
+
       iassert(op->tensor.type().isTensor());
       const TensorType* type = op->tensor.type().toTensor();
       tassert(type->order()<=2) << "we do not support higher-order tensors yet";
@@ -181,8 +184,17 @@ void PathExpressionBuilder::computePathExpression(Var target,
             }
           }
 
-          peStack.push(pe(peVarMap.at(op->indexVars[0]),
-                          peVarMap.at(op->indexVars[1])));
+          // Transpose?
+          if (indexVars[0]==resultVars[1] && indexVars[1]==resultVars[0]) {
+            pe = pe.reverse();
+            peStack.push(pe(peVarMap.at(op->indexVars[1]),
+                            peVarMap.at(op->indexVars[0])));
+          }
+          else {
+            peStack.push(pe(peVarMap.at(op->indexVars[0]),
+                            peVarMap.at(op->indexVars[1])));
+          }
+
         }
         else {
           // Matrices without path expressions (e.g. Diagonal matrices)

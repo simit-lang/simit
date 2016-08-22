@@ -6,8 +6,8 @@
 #include <algorithm>
 
 #include "graph.h"
-#include "util/collections.h"
 #include "error.h"
+#include "util/collections.h"
 
 using namespace std;
 
@@ -111,6 +111,45 @@ std::map<Var,Set> PathExpression::getSets() const {
   return ptr->getSets();
 }
 
+PathExpression PathExpression::reverse() {
+  class ReverseRewriter : public PathExpressionRewriter {
+    virtual void visit(const Link *pe) {
+      tassert(!pe->getStencil().defined())
+          << "Transposing stencil matrices not supported yet.";
+      switch (pe->getType()) {
+        case Link::ev:
+          expr = Link::make(pe->getVertexVar(), pe->getEdgeVar(), Link::ve);
+          break;
+        case Link::ve:
+          expr = Link::make(pe->getEdgeVar(), pe->getVertexVar(), Link::ev);
+          break;
+        case Link::vv:
+          expr = Link::make(pe->getRhs(), pe->getLhs(), Link::vv);
+          break;
+        default:
+          unreachable;
+          break;
+      }
+    }
+
+    virtual void visit(const And *pe) {
+      expr = And::make(pe->getFreeVars(), pe->getQuantifiedVars(),
+                       rewrite(pe->getRhs()), rewrite(pe->getLhs()));
+    }
+
+    virtual void visit(const Or *pe) {
+      expr = Or::make(pe->getFreeVars(), pe->getQuantifiedVars(),
+                       rewrite(pe->getRhs()), rewrite(pe->getLhs()));
+    }
+
+    virtual void visit(const RenamedPathExpression *pe) {
+      auto pathExpr = rewrite(pe->getPathExpression());
+      expr = pathExpr(pe->getPathEndpoint(1), pe->getPathEndpoint(0));
+    }
+  };
+  return ReverseRewriter().rewrite(*this);
+}
+
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
   ptr->accept(visitor);
 }
@@ -119,7 +158,6 @@ PathExpression PathExpression::operator()(Var v0, Var v1) {
   return new RenamedPathExpression(*this, {{getPathEndpoint(0),v0},
                                    {getPathEndpoint(1),v1}});
 }
-
 
 // class Link
 Link::Link(const Var &lhs, const Var &rhs, Type type, ir::StencilLayout stencil)
@@ -344,6 +382,8 @@ void PathExpressionRewriter::visit(const Link *pe) {
 template <class T>
 PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
   PathExpression l = rw->rewrite(pe->getLhs());
+//  std::cout << pe->getLhs() << std::endl;
+//  std::cout << l << std::endl;
   PathExpression r = rw->rewrite(pe->getRhs());
   if (l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
     return pe;
@@ -367,7 +407,6 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
     expr = pe;
   }
   else {
-    // TODO: Test this
     expr = renamedPe(pe->getPathEndpoint(0), pe->getPathEndpoint(1));
   }
 }

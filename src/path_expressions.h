@@ -154,6 +154,10 @@ public:
   unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
   const Var &getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
 
+  /// Reverse the path expression (this is equivalent to transposing matrices
+  /// represented by it).
+  PathExpression reverse();
+
   void accept(PathExpressionVisitor*) const;
 
   PathExpression operator()(Var v0, Var v1);

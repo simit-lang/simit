@@ -24,6 +24,11 @@ private:
   
   using IRVisitor::visit;
 
+  void visit(const IndexExpr *op) {
+    indexVars.insert(indexVars.begin(),
+                     op->resultVars.begin(), op->resultVars.end());
+  }
+
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
       if (iv.isFreeVar() && added.find(iv) == added.end()) {

@@ -163,4 +163,73 @@ TEST(solver, cholmat) {
   SIMIT_ASSERT_FLOAT_EQ( 65.0, x(v2));
 }
 
+TEST(solver, cholmat_rectangular) {
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  fixed(v0) = true;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Set D(V);
+  FieldRef<simit_float> a = D.addField<simit_float>("a");
+  ElementRef d0 = D.add(v0);
+  ElementRef d1 = D.add(v2);
+  a(d0) = 1.0;
+  a(d1) = 2.0;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.bind("D", &D);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ( 3.0, (simit_float)b(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-5.0, (simit_float)b(v1));
+  SIMIT_ASSERT_FLOAT_EQ( 7.0, (simit_float)b(v2));
+}
+
+TEST(DISABLED_solver, schur) {
+  Set V;
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  FieldRef<simit_float> f = V.addField<simit_float>("f");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  f(v0) = 10.0;
+  f(v1) = 20.0;
+  f(v2) = 30.0;
+  fixed(v0) = true;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Set D(V);
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<simit_float> l = V.addField<simit_float>("l");
+  ElementRef d0 = D.add(v0);
+  ElementRef d1 = D.add(v2);
+  b(d0) =  100.0;
+  b(d1) = -100.0;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.bind("D", &D);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ( 100.0, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(  10.0,   x(v1));
+  SIMIT_ASSERT_FLOAT_EQ(-100.0, x(v2));
+}
+
 #endif

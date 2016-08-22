@@ -78,7 +78,7 @@ class LLVMFunction : public backend::Function {
  private:
   std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
-  std::unique_ptr<llvm::EngineBuilder>    harnessEngineBuilder;
+  std::unique_ptr<llvm::EngineBuilder>   harnessEngineBuilder;
   std::unique_ptr<llvm::ExecutionEngine> harnessExecEngine;
 
   /// Temporaries

@@ -143,12 +143,12 @@ TEST(system, transpose) {
   func.bind("E", &E);
   func.runSafe();
 
-  ASSERT_EQ(4,  c(v0));
-  ASSERT_EQ(10, c(v1));
-  ASSERT_EQ(4,  c(v2));
+  ASSERT_EQ(0, (int)c(v0));
+  ASSERT_EQ(6, (int)c(v1));
+  ASSERT_EQ(8, (int)c(v2));
 }
 
-TEST(DISABLED_system, transpose_rectangular) {
+TEST(system, transpose_rectangular) {
   Set V;
   FieldRef<int> b = V.addField<int>("b");
   ElementRef v0 = V.add();
@@ -168,7 +168,7 @@ TEST(DISABLED_system, transpose_rectangular) {
   func.bind("E", &E);
   func.runSafe();
 
-  ASSERT_EQ(1.0, b(v0));
-  ASSERT_EQ(0.0, b(v1));
-  ASSERT_EQ(2.0, b(v2));
+  ASSERT_EQ(1, (int)b(v0));
+  ASSERT_EQ(0, (int)b(v1));
+  ASSERT_EQ(2, (int)b(v2));
 }
