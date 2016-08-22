@@ -82,7 +82,7 @@ int dadd(double a, double b, double* c) {
   return 0;
 }
 
-TEST(ffi, scalar_add) {
+TEST(ffi, scalar) {
   Var a("a", ir::Float);
   Var b("b", ir::Float);
   Var c("c", ir::Float);
@@ -120,7 +120,7 @@ int dnegtwo(double a, double b, double* c, double* d) {
   return 0;
 }
 
-TEST(ffi, scalar_neg_two) {
+TEST(ffi, scalar_two) {
   Var a("a", ir::Float);
   Var b("b", ir::Float);
   Var c("c", ir::Float);
@@ -166,7 +166,7 @@ int dvecadd(int aN, double* a, int bN, double* b, int cN, double* c) {
   return vecadd<double>(aN,a, bN,b, cN,c);
 }
 
-TEST(ffi, vector_add) {
+TEST(ffi, vector_arg) {
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -234,7 +234,7 @@ int dgemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, double* B,
   return gemv<double>(Bn, Bm, BrowPtr, BcolIdx, Bnn, Bmm, B, cN, c, aN, a);
 }
 
-TEST(ffi, gemv) {
+TEST(ffi, matrix_arg) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -276,7 +276,7 @@ TEST(ffi, gemv) {
   SIMIT_EXPECT_FLOAT_EQ(10.0, c.get(p2));
 }
 
-TEST(ffi, gemv_blocked) {
+TEST(ffi, matrix_arg_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
@@ -326,7 +326,7 @@ TEST(ffi, gemv_blocked) {
   SIMIT_EXPECT_FLOAT_EQ(136.0, c2(1));
 }
 
-TEST(ffi, gemv_generics) {
+TEST(ffi, matrix_arg_generics) {
   // Points
   Set points;
   FieldRef<simit_float> cPoints = points.addField<simit_float>("c");
@@ -396,7 +396,7 @@ TEST(ffi, gemv_generics) {
   SIMIT_EXPECT_FLOAT_EQ(3.0, cParticles.get(particle1));
 }
 
-TEST(ffi, gemv_blocked_generics) {
+TEST(ffi, matrix_arg_blocked_generics) {
   // Points
   Set points;
   FieldRef<simit_float,2> bPoints = points.addField<simit_float,2>("b");
@@ -477,7 +477,6 @@ TEST(ffi, gemv_blocked_generics) {
   TensorRef<simit_float,2> cParticles1 = cParticles.get(particle1);
   SIMIT_EXPECT_FLOAT_EQ(16.0, cParticles1(0));
   SIMIT_EXPECT_FLOAT_EQ(36.0, cParticles1(1));
-
 }
 
 template <typename Float>
@@ -571,7 +570,7 @@ void dmatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
                     An, Am, Arowptr, Acolidx, Ann, Amm, A);
 }
 
-TEST(ffi, matrix_neg) {
+TEST(ffi, matrix_result) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -607,7 +606,7 @@ TEST(ffi, matrix_neg) {
   ASSERT_EQ(-10.0, (double)a(v2));
 }
 
-TEST(ffi, matrix_neg_generics) {
+TEST(ffi, matrix_result_generics) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
