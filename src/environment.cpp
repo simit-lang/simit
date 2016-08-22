@@ -270,7 +270,7 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
       os << std::endl;
     }
     auto temporaries = env.getTemporaries();
-    os << *temporaries.begin()  << " : "
+    os << "temp " << *temporaries.begin()  << " : "
        << temporaries.begin()->getType() << ";";
     for (auto& temp : util::excludeFirst(temporaries)) {
       os << std::endl << "temp " << temp  << " : " << temp.getType() << ";";

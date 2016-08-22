@@ -15,6 +15,5 @@ end
 
 export func main()
   R = map asm to E reduce +;
-  Rt = R';
-  V.b = Rt * E.a;
+  V.b = R' * E.a;
 end

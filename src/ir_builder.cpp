@@ -221,13 +221,12 @@ Expr IRBuilder::transposedMatrix(Expr mat) {
   const std::vector<IndexDomain> &dimensions = mattype->getDimensions();
 
   std::vector<IndexVar> indexVars;
-  indexVars.push_back(factory.createIndexVar(dimensions[1]));
   indexVars.push_back(factory.createIndexVar(dimensions[0]));
+  indexVars.push_back(factory.createIndexVar(dimensions[1]));
 
-  std::vector<IndexVar> operandIndexVars(indexVars.rbegin(), indexVars.rend());
-  Expr val = IndexedTensor::make(mat, operandIndexVars);
+  Expr val = IndexedTensor::make(mat, {indexVars[0], indexVars[1]});
   
-  return IndexExpr::make(indexVars, val);
+  return IndexExpr::make({indexVars[1], indexVars[0]}, val);
 }
 
 Var IRBuilder::temporary(Type type, std::string name) {

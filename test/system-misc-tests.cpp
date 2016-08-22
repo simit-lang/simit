@@ -168,7 +168,7 @@ TEST(DISABLED_system, transpose_rectangular) {
   func.bind("E", &E);
   func.runSafe();
 
-  ASSERT_EQ(1.0, b(v0));
-  ASSERT_EQ(0.0, b(v1));
-  ASSERT_EQ(2.0, b(v2));
+  ASSERT_EQ(1, (int)b(v0));
+  ASSERT_EQ(0, (int)b(v1));
+  ASSERT_EQ(2, (int)b(v2));
 }
