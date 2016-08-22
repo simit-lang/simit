@@ -1,0 +1,46 @@
+element Vertex
+  f : float;
+  x : float;
+  fixed : bool;
+end
+
+element Edge
+end
+
+element Dirichlet 
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+extern D : set{Dirichlet}(V);
+
+func stiffness(e : Edge, v : (Vertex*2)) -> A : matrix[V,V](float)
+  if (v(0).fixed)
+    A(v(0),v(0)) = 2.0;
+  else
+    A(v(0),v(0)) = 1.0;
+  end
+  if (v(1).fixed)
+    A(v(1),v(1)) = 2.0;
+  else
+    A(v(1),v(1)) = 1.0;
+  end
+  A(v(0),v(1)) = 1.0;
+  A(v(1),v(0)) = 1.0;
+end
+
+func dirichlet(d : Dirichlet, v : (Vertex*1)) -> C : matrix[D,V](float)
+  C(d,v(0)) = 1.0;
+end
+
+export func main()
+  A = map stiffness to E reduce +;
+  C = map dirichlet to D reduce +;
+
+  solverA = chol(A);
+  t = lltsolve(solverA, V.f);
+  T = lltmatsolve(solverA, C');
+  println T;
+
+  cholfree(solverA);
+end
