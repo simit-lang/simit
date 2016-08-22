@@ -40,7 +40,7 @@ export func main()
   solverA = chol(A);
   t = lltsolve(solverA, V.f);
   T = lltmatsolve(solverA, C');
-  println T;
+  B = C*T;
 
   cholfree(solverA);
 end

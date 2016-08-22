@@ -431,17 +431,25 @@ private:
         auto operandStorageKind = operandStorage.getKind();
         auto tensorStorageKind = tensorStorage.getKind();
 
-        if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
+        if (priorities[operandStorageKind] >= priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
             case TensorStorage::Dense:
               tensorStorage = TensorStorage(TensorStorage::Dense);
               break;
             case TensorStorage::Indexed: {
               auto operandIndex = operandStorage.getTensorIndex();
-              auto index = operandIndex.getPathExpression().defined()
-                  ? getTensorIndex(var)
-                  : TensorIndex(var.getName()+"_index", pe::PathExpression());
-              tensorStorage = TensorStorage(TensorStorage::Indexed, index);
+              TensorIndex index;
+              if (tensorStorage.getKind() != TensorStorage::Indexed) {
+                index = operandIndex.getPathExpression().defined()
+                    ? getTensorIndex(var)
+                    : TensorIndex(var.getName()+"_index", pe::PathExpression());
+              }
+              else if (!operandIndex.getPathExpression().defined()) {
+                index=TensorIndex(var.getName()+"_index", pe::PathExpression());
+              }
+              if (index.defined()) {
+                tensorStorage = TensorStorage(TensorStorage::Indexed, index);
+              }
               break;
             }
             case TensorStorage::Stencil: {
