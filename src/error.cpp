@@ -87,7 +87,6 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
 void ErrorReport::explode() {
 //   assert(false);  // Uncomment to trigger an abort debuggers can break at
 
-  // TODO: Add an option to error out on warnings too
   if (warning) {
     std::cerr << msg->str();
     delete msg;
