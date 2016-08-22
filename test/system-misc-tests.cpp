@@ -7,6 +7,83 @@
 using namespace std;
 using namespace simit;
 
+TEST(system, neg) {
+  Set V;
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  FieldRef<int> a = V.addField<int>("a");
+  FieldRef<int> b = V.addField<int>("b");
+  a(v0) = 1;
+  a(v1) = 1;
+  a(v2) = 1;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(-2, (int)b(v0));
+  ASSERT_EQ(-4, (int)b(v1));
+  ASSERT_EQ(-2, (int)b(v2));
+}
+
+TEST(system, transpose) {
+  Set V;
+  FieldRef<int> b = V.addField<int>("b");
+  FieldRef<int> c = V.addField<int>("c");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1;
+  b(v1) = 2;
+  b(v2) = 3;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(0, (int)c(v0));
+  ASSERT_EQ(6, (int)c(v1));
+  ASSERT_EQ(8, (int)c(v2));
+}
+
+TEST(system, transpose_rectangular) {
+  Set V;
+  FieldRef<int> b = V.addField<int>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+
+  Set E(V);
+  ElementRef e0 = E.add(v0);
+  ElementRef e1 = E.add(v2);
+  FieldRef<int> a = E.addField<int>("a");
+  a(e0) = 1;
+  a(e1) = 2;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(1, (int)b(v0));
+  ASSERT_EQ(0, (int)b(v1));
+  ASSERT_EQ(2, (int)b(v2));
+}
+
 TEST(system, swap) {
   Set V;
   FieldRef<simit_float> val = V.addField<simit_float>("val");
@@ -120,55 +197,4 @@ TEST(system, slice) {
   ASSERT_EQ(0.0, d.get(p0));
   ASSERT_EQ(2.0, d.get(p1));
   ASSERT_EQ(2.0, d.get(p2));
-}
-
-TEST(system, transpose) {
-  Set V;
-  FieldRef<int> b = V.addField<int>("b");
-  FieldRef<int> c = V.addField<int>("c");
-  ElementRef v0 = V.add();
-  ElementRef v1 = V.add();
-  ElementRef v2 = V.add();
-  b(v0) = 1;
-  b(v1) = 2;
-  b(v2) = 3;
-
-  Set E(V,V);
-  E.add(v0,v1);
-  E.add(v1,v2);
-
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-  func.bind("V", &V);
-  func.bind("E", &E);
-  func.runSafe();
-
-  ASSERT_EQ(0, (int)c(v0));
-  ASSERT_EQ(6, (int)c(v1));
-  ASSERT_EQ(8, (int)c(v2));
-}
-
-TEST(system, transpose_rectangular) {
-  Set V;
-  FieldRef<int> b = V.addField<int>("b");
-  ElementRef v0 = V.add();
-  ElementRef v1 = V.add();
-  ElementRef v2 = V.add();
-
-  Set E(V);
-  ElementRef e0 = E.add(v0);
-  ElementRef e1 = E.add(v2);
-  FieldRef<int> a = E.addField<int>("a");
-  a(e0) = 1;
-  a(e1) = 2;
-
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-  func.bind("V", &V);
-  func.bind("E", &E);
-  func.runSafe();
-
-  ASSERT_EQ(1, (int)b(v0));
-  ASSERT_EQ(0, (int)b(v1));
-  ASSERT_EQ(2, (int)b(v2));
 }
