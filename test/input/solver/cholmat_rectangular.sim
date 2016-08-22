@@ -37,8 +37,7 @@ export func main()
   A = map stiffness to E reduce +;
   C = map dirichlet to D reduce +;
   solver = chol(A);
-  Ct = C';
-  T = lltmatsolve(solver, Ct);
+  T = lltmatsolve(solver, C');
   V.b = T * D.a;
   cholfree(solver);
 end
