@@ -14,12 +14,17 @@ namespace internal {
 // here to denote zero or more instances of the enclosing term, while '[]' is 
 // used to denote zero or one instance of the enclosing term.
 
+Parser::Parser(const std::vector<fir::FuncDecl::Ptr> &intrinsics, 
+               std::vector<ParseError> *errors) :
+    intrinsics(intrinsics), 
+    errors(errors) {}
+
 fir::Program::Ptr Parser::parse(const TokenStream &tokens) {
   this->tokens = tokens;
   
   decls = SymbolTable();
-  for (const auto kv : ir::intrinsics::byNames()) {
-    decls.insert(kv.first, IdentType::FUNCTION);
+  for (const auto kv : intrinsics) {
+    decls.insert(kv->name->ident, IdentType::FUNCTION);
   }
 
   return parseProgram();
