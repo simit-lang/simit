@@ -9,7 +9,6 @@ namespace simit {
 namespace internal {
 
 struct Token {
-public:
   enum class Type {
     END,
     UNKNOWN,
@@ -89,7 +88,6 @@ public:
     FALSE
   };
 
-public:
   Type        type;
   union {
     int       num;
@@ -101,7 +99,6 @@ public:
   unsigned    lineEnd;
   unsigned    colEnd;
 
-public:
   static std::string tokenTypeString(Token::Type);
   
   std::string toString() const;
@@ -109,8 +106,7 @@ public:
   friend std::ostream &operator <<(std::ostream &, const Token &);
 };
 
-class TokenStream {
-public:
+struct TokenStream {
   void addToken(Token newToken) { tokens.push_back(newToken); }
   void addToken(Token::Type, unsigned, unsigned, unsigned = 1);
 

@@ -142,7 +142,7 @@ void IRPrinter::visit(const Literal *op) {
         }
         case ScalarType::String: {
           const char *sdata = static_cast<const char*>(op->data);
-          os << "\"" << std::string(sdata) << "\"";
+          os << "\"" << util::escape(std::string(sdata)) << "\"";
           break;
         }
 

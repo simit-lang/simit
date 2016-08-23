@@ -5,6 +5,7 @@
 
 #include "token.h"
 #include "error.h"
+#include "util/util.h"
 
 namespace simit { 
 namespace internal {
@@ -176,7 +177,7 @@ std::string Token::toString() const {
     case Token::Type::FLOAT_LITERAL:
       return "'" + std::to_string(fnum) + "'";
     case Token::Type::STRING_LITERAL:
-      return "'\"" + str + "\"'";
+      return "'\"" + util::escape(str) + "\"'";
     case Token::Type::IDENT:
       return "'" + str + "'";
     default:
