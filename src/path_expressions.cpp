@@ -382,8 +382,6 @@ void PathExpressionRewriter::visit(const Link *pe) {
 template <class T>
 PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
   PathExpression l = rw->rewrite(pe->getLhs());
-//  std::cout << pe->getLhs() << std::endl;
-//  std::cout << l << std::endl;
   PathExpression r = rw->rewrite(pe->getRhs());
   if (l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
     return pe;

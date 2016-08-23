@@ -195,7 +195,7 @@ TEST(solver, cholmat_rectangular) {
   SIMIT_ASSERT_FLOAT_EQ( 7.0, (simit_float)b(v2));
 }
 
-TEST(DISABLED_solver, schur) {
+TEST(solver, schur) {
   Set V;
   FieldRef<bool> fixed = V.addField<bool>("fixed");
   FieldRef<simit_float> f = V.addField<simit_float>("f");
@@ -213,8 +213,8 @@ TEST(DISABLED_solver, schur) {
   E.add(v1,v2);
 
   Set D(V);
-  FieldRef<simit_float> b = V.addField<simit_float>("b");
-  FieldRef<simit_float> l = V.addField<simit_float>("l");
+  FieldRef<simit_float> b = D.addField<simit_float>("b");
+  FieldRef<simit_float> l = D.addField<simit_float>("l");
   ElementRef d0 = D.add(v0);
   ElementRef d1 = D.add(v2);
   b(d0) =  100.0;

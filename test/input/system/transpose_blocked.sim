@@ -1,0 +1,22 @@
+element Vertex
+  b : vector[2](int);
+  c : vector[3](int);
+end
+
+element Edge
+end
+
+extern V  : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func asm(s : Edge, p : (Vertex*2)) -> (A : matrix[V,V](matrix[2,3](int)))
+  A(p(0),p(0)) = [ 2, 2, 2;   2, 2, 2];
+  A(p(1),p(1)) = [ 2, 2, 2;   2, 2, 2];
+  A(p(0),p(1)) = [ 1, 1, 1;   1, 1, 1];
+  A(p(1),p(0)) = [-1,-1,-1;  -1,-1,-1];
+end
+
+export func main()
+  A = map asm to E reduce +;
+  V.c = A' * V.b;
+end
