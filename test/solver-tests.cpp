@@ -232,4 +232,45 @@ TEST(solver, schur) {
   SIMIT_ASSERT_FLOAT_EQ(-100.0, x(v2));
 }
 
+TEST(DISABLED_solver, schur_blocked) {
+  Set V;
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  FieldRef<simit_float,2> f = V.addField<simit_float,2>("f");
+  FieldRef<simit_float,2> x = V.addField<simit_float,2>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  f(v0) = {10.0, 10.0};
+  f(v1) = {20.0, 20.0};
+  f(v2) = {30.0, 30.0};
+  fixed(v0) = true;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Set D(V);
+  FieldRef<simit_float,2> b = D.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> l = D.addField<simit_float,2>("l");
+  ElementRef d0 = D.add(v0);
+  ElementRef d1 = D.add(v2);
+  b(d0) = { 100.0,  100};
+  b(d1) = {-100.0, -100};
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.bind("D", &D);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ( 100.0,       x(v0)(0));
+  SIMIT_ASSERT_FLOAT_EQ( 100.0,       x(v0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(  3.33333333, x(v1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(  3.33333333, x(v1)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-100.0,       x(v2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(-100.0,       x(v2)(1));
+}
+
+
 #endif
