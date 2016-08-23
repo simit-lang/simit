@@ -58,3 +58,11 @@ To build Simit's documentation do:
 
 This will create a doc directory containing HTML documentation.
 Open doc/index.html in your browser.
+
+License
+=======
+Simit is under a permissive MIT license. We encourage you to use it for
+research or commercially!
+
+If you do use it, we'd greatly appreciate a note saying what you use it for!
+(However, we stress that you're under no obligation to do so.)
