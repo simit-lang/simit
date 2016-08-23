@@ -84,6 +84,40 @@ TEST(system, transpose_rectangular) {
   ASSERT_EQ(2, (int)b(v2));
 }
 
+TEST(system, transpose_blocked) {
+  Set V;
+  FieldRef<int,2> b = V.addField<int,2>("b");
+  FieldRef<int,3> c = V.addField<int,3>("c");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = {1,2};
+  b(v1) = {3,4};
+  b(v2) = {5,6};
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(-1, (int)c(v0)(0));
+  ASSERT_EQ(-1, (int)c(v0)(1));
+  ASSERT_EQ(-1, (int)c(v0)(2));
+
+  ASSERT_EQ(20, (int)c(v1)(0));
+  ASSERT_EQ(20, (int)c(v1)(1));
+  ASSERT_EQ(20, (int)c(v1)(2));
+
+  ASSERT_EQ(29, (int)c(v2)(0));
+  ASSERT_EQ(29, (int)c(v2)(1));
+  ASSERT_EQ(29, (int)c(v2)(2));
+}
+
 TEST(system, swap) {
   Set V;
   FieldRef<simit_float> val = V.addField<simit_float>("val");
