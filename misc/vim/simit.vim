@@ -19,7 +19,12 @@ syn keyword simitRepeat       for in while do
 syn keyword simitStorageClass const extern var
 syn keyword simitFunc         apply map to reduce print println
 
-syn keyword simitTodo         contained  TODO NOTE FIXME XXX
+syn keyword simitBuiltins      mod sin cos tan asin acos atan2 sqrt log exp pow  
+syn keyword simitBuiltins      clock storeTime
+syn keyword simitBuiltins      norm dot det inv chol cholfree lltsolve lltmatsolve
+syn keyword simitBuiltins      createComplex createNorm complexGetReal complexGetImag complexConj
+
+syn keyword simitTodo contained TODO NOTE FIXME XXX
 
 syn match  simitRelationalOperator "\(==\|\!=\|>=\|<=\|=\~\|>\|<\|=\)"
 syn match simitArithmeticOperator  "[-+]"
@@ -87,6 +92,7 @@ if version >= 508 || !exists("did_simit_syntax_inits")
   HiLink simitLogicalOperator    simitOperator
   HiLink simitOperator           Operator
   HiLink simitFunc               Function
+  HiLink simitBuiltins           Function
 
   delcommand HiLink
 endif
