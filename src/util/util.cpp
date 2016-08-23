@@ -42,6 +42,53 @@ std::vector<std::string> split(const std::string &str, const std::string &delim,
   return results;
 }
 
+std::string escape(const std::string &str) {
+  std::stringstream oss;
+
+  for (const auto s : str) {
+    switch (s) {
+      case '\a':
+        oss << "\\a";
+        break;
+      case '\b':
+        oss << "\\b";
+        break;
+      case '\f':
+        oss << "\\f";
+        break;
+      case '\n':
+        oss << "\\n";
+        break;
+      case '\r':
+        oss << "\\r";
+        break;
+      case '\t':
+        oss << "\\t";
+        break;
+      case '\v':
+        oss << "\\v";
+        break;
+      case '\\':
+        oss << "\\\\";
+        break;
+      case '\'':
+        oss << "\\'";
+        break;
+      case '\"':
+        oss << "\\\"";
+        break;
+      case '\?':
+        oss << "\\?";
+        break;
+      default:
+        oss << s;
+        break;
+    }
+  }
+
+  return oss.str();
+}
+
 int loadText(const std::string &file, std::string *text) {
   std::ifstream ifs(file);
   if (!ifs.good()) {
