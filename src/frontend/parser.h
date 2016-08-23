@@ -17,7 +17,7 @@ namespace internal {
 
 class Parser {
 public:
-  Parser(std::vector<ParseError> *errors) : errors(errors) {}
+  Parser(const std::vector<fir::FuncDecl::Ptr> &, std::vector<ParseError> *);
 
   fir::Program::Ptr parse(const TokenStream &);
 
@@ -119,9 +119,11 @@ private:
   bool  tryconsume(Token::Type type) { return tokens.consume(type); }
 
 private:
-  SymbolTable              decls;
-  TokenStream              tokens;
-  std::vector<ParseError> *errors;
+  SymbolTable decls;
+  TokenStream tokens;
+
+  const std::vector<fir::FuncDecl::Ptr> &intrinsics;
+  std::vector<ParseError>               *errors;
 };
 
 }

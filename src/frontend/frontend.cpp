@@ -24,11 +24,11 @@ using namespace simit::internal;
 // Frontend
 int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
-  std::vector<fir::FuncDecl::Ptr> intrinsics = fir::createIntrinsics();
+  const std::vector<fir::FuncDecl::Ptr> intrinsics = fir::createIntrinsics();
 
   // Lexical and syntactic analyses.
   TokenStream tokens = Scanner(errors).lex(programStream);
-  fir::Program::Ptr program = Parser(errors).parse(tokens);
+  fir::Program::Ptr program = Parser(intrinsics, errors).parse(tokens);
 
   // Semantic analyses.
   program = fir::ConstantFolding().rewrite(program);
