@@ -217,6 +217,9 @@ struct SetType : public Type {
   typedef std::shared_ptr<SetType> Ptr;
 
   static Ptr getUndefinedSetType();
+
+protected:
+  virtual void copy(FIRNode::Ptr);
 };
 
 struct UnstructuredSetType : public SetType {
@@ -250,6 +253,61 @@ protected:
   virtual FIRNode::Ptr cloneNode(); 
 };
 
+struct TupleType : public Type {
+  typedef std::shared_ptr<TupleType> Ptr;
+};
+
+struct Identifier : public FIRNode {
+  std::string ident;
+
+  typedef std::shared_ptr<Identifier> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<Identifier>());
+  }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+
+struct TupleElement : public FIRNode {
+  Identifier::Ptr  name;
+  ElementType::Ptr element;
+
+  typedef std::shared_ptr<TupleElement> Ptr;
+  
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<TupleElement>());
+  }
+  
+  virtual unsigned getLineBegin() { return name->getLineBegin(); }
+  virtual unsigned getColBegin() { return name->getColBegin(); }
+  virtual unsigned getLineEnd() { return element->getLineEnd(); }
+  virtual unsigned getColEnd() { return element->getColEnd(); }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+
+struct NamedTupleType : public TupleType {
+  std::vector<TupleElement::Ptr> elems;
+
+  typedef std::shared_ptr<NamedTupleType> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<NamedTupleType>());
+  }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+
 struct TupleLength : public FIRNode {
   int val;
 
@@ -265,14 +323,14 @@ protected:
   virtual FIRNode::Ptr cloneNode(); 
 };
 
-struct TupleType : public Type {
+struct UnnamedTupleType : public TupleType {
   ElementType::Ptr element;
   TupleLength::Ptr length;
   
-  typedef std::shared_ptr<TupleType> Ptr;
+  typedef std::shared_ptr<UnnamedTupleType> Ptr;
   
   virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<TupleType>());
+    visitor->visit(self<UnnamedTupleType>());
   }
 
 protected:
@@ -330,21 +388,6 @@ protected:
   virtual void copy(FIRNode::Ptr);
 
   virtual FIRNode::Ptr cloneNode();
-};
-
-struct Identifier : public FIRNode {
-  std::string ident;
-
-  typedef std::shared_ptr<Identifier> Ptr;
-
-  virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<Identifier>());
-  }
-
-protected:
-  virtual void copy(FIRNode::Ptr);
-
-  virtual FIRNode::Ptr cloneNode(); 
 };
 
 struct IdentDecl : public FIRNode {
@@ -1049,16 +1092,42 @@ protected:
 
 struct TupleReadExpr : public Expr {
   Expr::Ptr tuple;
-  Expr::Ptr index;
 
   typedef std::shared_ptr<TupleReadExpr> Ptr;
 
-  virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<TupleReadExpr>());
-  }
-
   virtual unsigned getLineBegin() { return tuple->getLineBegin(); }
   virtual unsigned getColBegin() { return tuple->getColBegin(); }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+};
+
+struct NamedTupleReadExpr : public TupleReadExpr {
+  Identifier::Ptr elem;
+
+  typedef std::shared_ptr<NamedTupleReadExpr> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<NamedTupleReadExpr>());
+  }
+
+  virtual unsigned getLineEnd() { return elem->getLineEnd(); }
+  virtual unsigned getColEnd() { return elem->getColEnd(); }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+
+struct UnnamedTupleReadExpr : public TupleReadExpr {
+  Expr::Ptr index;
+
+  typedef std::shared_ptr<UnnamedTupleReadExpr> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<UnnamedTupleReadExpr>());
+  }
 
 protected:
   virtual void copy(FIRNode::Ptr);
@@ -1127,6 +1196,24 @@ struct RangeConst : public VarExpr {
 protected:
   virtual FIRNode::Ptr cloneNode(); 
 };
+
+#if 0
+struct TensorBlock : public Expr {
+  std::vector<Expr::Ptr> elems;
+  bool                   transposed;
+  
+  typedef std::shared_ptr<TensorBlock> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<TensorBlock>());
+  }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+#endif
 
 struct TensorLiteral : public Expr {
   typedef std::shared_ptr<TensorLiteral> Ptr;

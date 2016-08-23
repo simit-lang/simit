@@ -105,14 +105,20 @@ void InferElementSources::visit(TensorReadExpr::Ptr expr) {
     const auto idx = to<ExprParam>(expr->indices[i])->expr;
 
     std::string idxVarName;
+    std::string idxTupleElem;
+
     if (isa<VarExpr>(idx)) {
       idxVarName = to<VarExpr>(idx)->ident;
     } else if (isa<TupleReadExpr>(idx)) {
       const auto idxTupleRead = to<TupleReadExpr>(idx);
-      if (isa<VarExpr>(idxTupleRead->tuple)) {
-        idxVarName = to<VarExpr>(idxTupleRead->tuple)->ident;
-      } else {
+      
+      if (!isa<VarExpr>(idxTupleRead->tuple)) {
         continue;
+      }
+      
+      idxVarName = to<VarExpr>(idxTupleRead->tuple)->ident;
+      if (isa<NamedTupleReadExpr>(idx)) {
+        idxTupleElem = to<NamedTupleReadExpr>(idx)->elem->ident;
       }
     } else {
       continue;
@@ -127,8 +133,14 @@ void InferElementSources::visit(TensorReadExpr::Ptr expr) {
     
     if (isa<ElementType>(idxVarType)) {
       idxElemType = to<ElementType>(idxVarType);
-    } else if (isa<TupleType>(idxVarType)) {
-      idxElemType = to<TupleType>(idxVarType)->element;
+    } else if (isa<NamedTupleType>(idxVarType)) {
+      if (idxTupleElem.empty()) {
+        continue;
+      }
+
+      not_supported_yet;
+    } else if (isa<UnnamedTupleType>(idxVarType)) {
+      idxElemType = to<UnnamedTupleType>(idxVarType)->element;
     } else {
       continue;
     }

@@ -70,11 +70,33 @@ void FIRPrinter::visit(LatticeLinkSetType::Ptr type) {
   oss << ")";
 }
 
+void FIRPrinter::visit(TupleElement::Ptr elem) {
+  elem->name->accept(this);
+  oss << " : ";
+  elem->element->accept(this);
+}
+
+void FIRPrinter::visit(NamedTupleType::Ptr type) {
+  oss << "(";
+
+  bool printDelimiter = false;
+  for (auto elem : type->elems) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+
+    elem->accept(this);
+    printDelimiter = true;
+  }
+
+  oss << ")";
+}
+
 void FIRPrinter::visit(TupleLength::Ptr length) {
   oss << length->val;
 }
 
-void FIRPrinter::visit(TupleType::Ptr type) {
+void FIRPrinter::visit(UnnamedTupleType::Ptr type) {
   oss << "(";
   type->element->accept(this);
   oss << "*";
@@ -555,7 +577,13 @@ void FIRPrinter::visit(SetReadExpr::Ptr expr) {
   oss << "]";
 }
 
-void FIRPrinter::visit(TupleReadExpr::Ptr expr) {
+void FIRPrinter::visit(NamedTupleReadExpr::Ptr expr) {
+  expr->tuple->accept(this);
+  oss << ".";
+  expr->elem->accept(this);
+}
+
+void FIRPrinter::visit(UnnamedTupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
   
   oss << "(";

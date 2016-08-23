@@ -61,7 +61,11 @@ void IREmitter::visit(LatticeLinkSetType::Ptr type) {
       elementType, latticePointSet, type->dimensions);
 }
 
-void IREmitter::visit(TupleType::Ptr type) {
+void IREmitter::visit(NamedTupleType::Ptr type) {
+  not_supported_yet;
+}
+
+void IREmitter::visit(UnnamedTupleType::Ptr type) {
   const ir::Type elementType = emitType(type->element);
   
   iassert(type->length > 0);
@@ -707,7 +711,11 @@ void IREmitter::visit(SetReadExpr::Ptr expr) {
   retExpr = ir::SetRead::make(set, indices);
 }
 
-void IREmitter::visit(TupleReadExpr::Ptr expr) {
+void IREmitter::visit(NamedTupleReadExpr::Ptr expr) {
+  not_supported_yet;
+}
+
+void IREmitter::visit(UnnamedTupleReadExpr::Ptr expr) {
   const ir::Expr tuple = emitExpr(expr->tuple);
   const ir::Expr index = emitExpr(expr->index);
 

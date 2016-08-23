@@ -114,7 +114,11 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
   }
 }
 
-void TypeChecker::visit(TupleType::Ptr type) {
+void TypeChecker::visit(NamedTupleType::Ptr type) {
+  not_supported_yet;
+}
+
+void TypeChecker::visit(UnnamedTupleType::Ptr type) {
   retTypeChecked = typeCheck(type->element);
 
   // Check that tuple length is positive.
@@ -1293,7 +1297,11 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
   }
 }
 
-void TypeChecker::visit(TupleReadExpr::Ptr expr) {
+void TypeChecker::visit(NamedTupleReadExpr::Ptr expr) {
+  not_supported_yet;
+}
+
+void TypeChecker::visit(UnnamedTupleReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->tuple);
   const ExprType indexType = inferType(expr->index);
 
@@ -1310,8 +1318,9 @@ void TypeChecker::visit(TupleReadExpr::Ptr expr) {
   }
 
   iassert(lhsType.isSingleValue());
-  
-  retType = ExprType(to<TupleType>(lhsType.type[0])->element, lhsType.access);
+  const auto tupleType = to<UnnamedTupleType>(lhsType.type[0]);
+
+  retType = ExprType(tupleType->element, lhsType.access);
 }
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
@@ -1737,7 +1746,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
       const auto neighborsLength = std::make_shared<TupleLength>();
       neighborsLength->val = utype->endpoints.size();
 
-      const auto neighborsType = std::make_shared<TupleType>();
+      const auto neighborsType = std::make_shared<UnnamedTupleType>();
       neighborsType->element = endpoint->element;
       neighborsType->length = neighborsLength; 
       actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
@@ -2256,10 +2265,16 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
         specializedSets[genericName] = argElemType->source;
       }
     }
-  } else if (isa<TupleType>(paramType) && isa<TupleType>(argType)) {
-    const auto paramTupleType = to<TupleType>(paramType);
-    const auto argTupleType = to<TupleType>(argType);
-    unify(paramTupleType->element, argTupleType->element);
+  } else if (isa<UnnamedTupleType>(paramType)) {
+    const auto paramTupleType = to<UnnamedTupleType>(paramType);
+    
+    if (isa<UnnamedTupleType>(argType)) {
+      const auto argTupleType = to<UnnamedTupleType>(argType);
+      unify(paramTupleType->element, argTupleType->element);
+    } else if (isa<NamedTupleType>(argType)) {
+      const auto argTupleType = to<NamedTupleType>(argType);
+      unify(paramTupleType->element, argTupleType->elems[0]->element);
+    }
   }
 }
 
@@ -2512,13 +2527,17 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
 
     return false;
   }
-  else if (isa<TupleType>(l)) {
-    if (!isa<TupleType>(r)) {
+  else if (isa<NamedTupleType>(l)) {
+    not_supported_yet;
+  }
+  else if (isa<UnnamedTupleType>(l)) {
+    // TODO: Handle homogeneous named tuple type.
+    if (!isa<UnnamedTupleType>(r)) {
       return false;
     }
 
-    const auto ltype = to<TupleType>(l);
-    const auto rtype = to<TupleType>(r);
+    const auto ltype = to<UnnamedTupleType>(l);
+    const auto rtype = to<UnnamedTupleType>(r);
 
     return (ltype->length->val == rtype->length->val) && 
            compareTypes(ltype->element, rtype->element);
@@ -2649,8 +2668,10 @@ std::string TypeChecker::toString(Type::Ptr type, bool printQuotes) {
     if (elemType->source) {
       oss << " from set '" << *elemType->source << "'";
     }
-  } else if (isa<TupleType>(type)) {
-    const auto tupleType = to<TupleType>(type);
+  } else if (isa<NamedTupleType>(type)) {
+    not_supported_yet;
+  } else if (isa<UnnamedTupleType>(type)) {
+    const auto tupleType = to<UnnamedTupleType>(type);
 
     if (tupleType->element->source) {
       oss << " from set '(" << *tupleType->element->source << " * " 

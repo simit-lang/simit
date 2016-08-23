@@ -19,8 +19,10 @@ struct FIRRewriter : public FIRVisitor {
   virtual void visit(Endpoint::Ptr);
   virtual void visit(UnstructuredSetType::Ptr);
   virtual void visit(LatticeLinkSetType::Ptr);
+  virtual void visit(TupleElement::Ptr);
+  virtual void visit(NamedTupleType::Ptr);
   virtual void visit(TupleLength::Ptr op) { node = op; }
-  virtual void visit(TupleType::Ptr);
+  virtual void visit(UnnamedTupleType::Ptr);
   virtual void visit(ScalarType::Ptr op) { node = op; }
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(OpaqueType::Ptr op) { node = op; }
@@ -59,7 +61,8 @@ struct FIRRewriter : public FIRVisitor {
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
   virtual void visit(SetReadExpr::Ptr);
-  virtual void visit(TupleReadExpr::Ptr);
+  virtual void visit(NamedTupleReadExpr::Ptr);
+  virtual void visit(UnnamedTupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(ParenExpr::Ptr);
   virtual void visit(VarExpr::Ptr op) { node = op; }

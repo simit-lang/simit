@@ -1110,8 +1110,8 @@ fir::Expr::Ptr Parser::parseCallOrReadExpr() {
   }
 }
 
-// factor: ('(' expr ')') | call_expr | tuple_read_expr | range_const 
-//       | var_expr | tensor_literal
+// factor: ('(' expr ')') | call_expr | unnamed_tuple_read_expr 
+//       | named_tuple_read_expr | range_const | var_expr | tensor_literal
 fir::Expr::Ptr Parser::parseFactor() {
   switch (peek().type) {
     case Token::Type::LP:
@@ -1153,8 +1153,13 @@ fir::Expr::Ptr Parser::parseFactor() {
           case IdentType::RANGE_GENERIC_PARAM:
             return parseRangeConst();
           case IdentType::TUPLE:
-            if (peek(1).type == Token::Type::LP) {
-              return parseTupleReadExpr();
+            switch (peek(1).type) {
+              case Token::Type::LP:
+                return parseUnnamedTupleReadExpr();
+              case Token::Type::PERIOD:
+                return parseNamedTupleReadExpr();
+              default:
+                break;
             }
             break;
           default:
@@ -1226,9 +1231,9 @@ fir::CallExpr::Ptr Parser::parseCallExpr() {
   return call;
 }
 
-// tuple_read_expr: var_expr '(' expr ')'
-fir::TupleReadExpr::Ptr Parser::parseTupleReadExpr() {
-  auto tupleRead = std::make_shared<fir::TupleReadExpr>();
+// unnamed_tuple_read_expr: var_expr '(' expr ')'
+fir::UnnamedTupleReadExpr::Ptr Parser::parseUnnamedTupleReadExpr() {
+  auto tupleRead = std::make_shared<fir::UnnamedTupleReadExpr>();
   
   tupleRead->tuple = parseVarExpr();
   consume(Token::Type::LP);
@@ -1238,6 +1243,17 @@ fir::TupleReadExpr::Ptr Parser::parseTupleReadExpr() {
   const Token endToken = consume(Token::Type::RP);
   tupleRead->setEndLoc(endToken);
   
+  return tupleRead;
+}
+
+// named_tuple_read_expr: var_expr '.' ident
+fir::NamedTupleReadExpr::Ptr Parser::parseNamedTupleReadExpr() {
+  auto tupleRead = std::make_shared<fir::NamedTupleReadExpr>();
+
+  tupleRead->tuple = parseVarExpr();
+  consume(Token::Type::PERIOD);
+  tupleRead->elem = parseIdent();
+
   return tupleRead;
 }
 
@@ -1308,7 +1324,8 @@ fir::Type::Ptr Parser::parseType() {
       type = parseLatticeLinkSetType();
       break;
     case Token::Type::LP:
-      type = parseTupleType();
+      type = (peek(2).type == Token::Type::COL) ? 
+             parseNamedTupleType() : parseUnnamedTupleType();
       break;
     case Token::Type::INT:
     case Token::Type::FLOAT:
@@ -1408,6 +1425,35 @@ std::vector<fir::Endpoint::Ptr> Parser::parseEndpoints() {
   return endpoints;
 }
 
+// tuple_element: ident ':' element_type
+fir::TupleElement::Ptr Parser::parseTupleElement() {
+  auto tupleElement = std::make_shared<fir::TupleElement>();
+
+  tupleElement->name = parseIdent();
+  consume(Token::Type::COL);
+  tupleElement->element = parseElementType();
+
+  return tupleElement;
+}
+
+// named_tuple_type: '(' tuple_elemnt {',' tuple_element} ')'
+fir::TupleType::Ptr Parser::parseNamedTupleType() {
+  auto tupleType = std::make_shared<fir::NamedTupleType>();
+
+  const Token leftParenToken = consume(Token::Type::LP);
+  tupleType->setBeginLoc(leftParenToken);
+  
+  do {
+    const fir::TupleElement::Ptr elem = parseTupleElement();
+    tupleType->elems.push_back(elem);
+  } while (tryconsume(Token::Type::COMMA));
+  
+  const Token rightParenToken = consume(Token::Type::RP);
+  tupleType->setEndLoc(rightParenToken);
+  
+  return tupleType;
+}
+
 // tuple_length: INT_LITERAL
 fir::TupleLength::Ptr Parser::parseTupleLength() {
   auto tupleLength = std::make_shared<fir::TupleLength>();
@@ -1419,9 +1465,9 @@ fir::TupleLength::Ptr Parser::parseTupleLength() {
   return tupleLength;
 }
 
-// tuple_type: '(' element_type '*' tuple_length ')'
-fir::TupleType::Ptr Parser::parseTupleType() {
-  auto tupleType = std::make_shared<fir::TupleType>();
+// unnamed_tuple_type: '(' element_type '*' tuple_length ')'
+fir::TupleType::Ptr Parser::parseUnnamedTupleType() {
+  auto tupleType = std::make_shared<fir::UnnamedTupleType>();
 
   const Token leftParenToken = consume(Token::Type::LP);
   tupleType->setBeginLoc(leftParenToken);

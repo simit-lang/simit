@@ -7,7 +7,7 @@ namespace simit {
 namespace fir {
 
 static void
-addIntrinsic(std::vector<fir::FuncDecl::Ptr>* intrinsics,
+addIntrinsic(std::vector<FuncDecl::Ptr>* intrinsics,
              const std::string& name,
              const std::vector<Type::Ptr> &args,
              const std::vector<Type::Ptr> &results,
@@ -22,7 +22,7 @@ addIntrinsic(std::vector<fir::FuncDecl::Ptr>* intrinsics,
 
   for (unsigned i = 0; i < args.size(); ++i) {
     const auto arg = std::make_shared<Argument>();
-    arg->name = std::make_shared<fir::Identifier>();
+    arg->name = std::make_shared<Identifier>();
     arg->name->ident = "a" + to_string(i+1);
     arg->type = args[i];
     decl->args.push_back(arg);
@@ -30,7 +30,7 @@ addIntrinsic(std::vector<fir::FuncDecl::Ptr>* intrinsics,
 
   for (unsigned i = 0; i < results.size(); ++i) {
     const auto res = std::make_shared<IdentDecl>();
-    res->name = std::make_shared<fir::Identifier>();
+    res->name = std::make_shared<Identifier>();
     res->name->ident = "r" + to_string(i+1);
     res->type = results[i];
     decl->results.push_back(res);
@@ -40,7 +40,7 @@ addIntrinsic(std::vector<fir::FuncDecl::Ptr>* intrinsics,
 }
 
 static void
-addScalarIntrinsic(std::vector<fir::FuncDecl::Ptr>* intrinsics,
+addScalarIntrinsic(std::vector<FuncDecl::Ptr>* intrinsics,
                    const std::string& name,
                    const std::vector<ScalarType::Type> &args,
                    const std::vector<ScalarType::Type> &results) {
@@ -57,8 +57,8 @@ addScalarIntrinsic(std::vector<fir::FuncDecl::Ptr>* intrinsics,
   addIntrinsic(intrinsics, name, argTypes, resultTypes);
 }
 
-std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
-  std::vector<fir::FuncDecl::Ptr> intrinsics;
+std::vector<FuncDecl::Ptr> createIntrinsics() {
+  std::vector<FuncDecl::Ptr> intrinsics;
 
   const auto threeDim = std::make_shared<RangeIndexSet>();
   threeDim->range = 3;
@@ -67,20 +67,20 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
   threeByThreeTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   threeByThreeTensorType->indexSets = {threeDim, threeDim};
 
-  auto N = std::make_shared<fir::GenericParam>();
-  N->type = fir::GenericParam::Type::UNKNOWN;
+  auto N = std::make_shared<GenericParam>();
+  N->type = GenericParam::Type::UNKNOWN;
   N->name = "N";
 
-  auto M = std::make_shared<fir::GenericParam>();
-  M->type = fir::GenericParam::Type::UNKNOWN;
+  auto M = std::make_shared<GenericParam>();
+  M->type = GenericParam::Type::UNKNOWN;
   M->name = "M";
 
-  const auto nDim = std::make_shared<fir::GenericIndexSet>();
-  nDim->type = fir::GenericIndexSet::Type::UNKNOWN;
+  const auto nDim = std::make_shared<GenericIndexSet>();
+  nDim->type = GenericIndexSet::Type::UNKNOWN;
   nDim->setName = N->name;
 
-  const auto mDim = std::make_shared<fir::GenericIndexSet>();
-  mDim->type = fir::GenericIndexSet::Type::UNKNOWN;
+  const auto mDim = std::make_shared<GenericIndexSet>();
+  mDim->type = GenericIndexSet::Type::UNKNOWN;
   mDim->setName = M->name;
 
   const auto nVectorType = std::make_shared<NDTensorType>();

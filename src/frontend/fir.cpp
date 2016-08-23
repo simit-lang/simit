@@ -130,10 +130,15 @@ SetType::Ptr SetType::getUndefinedSetType() {
   return undefinedSetType;
 }
 
-void UnstructuredSetType::copy(FIRNode::Ptr node) {
-  const auto setType = to<UnstructuredSetType>(node);
+void SetType::copy(FIRNode::Ptr node) {
+  const auto setType = to<SetType>(node);
   Type::copy(setType);
   element = setType->element->clone<ElementType>();
+}
+
+void UnstructuredSetType::copy(FIRNode::Ptr node) {
+  const auto setType = to<UnstructuredSetType>(node);
+  SetType::copy(setType);
   for (const auto &endpoint : setType->endpoints) {
     endpoints.push_back(endpoint->clone<Endpoint>());
   }
@@ -147,14 +152,52 @@ FIRNode::Ptr UnstructuredSetType::cloneNode() {
 
 void LatticeLinkSetType::copy(FIRNode::Ptr node) {
   const auto setType = to<LatticeLinkSetType>(node);
-  Type::copy(setType);
-  element = setType->element->clone<ElementType>();
+  SetType::copy(setType);
   latticePointSet = setType->latticePointSet->clone<Endpoint>();
   dimensions = setType->dimensions;
 }
 
 FIRNode::Ptr LatticeLinkSetType::cloneNode() {
   const auto node = std::make_shared<LatticeLinkSetType>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void Identifier::copy(FIRNode::Ptr node) {
+  const auto identifier = to<Identifier>(node);
+  FIRNode::copy(identifier);
+  ident = identifier->ident;
+}
+
+FIRNode::Ptr Identifier::cloneNode() {
+  const auto node = std::make_shared<Identifier>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void TupleElement::copy(FIRNode::Ptr node) {
+  const auto elem = to<TupleElement>(node);
+  FIRNode::copy(elem);
+  name = elem->name->clone<Identifier>();
+  element = elem->element->clone<ElementType>();
+}
+
+FIRNode::Ptr TupleElement::cloneNode() {
+  const auto node = std::make_shared<TupleElement>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void NamedTupleType::copy(FIRNode::Ptr node) {
+  const auto tupleType = to<NamedTupleType>(node);
+  Type::copy(tupleType);
+  for (const auto &elem : tupleType->elems) {
+    elems.push_back(elem->clone<TupleElement>());
+  }
+}
+
+FIRNode::Ptr NamedTupleType::cloneNode() {
+  const auto node = std::make_shared<NamedTupleType>();
   node->copy(shared_from_this());
   return node;
 }
@@ -171,15 +214,15 @@ FIRNode::Ptr TupleLength::cloneNode() {
   return node;
 }
 
-void TupleType::copy(FIRNode::Ptr node) {
-  const auto tupleType = to<TupleType>(node);
+void UnnamedTupleType::copy(FIRNode::Ptr node) {
+  const auto tupleType = to<UnnamedTupleType>(node);
   Type::copy(tupleType);
   element = tupleType->element->clone<ElementType>();
   length = tupleType->length->clone<TupleLength>();
 }
 
-FIRNode::Ptr TupleType::cloneNode() {
-  const auto node = std::make_shared<TupleType>();
+FIRNode::Ptr UnnamedTupleType::cloneNode() {
+  const auto node = std::make_shared<UnnamedTupleType>();
   node->copy(shared_from_this());
   return node;
 }
@@ -219,18 +262,6 @@ void OpaqueType::copy(FIRNode::Ptr node) {
 
 FIRNode::Ptr OpaqueType::cloneNode() {
   const auto node = std::make_shared<OpaqueType>();
-  node->copy(shared_from_this());
-  return node;
-}
-
-void Identifier::copy(FIRNode::Ptr node) {
-  const auto identifier = to<Identifier>(node);
-  FIRNode::copy(identifier);
-  ident = identifier->ident;
-}
-
-FIRNode::Ptr Identifier::cloneNode() {
-  const auto node = std::make_shared<Identifier>();
   node->copy(shared_from_this());
   return node;
 }
@@ -686,13 +717,28 @@ void TupleReadExpr::copy(FIRNode::Ptr node) {
   const auto tupleReadExpr = to<TupleReadExpr>(node);
   Expr::copy(tupleReadExpr);
   tuple = tupleReadExpr->tuple->clone<Expr>();
-  if (tupleReadExpr->index) {
-    index = tupleReadExpr->index->clone<Expr>();
-  }
 }
 
-FIRNode::Ptr TupleReadExpr::cloneNode() {
-  const auto node = std::make_shared<TupleReadExpr>();
+void NamedTupleReadExpr::copy(FIRNode::Ptr node) {
+  const auto tupleReadExpr = to<NamedTupleReadExpr>(node);
+  TupleReadExpr::copy(tupleReadExpr);
+  elem = tupleReadExpr->elem->clone<Identifier>();
+}
+
+FIRNode::Ptr NamedTupleReadExpr::cloneNode() {
+  const auto node = std::make_shared<NamedTupleReadExpr>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void UnnamedTupleReadExpr::copy(FIRNode::Ptr node) {
+  const auto tupleReadExpr = to<UnnamedTupleReadExpr>(node);
+  TupleReadExpr::copy(tupleReadExpr);
+  index = tupleReadExpr->index->clone<Expr>();
+}
+
+FIRNode::Ptr UnnamedTupleReadExpr::cloneNode() {
+  const auto node = std::make_shared<UnnamedTupleReadExpr>();
   node->copy(shared_from_this());
   return node;
 }
