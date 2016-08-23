@@ -40,7 +40,7 @@ inline std::string toLower(std::string str) {
 #endif
 
 #ifdef F32
-#define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
+#define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.0001)
 #else
 #define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.0000000000001)
 #endif
