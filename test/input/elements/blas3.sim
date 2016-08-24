@@ -39,3 +39,12 @@ end
 func gemm(A : tensor[2,3](float), B : tensor[3,4](float)) -> (C : tensor[2,4](float))
   C = A * B;
 end
+
+%%% composite
+%! composite() == [0.0, 0.0; 0.0, 0.0];
+func composite() -> R : matrix[2,2](float)
+  var A0 = [0.0, 0.0; 0.0, 0.0];
+  var A1 = [0.0, 0.0; 0.0, 0.0];
+  AA = A0 * A0 + A1 * A1;
+  R = AA;
+end

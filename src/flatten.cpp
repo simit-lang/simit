@@ -88,7 +88,14 @@ private:
     if (countIndexVars(a) == countIndexVars(b) &&
         !IsAnyInputSparseVisitor().query(a) &&
         !IsAnyInputSparseVisitor().query(b)) {
-      return pair<Expr,Expr>(a,b);
+      set<IndexVar> ivs;
+      auto aivs = getReductionVars(a);
+      auto bivs = getReductionVars(b);
+      ivs.insert(aivs.begin(), aivs.end());
+      ivs.insert(bivs.begin(), bivs.end());
+      if (ivs.size() < 2) {
+        return pair<Expr,Expr>(a,b);
+      }
     }
 
     if (!isa<IndexedTensor>(a)) {
