@@ -1,0 +1,19 @@
+element Vertex
+  a : vector[2](int);
+  b : vector[2](int);
+end
+
+element Edge
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func asm(e : Edge, v : (Vertex*2)) -> K : matrix[V,V](matrix[2, 2](int))
+  K(v(0),v(0))(0, 0) = 1;  % error because we're assigning to component
+end
+
+export func main()
+  As = map asm to E reduce +;
+  V.b = As * V.a;
+end
