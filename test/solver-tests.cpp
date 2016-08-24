@@ -228,7 +228,7 @@ TEST(solver, schur) {
   func.runSafe();
 
   SIMIT_ASSERT_FLOAT_EQ( 100.0, x(v0));
-  SIMIT_ASSERT_FLOAT_EQ(  10.0,   x(v1));
+  SIMIT_ASSERT_FLOAT_EQ(  10.0, x(v1));
   SIMIT_ASSERT_FLOAT_EQ(-100.0, x(v2));
 }
 

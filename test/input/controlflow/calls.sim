@@ -101,3 +101,15 @@ func caller(a : tensor[2](float)') -> (b : tensor[2](float)')
   b = callee(a + 1.0) + [3.0, 4.0];
 end
 
+
+%%% arg-expression
+%! caller() == 6.0;
+
+func callee(c : float) -> d : float
+  d = c;
+end
+
+func caller() -> r : float
+  a = 2.0;
+  r = callee(3.0 * a);
+end
