@@ -9,7 +9,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(issue, 45) {
+TEST(DISABLED_issue, 45) {
   Set V;
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
