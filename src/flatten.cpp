@@ -153,9 +153,9 @@ private:
         changed = true;
       }
 
-      // Spill non-var higher-order tensor-typed expressions in function calls
+      // Spill non-var tensor-typed expressions in function calls
       Type atype = actual.type();
-      if ((atype.isTensor() && !isScalar(atype) && !isa<VarExpr>(actual)) ) {
+      if ((atype.isTensor() && !isa<VarExpr>(actual)) ) {
         actual = spill(actual);
         if (isa<IndexedTensor>(actual)) {
           actual = to<IndexedTensor>(actual)->tensor;
