@@ -10,7 +10,7 @@ extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
 func asm(e : Edge, v : (Vertex*2)) -> K : matrix[V,V](matrix[2, 2](int))
-  K(v(0),v(0))(0, 0) = 1;  % error because we're assigning to component
+  K(v(0),v(0))(0,0) = 1;  % error because we're assigning to component
 end
 
 export func main()
