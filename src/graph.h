@@ -519,7 +519,7 @@ public:
 
   void* getFieldData(const std::string &fieldName) {
     uassert(fieldNames.find(fieldName) != fieldNames.end())
-        << "Cannot find " << fieldName;
+        << "The Set has no field " << fieldName;
     return fields[fieldNames.at(fieldName)]->data;
   }
 

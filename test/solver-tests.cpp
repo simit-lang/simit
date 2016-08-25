@@ -21,7 +21,7 @@ using namespace simit::ir;
 TEST(solver, solve) {
   Set V;
   FieldRef<simit_float> b = V.addField<simit_float>("b");
-  FieldRef<simit_float> c = V.addField<simit_float>("c");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
   ElementRef v2 = V.add();
@@ -42,15 +42,15 @@ TEST(solver, solve) {
   func.bind("E", &E);
   func.runSafe();
 
-  ASSERT_NEAR(2.0, (double)c.get(v0), 0.00001);
-  ASSERT_NEAR(1.0, (double)c.get(v1), 0.00001);
-  ASSERT_NEAR(4.0, (double)c.get(v2), 0.00001);
+  SIMIT_ASSERT_FLOAT_EQ( 0.202777777777778, (simit_float)x.get(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-0.013888888888889, (simit_float)x.get(v1));
+  SIMIT_ASSERT_FLOAT_EQ( 0.802777777777778, (simit_float)x.get(v2));
 }
 
 TEST(solver, solve_blocked) {
   Set V;
   FieldRef<simit_float,2> b = V.addField<simit_float,2>("b");
-  FieldRef<simit_float,2> c = V.addField<simit_float,2>("c");
+  FieldRef<simit_float,2> x = V.addField<simit_float,2>("x");
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
   ElementRef v2 = V.add();
@@ -71,17 +71,17 @@ TEST(solver, solve_blocked) {
   func.bind("E", &E);
   func.runSafe();
 
-  TensorRef<simit_float,2> c0 = c.get(v0);
-  ASSERT_NEAR(1.0, c0(0), 1.0);
-  ASSERT_NEAR(3.0, c0(1), 1.0);
+  TensorRef<simit_float,2> c0 = x.get(v0);
+  SIMIT_ASSERT_FLOAT_EQ( 0.069642857142857, (simit_float)c0(0));
+  SIMIT_ASSERT_FLOAT_EQ(-0.004910714285714, (simit_float)c0(1));
 
-  TensorRef<simit_float,2> c1 = c.get(v1);
-  ASSERT_NEAR(5.0, c1(0), 1.0);
-  ASSERT_NEAR(7.0, c1(1), 1.0);
+  TensorRef<simit_float,2> c1 = x.get(v1);
+  SIMIT_ASSERT_FLOAT_EQ(-0.044642857142857, (simit_float)c1(0));
+  SIMIT_ASSERT_FLOAT_EQ( 0.073660714285714, (simit_float)c1(1));
 
-  TensorRef<simit_float,2> c2 = c.get(v2);
-  ASSERT_NEAR(2.0, c2(0), 1.0);
-  ASSERT_NEAR(4.0, c2(1), 1.0);
+  TensorRef<simit_float,2> c2 = x.get(v2);
+  SIMIT_ASSERT_FLOAT_EQ( 0.269642857142857, (simit_float)c2(0));
+  SIMIT_ASSERT_FLOAT_EQ(-0.204910714285714, (simit_float)c2(1));
 }
 
 TEST(solver, chol) {
@@ -271,6 +271,5 @@ TEST(DISABLED_solver, schur_blocked) {
   SIMIT_ASSERT_FLOAT_EQ(-100.0,       x(v2)(0));
   SIMIT_ASSERT_FLOAT_EQ(-100.0,       x(v2)(1));
 }
-
 
 #endif

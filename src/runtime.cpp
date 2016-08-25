@@ -201,16 +201,15 @@ do {                                                            \
 
 template <typename Float>
 void solve(int n,  int m,  int* rowptr, int* colidx,
-           int nn, int mm, Float* Avals, Float* xvals, Float* bvals) {
+           int nn, int mm, Float* Avals, Float* bvals, Float* xvals) {
 #ifdef EIGEN
   auto A = csr2eigen<Float,ColMajor>(n, m, rowptr, colidx, nn, mm, Avals);
-  auto b = new Map<Matrix<Float,Dynamic,1>>(bvals, n);
   auto x = new Map<Matrix<Float,Dynamic,1>>(xvals, m);
+  auto b = new Map<Matrix<Float,Dynamic,1>>(bvals, n);
 
-  ConjugateGradient<SparseMatrix<Float>,Lower,IdentityPreconditioner> solver;
-  solver.setMaxIterations(50);
+  SparseLU<SparseMatrix<Float, ColMajor>> solver;
   solver.compute(A);
-  *b = solver.solve(*x);
+  *x = solver.solve(*b);
 #else
   SOLVER_ERROR;
 #endif
