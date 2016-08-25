@@ -84,6 +84,62 @@ TEST(solver, solve_blocked) {
   SIMIT_ASSERT_FLOAT_EQ(-0.204910714285714, (simit_float)c2(1));
 }
 
+TEST(solver, lu) {
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 10.0;
+  b(v1) = 20.0;
+  b(v2) = 30.0;
+  fixed(v0) = true;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ(-40.0, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ( 45.0, x(v1));
+  SIMIT_ASSERT_FLOAT_EQ(-15.0, x(v2));
+}
+
+TEST(solver, lumat) {
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<bool> fixed = V.addField<bool>("fixed");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1.0;
+  b(v1) = 1.0;
+  b(v2) = 1.0;
+  fixed(v0) = true;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ(-43.0, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ( 48.5, x(v1));
+  SIMIT_ASSERT_FLOAT_EQ(-16.5, x(v2));
+}
+
 TEST(solver, chol) {
   Set V;
   FieldRef<simit_float> b = V.addField<simit_float>("b");
