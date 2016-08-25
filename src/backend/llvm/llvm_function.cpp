@@ -342,7 +342,8 @@ Function::FuncType LLVMFunction::init() {
           << "Could not find formal argument " << formal <<  " in "
           << llvmFunc->getName().str();
 
-      llvm::Argument* llvmFormal = llvmArgIt++;
+      llvm::Argument* llvmFormal = &(*llvmArgIt);
+      ++llvmArgIt;
       Actual* actual = arguments.at(formal).get();
       ir::Type type = getArgType(formal);
       iassert(type.kind() == ir::Type::Set || type.kind() == ir::Type::Tensor);

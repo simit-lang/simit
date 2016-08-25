@@ -1569,12 +1569,12 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
   auto llvmArgIt = llvmFunc->getArgumentList().begin();
   auto simitArgIt = arguments.begin();
   for (; simitArgIt < arguments.end(); ++simitArgIt, ++llvmArgIt) {
-    symtable.insert(*simitArgIt, llvmArgIt);
+    symtable.insert(*simitArgIt, &(*llvmArgIt));
   }
 
   auto simitResIt = results.begin();
   for (; simitResIt < results.end(); ++simitResIt, ++llvmArgIt) {
-    symtable.insert(*simitResIt, llvmArgIt);
+    symtable.insert(*simitResIt, &(*llvmArgIt));
   }
 
   return llvmFunc;
