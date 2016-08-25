@@ -20,7 +20,7 @@ set(SIMIT_HEADERS ${SIMIT_HEADERS})
 set(SIMIT_SOURCES ${SIMIT_SOURCES})
 
 # Collect LLVM components from subprojects
-set(LLVM_COMPONENTS "")
+set(LLVM_COMPONENTS mcjit;bitwriter;linker;passes)  # bitreader asmparser irreader mirparser
 
 add_subdirectory(backend)
 add_subdirectory(frontend)
@@ -71,7 +71,6 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
 execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE)
 include_directories("${LLVM_INCLUDES}")
 
-set(LLVM_COMPONENTS "${LLVM_COMPONENTS}" core bitwriter x86 ipo bitreader asmparser irreader mirparser mcjit passes)
 message("-- Compiling with components: ${LLVM_COMPONENTS}")
 
 execute_process(COMMAND "${LLVM_CONFIG}" --libdir OUTPUT_VARIABLE LLVM_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
