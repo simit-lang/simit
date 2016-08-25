@@ -305,6 +305,62 @@ const Func& solve() {
   return solveVar;
 }
 
+static Func luVar;
+void luInit() {
+  luVar = Func("lu",
+                 {Var("A", Type())},
+                 {Var("solver", Type(Type::Opaque))},
+                 Func::External);
+}
+const Func& lu() {
+  if (!luVar.defined()) {
+    luInit();
+  }
+  return luVar;
+}
+
+static Func lufreeVar;
+void lufreeInit() {
+  lufreeVar = Func("lufree",
+                     {Var("A", Type(Type::Opaque))},
+                     {},
+                     Func::External);
+}
+const Func& lufree() {
+  if (!lufreeVar.defined()) {
+    lufreeInit();
+  }
+  return lufreeVar;
+}
+
+static Func lusolveVar;
+void lusolveInit() {
+  lusolveVar = Func("lusolve",
+                    {Var("solver", Type(Type::Opaque)), Var("b", Type())},
+                    {Var("x", Type())},
+                    Func::External);
+}
+const Func& lusolve() {
+  if (!lusolveVar.defined()) {
+    lusolveInit();
+  }
+  return lusolveVar;
+}
+
+static Func lumatsolveVar;
+void lumatsolveInit() {
+  lumatsolveVar = Func("lumatsolve",
+                       {Var("solver", Type(Type::Opaque)), Var("B", Type())},
+                       {Var("X", Type())},
+                       Func::External);
+}
+const Func& lumatsolve() {
+  if (!lumatsolveVar.defined()) {
+    lumatsolveInit();
+  }
+  return lumatsolveVar;
+}
+
 static Func cholVar;
 void cholInit() {
   cholVar = Func("chol",
@@ -512,6 +568,10 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    luInit();
+    lufreeInit();
+    lusolveInit();
+    lumatsolveInit();
     cholInit();
     cholfreeInit();
     lltsolveInit();
@@ -546,6 +606,10 @@ const std::map<std::string,Func> &byNames() {
                       {"det",detVar},
                       {"inv",invVar},
                       {"__solve",solveVar},
+                      {"lu", luVar},
+                      {"lufree", lufreeVar},
+                      {"lusolve", lusolveVar},
+                      {"lumatsolve", lumatsolveVar},
                       {"chol", cholVar},
                       {"cholfree", cholfreeVar},
                       {"lltsolve", lltsolveVar},

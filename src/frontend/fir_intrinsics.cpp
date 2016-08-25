@@ -171,6 +171,26 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                {Type::Ptr(), Type::Ptr()},
                {makeTensorType(ScalarType::Type::FLOAT)});
   addIntrinsic(&intrinsics,
+               ir::intrinsics::lu().getName(),
+               {nnMatrixType},
+               {opaqueType},
+               {N});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::lufree().getName(),
+               {opaqueType},
+               {},
+               {});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::lusolve().getName(),
+               {opaqueType, nVectorType},
+               {nVectorType},
+               {N});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::lumatsolve().getName(),
+               {opaqueType, nmMatrixType},
+               {nmMatrixType},
+               {N, M});
+  addIntrinsic(&intrinsics,
                ir::intrinsics::chol().getName(),
                {nnMatrixType},
                {opaqueType},
