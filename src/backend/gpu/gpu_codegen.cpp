@@ -180,7 +180,7 @@ std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
   iassert((bool)libdeviceModule)
       << "Failed to load libdevice: " << printToString(errReport);
   setNVVMModuleProps(libdeviceModule.get());
-  maybeLogModule(libdeviceModule.get(), "simit-libdevice.ll");
+  logModule(libdeviceModule.get(), "simit-libdevice.ll");
   std::string libdevicePtx = generatePtx(libdeviceModule.get(), devMajor, devMinor);
 
   // Build intrinsics module
@@ -193,7 +193,7 @@ std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
   iassert((bool)intrinsicsModule)
       << "Failed to load intrinsics: " << printToString(errReport);
   setNVVMModuleProps(intrinsicsModule.get());
-  maybeLogModule(intrinsicsModule.get(), "simit-intrinsics.ll");
+  logModule(intrinsicsModule.get(), "simit-intrinsics.ll");
   std::string intrinsicsPtx = generatePtx(intrinsicsModule.get(), devMajor, devMinor);
 
   // Cache the compiled libries

@@ -657,7 +657,7 @@ GPUFunction::init() {
   bool failed = llvm::verifyModule(*module);
   iassert(!failed)
       << "LLVM module does not pass verification";
-  maybeLogModule(module, "simit.ll");
+  logModule(module, "simit.ll");
 
   // Generate harness PTX
 #ifdef SIMIT_DEBUG

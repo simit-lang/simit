@@ -25,7 +25,7 @@ std::string printToString(const llvm::SMDiagnostic &);
 typedef void (*VoidFuncPtr)();
 VoidFuncPtr getGlobalFunc(llvm::Function *func, llvm::ExecutionEngine *ee);
 
-void maybeLogModule(llvm::Module *module, std::string fileName);
+void logModule(llvm::Module *module, std::string fileName);
 
 }}
 #endif

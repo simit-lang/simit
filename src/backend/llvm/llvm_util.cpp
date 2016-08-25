@@ -51,7 +51,7 @@ VoidFuncPtr getGlobalFunc(llvm::Function *func, llvm::ExecutionEngine *ee) {
 }
 
 
-void maybeLogModule(llvm::Module *module, std::string fileName) {
+void logModule(llvm::Module *module, std::string fileName) {
 #ifdef SIMIT_DEBUG
   std::string llStr;
   llvm::raw_string_ostream llOstr(llStr);
