@@ -7,25 +7,21 @@
 #include "cuda.h"
 #include "nvvm.h"
 
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-#include "llvm/Analysis/Verifier.h"
-#else
-#include "llvm/IR/Verifier.h"
-#endif
-
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "error.h"
 #include "graph.h"
-#include "indices.h"
 #include "ir.h"
+#include "stencils.h"
 #include "tensor_index.h"
 #include "tensor_data.h"
 #include "path_indices.h"
 #include "backend/actual.h"
 #include "backend/llvm/llvm_codegen.h"
+#include "backend/llvm/llvm_util.h"
 #include "util/collections.h"
 
 using namespace std;
@@ -35,12 +31,14 @@ namespace backend {
 
 size_t GPUFunction::DeviceDataHandle::total_allocations = 0;
 
-static void *getGlobalHostPtr(CUmodule& cudaModule, std::string name,
-                              size_t expectedSize) {
+static CUdeviceptr getGlobalDevPtr(CUmodule& cudaModule, std::string name,
+                                   size_t expectedSize) {
   CUdeviceptr globalPtr;
   size_t globalPtrSize;
-  checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
-                                    cudaModule, name.data()));
+  checkCudaErrorsExtra(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
+                                         cudaModule, name.data()),
+                       "Locating global: " + name + ", expected size: "
+                       + to_string(expectedSize));
   iassert(globalPtrSize == expectedSize)
       << "Global pointer for " << name << " is wrong size. Got "
       << globalPtrSize << ", but expected " << expectedSize;
@@ -49,15 +47,9 @@ static void *getGlobalHostPtr(CUmodule& cudaModule, std::string name,
   unsigned int attrVal;
   checkCudaErrors(cuPointerGetAttribute(
       &attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
-  iassert(attrVal == 1);
-  checkCudaErrors(cuPointerGetAttribute(
-      &attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
-  iassert(attrVal == CU_MEMORYTYPE_DEVICE);
-  
-  void *globalPtrHost;
-  checkCudaErrors(cuPointerGetAttribute(
-      &globalPtrHost, CU_POINTER_ATTRIBUTE_HOST_POINTER, globalPtr));
-  return globalPtrHost;
+  iassert(attrVal == 1) << "Non-managed memory for global: " << name;
+
+  return globalPtr;
 }
 
 GPUFunction::GPUFunction(
@@ -65,8 +57,54 @@ GPUFunction::GPUFunction(
     llvm::Module *module,
     std::shared_ptr<llvm::EngineBuilder> engineBuilder,
     const ir::Storage& storage)
-    : LLVMFunction(simitFunc, storage, llvmFunc, module, engineBuilder),
+    : LLVMFunction(simitFunc, storage, llvmFunc, module, engineBuilder, true),
       cudaModule(nullptr) {
+
+  // Subset of LLVMFunction init:
+  const ir::Environment& env = getEnvironment();
+  // Initialize extern pointers
+  for (const ir::VarMapping& externMapping : env.getExterns()) {
+    ir::Var bindable = externMapping.getVar();
+    vector<void**> extPtrs;
+    for (const ir::Var& ext : externMapping.getMappings()) {
+      // Allocate space for a pointer host-side
+      void **extPtr = new void*;
+      *extPtr = nullptr;
+      extPtrs.push_back(extPtr);
+    }
+    iassert(!util::contains(this->externPtrs, bindable.getName()));
+    this->externPtrs.insert({bindable.getName(), extPtrs});
+  }
+  // Initialize temporary pointers
+  for (const ir::Var& tmp : env.getTemporaries()) {
+    iassert(tmp.getType().isTensor())
+        << "Cannot handle non-tensor temporary: " << tmp;
+    // Allocate space for a pointer host-side
+    // TODO: CLEANUP!
+    void **tmpPtr = new void*;
+    *tmpPtr = nullptr;
+    temporaryPtrs.insert({tmp.getName(), tmpPtr});
+  }
+  // Initialize tensorIndex ptrs
+  for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
+    if (tensorIndex.getKind() == ir::TensorIndex::PExpr) {
+      const ir::Var& rowptr = tensorIndex.getRowptrArray();
+      const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
+      const uint32_t **rowptrPtr = (const uint32_t**)new uint32_t*;
+      *rowptrPtr = nullptr;
+      const uint32_t **colidxPtr = (const uint32_t**)new uint32_t*;
+      *colidxPtr = nullptr;
+      tensorIndexPtrs.insert({pexpr, {rowptrPtr, colidxPtr}});
+    }
+    else if (tensorIndex.getKind() == ir::TensorIndex::Sten) {
+      // No in-memory structures
+    }
+    else {
+      not_supported_yet;
+    }
+  }
+
+
   // CUDA runtime
   CUdevice device;
   int devCount;
@@ -78,17 +116,22 @@ GPUFunction::GPUFunction(
 
   char name[128];
   checkCudaErrors(cuDeviceGetName(name, 128, device));
-  // TODO(gkanwar): Figure out logging system
+#ifdef SIMIT_DEBUG
   std::cout << "Using CUDA Device [0]: " << name << std::endl;
+#endif
 
   checkCudaErrors(cuDeviceComputeCapability(&cuDevMajor, &cuDevMinor, device));
+#ifdef SIMIT_DEBUG
   std::cout << "Device Compute Capability: "
             << cuDevMajor << "." << cuDevMinor << std::endl;
+#endif
   iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
 
+#ifdef SIMIT_DEBUG
   size_t bytes;
   checkCudaErrors(cuDeviceTotalMem(&bytes, device));
   std::cout << "Total memory: " << bytes << std::endl;
+#endif
 
   // Create driver context
   cudaContext = new CUcontext();
@@ -115,9 +158,11 @@ GPUFunction::~GPUFunction() {
     delete cudaModule;
   }
 
+#ifdef SIMIT_DEBUG
   size_t free, total;
   cuMemGetInfo(&free, &total);
   std::cerr << "CUDA mem info: " << free << " free of " << total << std::endl;
+#endif
 
   // Release driver context, if any
   if (cudaContext) {
@@ -139,12 +184,14 @@ void GPUFunction::unmapArgs(bool updated) {
 
   for (DeviceDataHandle *handle : pushedBufs) {
     // Push non-null args from CPU -> GPU
-    if (handle->hostBuffer) {
+    if (handle->hostBuffer ||
+        handle->hostBufferConst) {
       // Short-circuit on size-zero buffer, because the CUDA API
       // doesn't like size-zero copies
       if (handle->size == 0) return;
       checkCudaErrors(cuMemcpyHtoD(
-          *handle->devBuffer, handle->hostBuffer, handle->size));
+          *handle->devBuffer, handle->hostBuffer ?
+          handle->hostBuffer : handle->hostBufferConst, handle->size));
     }
   }
 }
@@ -169,27 +216,51 @@ void GPUFunction::bind(const std::string& name, TensorData& data) {
   initialized = false;
 }
 
-GPUFunction::SetData GPUFunction::pushSetData(
-    Set* set, const ir::UnstructuredSetType* setType) {
-  GPUFunction::SetData data;
-  // Set size
-  data.setSize = set->getSize();
+GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setType) {
+  GPUFunction::SetData data = {0};
+  // Set size(s)
+  if (setType->isa<ir::UnstructuredSetType>()) {
+    data.setSize = set->getSize();
+  }
+  else if (setType->isa<ir::LatticeLinkSetType>()) {
+    CUdeviceptr *setSizesBuffer = new CUdeviceptr;
+    unsigned dims = setType->to<ir::LatticeLinkSetType>()->dimensions;
+    uassert(dims == set->getDimensions().size())
+        << "Set bound to type with wrong number of dimensions: "
+        << set->getDimensions().size() << " vs "
+        << setType->to<ir::LatticeLinkSetType>()->dimensions;
+    size_t size = dims*sizeof(int);
+    checkCudaErrors(cuMemAlloc(setSizesBuffer, size));
+    checkCudaErrors(cuMemcpyHtoD(
+        *setSizesBuffer, set->getDimensions().data(), size));
+    DeviceDataHandle *setSizesHandle = new DeviceDataHandle(
+        set->getDimensions().data(), setSizesBuffer, size);
+    pushedBufs.push_back(setSizesHandle);
+    data.setSizes = setSizesHandle;
+  }
+  else {
+    not_supported_yet;
+  }
 
   // Short-circuit on a size-zero set, because the CUDA API doesn't like
   // size-zero allocations and copies
-  if (data.setSize == 0) {
+  if (set->getSize() == 0) {
     uwarning << "Binding a size-zero set: " << set->getName() << std::endl;
     CUdeviceptr *nullDevPtr = new CUdeviceptr;
-    DeviceDataHandle *nullHandle = new DeviceDataHandle(nullptr, nullDevPtr, 0);
+    DeviceDataHandle *nullHandle = new DeviceDataHandle(
+        (const void*)nullptr, nullDevPtr, 0);
     pushedBufs.push_back(nullHandle);
     data.endpoints = nullHandle;
-    data.startIndex = nullHandle;
-    data.nbrIndex = nullHandle;
     return data;
   }
 
   // Edge indices
-  if (setType->endpointSets.size() > 0) {
+  if (setType->isa<ir::UnstructuredSetType>() &&
+      setType->to<ir::UnstructuredSetType>()->endpointSets.size() > 0) {
+    uassert(set->getKind() == Set::Unstructured)
+        << "Cannot bind non-unstructured set " << set->getName()
+        << " to unstructured type.";
+
     // Endpoints index
     int *endpoints = set->getEndpointsData();
     CUdeviceptr *endpointBuffer = new CUdeviceptr();
@@ -203,47 +274,15 @@ GPUFunction::SetData GPUFunction::pushSetData(
         endpoints, endpointBuffer, size);
     pushedBufs.push_back(endpointsHandle);
     data.endpoints = endpointsHandle;
-    // setData.push_back(llvmPtr(LLVM_INT_PTR,
-    //                           reinterpret_cast<void*>(*endpointBuffer)));
-
-    // Neighbor index
-    const internal::NeighborIndex *nbrs = set->getNeighborIndex();
-    const int *startIndex = nbrs->getStartIndex();
-    size_t startSize = (set->getEndpointSet(0)->getSize()+1) * sizeof(int);
-    const int *nbrIndex = nbrs->getNeighborIndex();
-    size_t nbrSize = nbrs->getSize() * sizeof(int);
-    // Sentinel is present and correct
-    iassert(startIndex[set->getEndpointSet(0)->getSize()] == nbrs->getSize())
-        << "Sentinel: " << startIndex[set->getEndpointSet(0)->getSize()]
-        << " does not match neighbor size: " << nbrs->getSize();
-    CUdeviceptr *startBuffer = new CUdeviceptr();
-    CUdeviceptr *nbrBuffer = new CUdeviceptr();
-
-    iassert(startSize != 0)
-        << "Cannot allocate edge set with zero-sized start array: "
-        << set->getName();
-    checkCudaErrors(cuMemAlloc(startBuffer, startSize));
-    checkCudaErrors(cuMemcpyHtoD(*startBuffer, startIndex, startSize));
-    // Pushed bufs expects non-const pointers, because some are written to.
-    DeviceDataHandle *startIndexHandle = new DeviceDataHandle(
-        const_cast<int*>(startIndex), startBuffer, startSize);
-    pushedBufs.push_back(startIndexHandle);
-    data.startIndex = startIndexHandle;
-    // setData.push_back(llvmPtr(LLVM_INT_PTR,
-    //                           reinterpret_cast<void*>(*startBuffer)));
-
-    iassert(nbrSize != 0)
-        << "Cannot allocate edge set with zero-sized neighbor array: "
-        << set->getName();
-    checkCudaErrors(cuMemAlloc(nbrBuffer, nbrSize));
-    checkCudaErrors(cuMemcpyHtoD(*nbrBuffer, nbrIndex, nbrSize));
-    // Pushed bufs expects non-const pointers, because some are written to.
-    DeviceDataHandle *nbrIndexHandle = new DeviceDataHandle(
-        const_cast<int*>(nbrIndex), nbrBuffer, nbrSize);
-    pushedBufs.push_back(nbrIndexHandle);
-    data.nbrIndex = nbrIndexHandle;
-    // setData.push_back(llvmPtr(LLVM_INT_PTR,
-    //                           reinterpret_cast<void*>(*nbrBuffer)));
+  }
+  else if (setType->isa<ir::LatticeLinkSetType>()) {
+    // Lattice link set type format leaves room for eps, nbrs_start and nbrs
+    // pointers in the struct.
+    CUdeviceptr *nullDevPtr = new CUdeviceptr;
+    DeviceDataHandle *nullHandle = new DeviceDataHandle(
+        (const void*)nullptr, nullDevPtr, 0);
+    pushedBufs.push_back(nullHandle);
+    data.endpoints = nullHandle;
   }
 
   // Fields
@@ -301,6 +340,11 @@ GPUFunction::pushGlobalTensor(
           }
           break;
         }
+        case ir::TensorStorage::Kind::Diagonal: {
+          // Just grab first outer dimension
+          bufSize *= size(ttype->getOuterDimensions()[0]);
+          break;
+        }
         case ir::TensorStorage::Kind::Indexed: {
           if (env.hasTensorIndex(bufVar)) {
             const pe::PathExpression& pexpr =
@@ -312,15 +356,33 @@ GPUFunction::pushGlobalTensor(
           // tensors dynamically at runtime. The GPU does allocation here,
           // so we need to "statically" compute the right size.
           else {
-            const pe::PathExpression& pexpr = ts.getPathExpression();
+	    iassert(ts.hasTensorIndex());
+            const pe::PathExpression& pexpr =
+	      ts.getTensorIndex().getPathExpression();
             iassert (util::contains(pathIndices, pexpr));
             bufSize *= pathIndices.at(pexpr).numNeighbors();
           }
           break;
         }
-        case ir::TensorStorage::Kind::Diagonal: {
-          // Just grab first outer dimension
-          bufSize *= size(ttype->getOuterDimensions()[0]);
+        case ir::TensorStorage::Stencil: {
+          if (env.hasTensorIndex(bufVar)) {
+            iassert(env.getTensorIndex(bufVar).getKind()
+                    == ir::TensorIndex::Sten);
+            const ir::StencilLayout& stencil =
+                env.getTensorIndex(bufVar).getStencilLayout();
+            // Size of stencil-base matrix is stencil size * dim[0]
+            bufSize *= stencil.getLayout().size();
+            bufSize *= size(ttype->getOuterDimensions()[0]);
+          }
+          else {
+            iassert(ts.hasTensorIndex());
+            iassert(ts.getTensorIndex().getKind() == ir::TensorIndex::Sten);
+            const ir::StencilLayout& stencil =
+                ts.getTensorIndex().getStencilLayout();
+            // Size of stencil-base matrix is stencil size * dim[0]
+            bufSize *= stencil.getLayout().size();
+            bufSize *= size(ttype->getOuterDimensions()[0]);
+          }
           break;
         }
         default: {
@@ -330,7 +392,9 @@ GPUFunction::pushGlobalTensor(
       }
     }
     else {
-      ierror << "Higher-order tensor allocation not supported";
+      tassert(!isSystemTensorType(ttype))
+          << "Higher-order system tensor allocation not supported: " << bufVar;
+      bufSize = ttype->size();
     }
   }
   CUdeviceptr *devBuffer = new CUdeviceptr();
@@ -339,14 +403,17 @@ GPUFunction::pushGlobalTensor(
   checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
 
   // Find the host-side data, if it exists
-  void *hostPtr = nullptr;
+  DeviceDataHandle* handle;
   if (hasGlobal(bufVar.getName())) {
     iassert(util::contains(externPtrs, bufVar.getName()) &&
             externPtrs.at(bufVar.getName()).size() == 1);
-    hostPtr = *externPtrs.at(bufVar.getName())[0];
+    void *hostPtr = *externPtrs.at(bufVar.getName())[0];
+    handle = new DeviceDataHandle(hostPtr, devBuffer, bufSize);
+  }
+  else {
+    handle = new DeviceDataHandle((const void*)nullptr, devBuffer, bufSize);
   }
 
-  DeviceDataHandle* handle = new DeviceDataHandle(hostPtr, devBuffer, bufSize);
   return handle;
 }
 
@@ -392,7 +459,6 @@ GPUFunction::pushExternSparseTensor(const ir::Environment& env,
 llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* actual) {
   // TODO: Use ActualVisitor
 
-  // std::cout << "Push arg: " << formal << std::endl;
   if (isa<TensorActual>(actual)) {
     TensorActual* tActual = to<TensorActual>(actual);
     CUdeviceptr *devBuffer = new CUdeviceptr();
@@ -408,6 +474,11 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
           return llvmFP(*(float*)tActual->getData());
         case ir::ScalarType::Boolean:
           return llvmBool(*(bool*)tActual->getData());
+        case ir::ScalarType::Complex:
+          tassert(ir::ScalarType::floatBytes == sizeof(float))
+              << "GPUFunction requires single precision floats";
+          return llvmComplex(((float*)tActual->getData())[0],
+                             ((float*)tActual->getData())[1]);
         default:
           ierror << "Unknown ScalarType: " << ttype->getComponentType().kind;
       }
@@ -416,7 +487,6 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
       size_t size = ttype->size() * ttype->getComponentType().bytes();
       checkCudaErrors(cuMemAlloc(devBuffer, size));
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, tActual->getData(), size));
-      // std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
       pushedBufs.push_back(
           new DeviceDataHandle(tActual->getData(), devBuffer, size));
       std::vector<DeviceDataHandle*> argBufs = { pushedBufs.back() };
@@ -430,18 +500,23 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
     const ir::SetType *setType = argType.toSet();
     GPUFunction::SetData pushedData = pushSetData(set, setType);
 
-    llvm::StructType *llvmSetType = llvmType(*setType);
+    llvm::StructType *llvmSetType = llvmType(setType);
     std::vector<llvm::Constant*> setData;
     // Set size
-    setData.push_back(llvmInt(pushedData.setSize));
+    if (setType->isa<ir::UnstructuredSetType>()) {
+      setData.push_back(llvmInt(pushedData.setSize));
+    }
+    else if (setType->isa<ir::LatticeLinkSetType>()) {
+      setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
+          *(pushedData.setSizes->devBuffer))));
+    }
+    else {
+      unreachable;
+    }
     // Edge set
-    if (setType->getCardinality() > 0) {
+    if (pushedData.endpoints != nullptr) {
       setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
           *(pushedData.endpoints->devBuffer))));
-      setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
-          *(pushedData.startIndex->devBuffer))));
-      setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
-          *(pushedData.nbrIndex->devBuffer))));
     }
     // Fields
     ir::Type ety = setType->elementType;
@@ -472,6 +547,8 @@ void GPUFunction::pullArg(DeviceDataHandle* handle) {
   // Short-circuit on size-zero buffer, because the CUDA API
   // doesn't like size-zero copies
   if (handle->size == 0) return;
+  iassert(handle->hostBuffer)
+      << "Must define mutable hostBuffer to allow pulling arg";
   checkCudaErrors(cuMemcpyDtoH(
       handle->hostBuffer, *handle->devBuffer, handle->size));
   handle->devDirty = false;
@@ -528,8 +605,10 @@ llvm::Function *GPUFunction::createHarness(
   llvm::ReturnInst::Create(LLVM_CTX, entry);
 
   // Kernel metadata
-  llvm::Value *mdVals[] = {
-    harness, llvm::MDString::get(LLVM_CTX, "kernel"), llvmInt(1)
+  llvm::Metadata *mdVals[] = {
+    llvm::ValueAsMetadata::get(harness),
+    llvm::MDString::get(LLVM_CTX, "kernel"),
+    llvm::ValueAsMetadata::get(llvmInt(1))
   };
   llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CTX, mdVals);
   llvm::NamedMDNode *nvvmAnnot = module
@@ -575,18 +654,30 @@ GPUFunction::init() {
   llvm::Function *harness = createHarness(args, llvmFunc, module);
 
   // Validate LLVM module
-  iassert(!llvm::verifyModule(*module))
+  bool failed = llvm::verifyModule(*module);
+  iassert(!failed)
       << "LLVM module does not pass verification";
+  maybeLogModule(module, "simit.ll");
 
   // Generate harness PTX
+#ifdef SIMIT_DEBUG
   std::cout << "Create PTX" << std::endl;
-  std::string ptxStr = generatePtx(
-      module, cuDevMajor, cuDevMinor,
-      module->getModuleIdentifier().c_str());
+#endif
+  std::string ptxStr = generatePtx(module, cuDevMajor, cuDevMinor);
+  std::vector<std::string> libPtxStrs =
+      generateLibraryPtx(cuDevMajor, cuDevMinor);
 
+#ifdef SIMIT_DEBUG
   std::ofstream ptxFile("simit.ptx", std::ofstream::trunc);
   ptxFile << ptxStr << std::endl;
   ptxFile.close();
+  for (int i = 0; i < libPtxStrs.size(); ++i) {
+    std::ofstream ptxLibFile(
+      "simit-lib-"+std::to_string(i)+".ptx", std::ofstream::trunc);
+    ptxLibFile << libPtxStrs[i] << std::endl;
+    ptxLibFile.close();
+  }
+#endif
 
   // JIT linker and final CUBIN
   char linkerInfo[16384];
@@ -605,23 +696,37 @@ GPUFunction::init() {
     reinterpret_cast<void*>(16384),
     reinterpret_cast<void*>(1)
   };
-
   checkCudaErrors(cuLinkCreate(5, linkerOptions, linkerOptionValues, &linker));
-  checkCudaErrors(cuLinkAddData(
-      linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
-      ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL));
+
   // libcudadevrt.a
   checkCudaErrors(cuLinkAddFile(linker, CU_JIT_INPUT_LIBRARY,
                                 LIBCUDADEVRT, 0, NULL, NULL));
+  // libraries
+  for (int i = 0; i < libPtxStrs.size(); ++i) {
+    std::string cudaModuleName = "<compiled-ptx-lib-"+std::to_string(i)+">";
+    checkCudaErrorsExtra(
+        cuLinkAddData(
+            linker, CU_JIT_INPUT_PTX, (void*)libPtxStrs[i].c_str(),
+            libPtxStrs[i].size(), cudaModuleName.c_str(), 0, NULL, NULL),
+        std::string(linkerInfo) + "\n" + std::string(linkerErrors));
+  }
+
+  // main module
+  checkCudaErrorsExtra(
+      cuLinkAddData(
+          linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
+          ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL),
+      std::string(linkerInfo) + "\n" + std::string(linkerErrors));
 
   void *cubin;
   size_t cubinSize;
-  checkCudaErrors(cuLinkComplete(linker, &cubin, &cubinSize));
+  auto errCode = cuLinkComplete(linker, &cubin, &cubinSize);
 
   std::ofstream linkerLog("simit.linker.log", std::ofstream::trunc);
   linkerLog << linkerInfo << std::endl
             << linkerErrors << std::endl;
   linkerLog.close();
+  checkCudaErrors(errCode);
 
   // Create CUDA module for binary object, possibly removing previous module
   if (cudaModule) {
@@ -663,18 +768,18 @@ GPUFunction::init() {
         const ir::Var& dataVar = mapping.getMappings()[0];
         const ir::Var& rowPtrVar = mapping.getMappings()[1];
         const ir::Var& colIndVar = mapping.getMappings()[2];
-        void *globalPtrHost = getGlobalHostPtr(
+        CUdeviceptr globalPtr = getGlobalDevPtr(
             *cudaModule, dataVar.getName(), sizeof(void*));
-        *((void**)globalPtrHost) = reinterpret_cast<void*>(
-            *(pushedData.data->devBuffer));
-        globalPtrHost = getGlobalHostPtr(
+        cuMemcpyHtoD(globalPtr, reinterpret_cast<void*>(
+            pushedData.data->devBuffer), sizeof(void*));
+        globalPtr = getGlobalDevPtr(
             *cudaModule, rowPtrVar.getName(), sizeof(void*));
-        *((void**)globalPtrHost) = reinterpret_cast<void*>(
-            *(pushedData.rowPtr->devBuffer));
-        globalPtrHost = getGlobalHostPtr(
+        cuMemcpyHtoD(globalPtr, reinterpret_cast<void*>(
+            pushedData.rowPtr->devBuffer), sizeof(void*));
+        globalPtr = getGlobalDevPtr(
             *cudaModule, colIndVar.getName(), sizeof(void*));
-        *((void**)globalPtrHost) = reinterpret_cast<void*>(
-            *(pushedData.colInd->devBuffer));
+        cuMemcpyHtoD(globalPtr, reinterpret_cast<void*>(
+            pushedData.colInd->devBuffer), sizeof(void*));
       }
       else {
         DeviceDataHandle *handle = pushGlobalTensor(
@@ -684,10 +789,10 @@ GPUFunction::init() {
         std::vector<DeviceDataHandle*> handleVec = {handle};
         argBufMap.emplace(bufVar.getName(), handleVec);
 
-        void *devBufferPtr = reinterpret_cast<void*>(*handle->devBuffer);
-        void *globalPtrHost = getGlobalHostPtr(
+        void *devBufferPtr = reinterpret_cast<void*>(handle->devBuffer);
+        CUdeviceptr globalPtr = getGlobalDevPtr(
             *cudaModule, bufVar.getName(), sizeof(void*));
-        *((void**)globalPtrHost) = devBufferPtr;
+        cuMemcpyHtoD(globalPtr, devBufferPtr, sizeof(void*));
       }
     }
     else if (bufVar.getType().isSet()) {
@@ -700,39 +805,57 @@ GPUFunction::init() {
       GPUFunction::SetData pushedData = pushSetData(set, setType);
       std::vector<DeviceDataHandle*> handleVec;
       
-      size_t expectedSize = sizeof(int) // setSize
-          + pushedData.fields.size() * sizeof(void*); // fields
-      if (setType->getCardinality() > 0) {
-        expectedSize += 3*sizeof(void*); // endpoints and indices arrays
+      vector<uint8_t> setData;
+      if (setType->isa<ir::UnstructuredSetType>()) {
+        // setSize
+        int idx = setData.size();
+        setData.resize(setData.size() + sizeof(int));
+        memcpy(setData.data()+idx, (uint8_t*)(&pushedData.setSize), sizeof(int));
       }
-      void *globalPtrHost = getGlobalHostPtr(
-          *cudaModule, bufVar.getName(), expectedSize);
-      // Build packed global set struct
-      *(int*)globalPtrHost = pushedData.setSize;
-      globalPtrHost = ((int*)globalPtrHost)+1;
-      if (setType->getCardinality() > 0) {
-        *(void**)globalPtrHost = reinterpret_cast<void*>(
-            *(pushedData.endpoints->devBuffer));
-        globalPtrHost = ((void**)globalPtrHost)+1;
-        *(void**)globalPtrHost = reinterpret_cast<void*>(
-            *(pushedData.startIndex->devBuffer));
-        globalPtrHost = ((void**)globalPtrHost)+1;
-        *(void**)globalPtrHost  = reinterpret_cast<void*>(
-            *(pushedData.nbrIndex->devBuffer));
-        globalPtrHost = ((void**)globalPtrHost)+1;
+      else if (setType->isa<ir::LatticeLinkSetType>()) {
+        // setSizes
+        int idx = setData.size();
+        setData.resize(setData.size() + sizeof(void*));
+        memcpy(setData.data()+idx, (uint8_t*)(&pushedData.setSizes), sizeof(void*));
+      }
+      else {
+        unreachable;
+      }
+      // Padding to 8-byte alignment (only needed if something comes afterwards)
+      if ((setType->isa<ir::UnstructuredSetType>() &&
+           setType->to<ir::UnstructuredSetType>()->getCardinality() > 0) ||
+          setType->isa<ir::LatticeLinkSetType>() ||
+          pushedData.fields.size() > 0) {
+        if (setData.size() % 8 != 0) {
+          setData.resize(setData.size() + (8-setData.size()%8));
+          iassert(setData.size() % 8 == 0); // double check this math
+        }
+      }
+      // Neighbors structures
+      if ((setType->isa<ir::UnstructuredSetType>() &&
+           setType->to<ir::UnstructuredSetType>()->getCardinality() > 0) ||
+          setType->isa<ir::LatticeLinkSetType>()) {
+        int idx = setData.size();
+        setData.resize(setData.size() + 3*sizeof(void*));
+        memcpy(setData.data()+idx, (void*)(pushedData.endpoints->devBuffer), sizeof(void*));
+        idx += sizeof(void*);
+        iassert(idx == setData.size());
         handleVec.push_back(pushedData.endpoints);
-        handleVec.push_back(pushedData.startIndex);
-        handleVec.push_back(pushedData.nbrIndex);
       }
+      // Fields
       // NOTE: This code assumes the width of void* is the same as
       // and float*/int* on the GPU.
       for (DeviceDataHandle *fieldHandle : pushedData.fields) {
-        *(void**)globalPtrHost = reinterpret_cast<void*>(
-            *(fieldHandle->devBuffer));
-        globalPtrHost = ((void**)globalPtrHost)+1;
+        int idx = setData.size();
+        setData.resize(setData.size() + sizeof(void*));
+        memcpy(setData.data()+idx, (void*)(fieldHandle->devBuffer), sizeof(void*));
         handleVec.push_back(fieldHandle);
       }
       argBufMap.emplace(bufVar.getName(), handleVec);
+
+      CUdeviceptr globalPtr = getGlobalDevPtr(
+          *cudaModule, bufVar.getName(), setData.size());
+      cuMemcpyHtoD(globalPtr, (void*)setData.data(), setData.size());
     }
   }
   // for (auto& kv : globals) {
@@ -753,48 +876,52 @@ GPUFunction::init() {
 
   // Initialize tensor index data
   for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
+    if (tensorIndex.getKind() != ir::TensorIndex::PExpr) {
+      continue;
+    }
     const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
-    const uint32_t** coordDataPtr = tensorIndexPtrs[pexpr].first;
-    const uint32_t** sinkDataPtr = tensorIndexPtrs[pexpr].second;
-    CUdeviceptr *devCoordBuffer = new CUdeviceptr();
-    CUdeviceptr *devSinkBuffer = new CUdeviceptr();
+    const uint32_t** rowptrDataPtr = tensorIndexPtrs[pexpr].first;
+    const uint32_t** colidxDataPtr = tensorIndexPtrs[pexpr].second;
+    CUdeviceptr *devRowptrBuffer = new CUdeviceptr();
+    CUdeviceptr *devColidxBuffer = new CUdeviceptr();
 
     // Push data to GPU
     const pe::PathIndex& pidx = pathIndices[pexpr];
     if (isa<pe::SegmentedPathIndex>(pidx)) {
       const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
-      size_t coordSize = (spidx->numElements()+1)*sizeof(uint32_t);
-      size_t sinkSize = spidx->numNeighbors()*sizeof(uint32_t);
-      checkCudaErrors(cuMemAlloc(devCoordBuffer, coordSize));
+      size_t rowptrSize = (spidx->numElements()+1)*sizeof(uint32_t);
+      size_t colidxSize = spidx->numNeighbors()*sizeof(uint32_t);
+      checkCudaErrors(cuMemAlloc(devRowptrBuffer, rowptrSize));
       checkCudaErrors(cuMemcpyHtoD(
-          *devCoordBuffer, *coordDataPtr, coordSize));
+          *devRowptrBuffer, *rowptrDataPtr, rowptrSize));
       
-      checkCudaErrors(cuMemAlloc(devSinkBuffer, sinkSize));
+      checkCudaErrors(cuMemAlloc(devColidxBuffer, colidxSize));
       checkCudaErrors(cuMemcpyHtoD(
-          *devSinkBuffer, *sinkDataPtr, sinkSize));
+          *devColidxBuffer, *colidxDataPtr, colidxSize));
     }
     else {
       not_supported_yet;
     }
 
-    const ir::Var& coords = tensorIndex.getCoordArray();
-    void *coordsPtrHost = getGlobalHostPtr(
-        *cudaModule, coords.getName(), sizeof(void*));
-    *((void**)coordsPtrHost) = reinterpret_cast<void*>(*devCoordBuffer);
-    // std::cout << "store in: " << coordsPtrHost << std::endl;
-    // std::cout << "Value of coordsPtr: " << *(void**)coordsPtrHost << std::endl;
+    const ir::Var& rowptrs = tensorIndex.getRowptrArray();
+    CUdeviceptr rowptrsPtr = getGlobalDevPtr(
+        *cudaModule, rowptrs.getName(), sizeof(void*));
+    cuMemcpyHtoD(rowptrsPtr, reinterpret_cast<void*>(devRowptrBuffer),
+                 sizeof(void*));
 
-    const ir::Var& sinks = tensorIndex.getSinkArray();
-    void *sinksPtrHost = getGlobalHostPtr(
-        *cudaModule, sinks.getName(), sizeof(void*));
-    *((void**)sinksPtrHost) = reinterpret_cast<void*>(*devSinkBuffer);
-    // std::cout << "store in: " << sinksPtrHost << std::endl;
-    // std::cout << "Value of sinksPtr: " << *(void**)sinksPtrHost << std::endl;
+    const ir::Var& colidx = tensorIndex.getColidxArray();
+    CUdeviceptr colidxPtr = getGlobalDevPtr(
+        *cudaModule, colidx.getName(), sizeof(void*));
+    cuMemcpyHtoD(colidxPtr, reinterpret_cast<void*>(devColidxBuffer),
+                 sizeof(void*));
   }
 
   // Get reference to CUDA function
   checkCudaErrors(cuModuleGetFunction(
       &cudaFunction, *cudaModule, harness->getName().data()));
+
+  // Mark initialized
+  initialized = true;
 
   return [this, env, cudaFunction](){
     // std::cerr << "Allocated GPU memory: "
@@ -809,7 +936,6 @@ GPUFunction::init() {
     for (auto& pair : arguments) {
       std::string name = pair.first;
       if (isResult(name)) {
-        // std::cout << "Dirtying " << formal << std::endl;
         for (auto &handle : argBufMap[name]) {
           handle->devDirty = true;
         }

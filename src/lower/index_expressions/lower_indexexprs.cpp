@@ -736,8 +736,15 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       (to<TensorWrite>(stmt)->cop != CompoundOperator::None)) ||
       (isa<FieldWrite>(stmt) &&
       (to<FieldWrite>(stmt)->cop != CompoundOperator::None));
-  if ((isResultScalar || sig.isSparse()) && !isCompoundAssign) {
+  bool isVarSparse = (isa<AssignStmt>(stmt) && 
+                      (storage.hasStorage(to<AssignStmt>(stmt)->var) &&
+                       storage.getStorage(to<AssignStmt>(stmt)->var).getKind()
+                       == TensorStorage::Indexed));
+  if (isResultScalar || isVarSparse) {
     loopNest = Block::make(initializeLhsToZero(stmt), loopNest);
+  }
+  else if (sig.isSparse() && !isCompoundAssign) {
+    loopNest = Block::make(initializeTensorToZero(stmt), loopNest);
   }
 
   return loopNest;

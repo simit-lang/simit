@@ -150,7 +150,7 @@ protected:
 
   /// Produce LLVM globals for everything in `env` and store in `globals`
   /// and in `symtable` appropriately.
-  virtual void emitGlobals(const ir::Environment& env);
+  virtual void emitGlobals(const ir::Environment& env, bool packed=true);
 
   virtual void emitPrintf(llvm::Value *str, 
                           std::vector<llvm::Value*> args={});

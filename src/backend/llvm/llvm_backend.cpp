@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
@@ -13,26 +14,13 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
-
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-#include "llvm/Analysis/Verifier.h"
-#else
 #include "llvm/IR/Verifier.h"
-#endif
-
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
-
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#if LLVM_MAJOR_VERSION <=3 && LLVM_MINOR_VERSION <= 6
-#include "llvm/PassManager.h"
-#else
-#include "llvm/IR/LegacyPassManager.h"
-#endif
 
 #include "llvm_types.h"
 #include "llvm_codegen.h"
@@ -69,12 +57,8 @@ const std::string LEN_SUFFIX(".len");
 bool LLVMBackend::llvmInitialized = false;
 
 shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 5
-  shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(module));
-#else
-  shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(
-      unique_ptr<llvm::Module>(module)));
-#endif
+  shared_ptr<llvm::EngineBuilder> engineBuilder(
+      new llvm::EngineBuilder(std::unique_ptr<llvm::Module>(module)));
   return engineBuilder;
 }
 
@@ -82,6 +66,7 @@ LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
     llvmInitialized = true;
   }
 }
@@ -238,13 +223,8 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
-  llvm::FunctionPassManager fpm(module);
-  llvm::PassManager mpm;
-#else
   llvm::legacy::FunctionPassManager fpm(module);
   llvm::legacy::PassManager mpm;
-#endif
   llvm::PassManagerBuilder pmBuilder;
   
   pmBuilder.OptLevel = 3;
@@ -255,13 +235,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   pmBuilder.SLPVectorize = 1;
 
   llvm::DataLayout dataLayout(module);
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
-  fpm.add(new llvm::DataLayout(dataLayout));
-#elif LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
-  fpm.add(new llvm::DataLayoutPass(dataLayout));
-#else
   module->setDataLayout(dataLayout);
-#endif
 
   pmBuilder.populateFunctionPassManager(fpm);
   pmBuilder.populateModulePassManager(mpm);
@@ -1543,11 +1517,7 @@ llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
   std::vector<llvm::Constant*> idx;
   idx.push_back(zero);
   idx.push_back(zero);
-#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 6
-  return llvm::ConstantExpr::getGetElementPtr(strGlobal, idx);
-#else
   return llvm::ConstantExpr::getGetElementPtr(nullptr, strGlobal, idx);
-#endif
 }
 
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
@@ -1622,7 +1592,7 @@ void LLVMBackend::emitPrintf(std::string format,
   emitPrintf(emitGlobalString(format), args);
 }
 
-void LLVMBackend::emitGlobals(const ir::Environment& env) {
+void LLVMBackend::emitGlobals(const ir::Environment& env, bool packed) {
   // Emit global constants
   // TODO
 
@@ -1630,7 +1600,7 @@ void LLVMBackend::emitGlobals(const ir::Environment& env) {
   for (const Var& ext : env.getExternVars()) {
     llvm::GlobalVariable* ptr = createGlobal(module, ext,
                                              llvm::GlobalValue::ExternalLinkage,
-                                             globalAddrspace());
+                                             globalAddrspace(), packed);
     this->symtable.insert(ext, ptr);
     this->globals.insert(ext);
   }
@@ -1639,7 +1609,7 @@ void LLVMBackend::emitGlobals(const ir::Environment& env) {
   for (const Var& tmp : env.getTemporaries()) {
     llvm::GlobalVariable* ptr = createGlobal(module, tmp,
                                              llvm::GlobalValue::ExternalLinkage,
-                                             globalAddrspace());
+                                             globalAddrspace(), packed);
     this->symtable.insert(tmp, ptr);
     this->globals.insert(tmp);
   }
@@ -1650,14 +1620,14 @@ void LLVMBackend::emitGlobals(const ir::Environment& env) {
       const Var& rowptr = tensorIndex.getRowptrArray();
       llvm::GlobalVariable* rowptrPtr =
           createGlobal(module, rowptr, llvm::GlobalValue::ExternalLinkage,
-                       globalAddrspace());
+                       globalAddrspace(), packed);
       this->symtable.insert(rowptr, rowptrPtr);
       this->globals.insert(rowptr);
 
       const Var& colidx  = tensorIndex.getColidxArray();
       llvm::GlobalVariable* colidxPtr =
           createGlobal(module, colidx, llvm::GlobalValue::ExternalLinkage,
-                       globalAddrspace());
+                       globalAddrspace(), packed);
       this->symtable.insert(colidx, colidxPtr);
       this->globals.insert(colidx);
     }

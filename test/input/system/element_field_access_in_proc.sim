@@ -14,8 +14,8 @@ export func main()
   var i = 0.0;
   for p in V
     i = i + p.b;
-    for p in E
-      i = i + p.e;
+    for edge in E
+      i = i + edge.e;
     end
   end
   for p in V
