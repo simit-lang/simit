@@ -757,9 +757,7 @@ Stmt CallStmt::make(std::vector<Var> results,
 
 // struct Scope
 Stmt Scope::make(Stmt scopedStmt) {
-  if (!scopedStmt.defined()) {
-    scopedStmt = Pass::make();
-  }
+  iassert(scopedStmt.defined());
   Scope *node = new Scope;
   node->scopedStmt = scopedStmt;
   return node;
