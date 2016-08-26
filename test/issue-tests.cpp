@@ -120,3 +120,15 @@ TEST(DISABLED_issue, 45) {
   ASSERT_EQ(0, (int)b(v2)(0));
   ASSERT_EQ(0, (int)b(v2)(1));
 }
+
+TEST(DISABLED_issue, 53) {
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  int a[2] = {1,2};
+  int b[2];
+  func.bind("a", a);
+  func.bind("b", b);
+  func.runSafe();
+  ASSERT_EQ(2, b[0]);
+  ASSERT_EQ(4, b[1]);
+}
