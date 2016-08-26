@@ -19,8 +19,8 @@ const grav    = [0.0, -9.81, 0.0]';
 const I       = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
 
 func compute_mass_damping(p : Point)
--> (MD  : matrix[points,points](matrix[3,3](float)),
-    fmg : vector[points](vector[3](float)))
+  -> (MD  : matrix[points,points](matrix[3,3](float)),
+      fmg : vector[points](vector[3](float)))
   mass = p.m;
   if p.fixed
     MD(p,p) = 1.0;
@@ -31,8 +31,8 @@ func compute_mass_damping(p : Point)
 end
 
 func compute_elasticity(s: Spring, p : (Point*2))
--> (K  : matrix[points,points](matrix[3,3](float)),
-    fe : vector[points](vector[3](float)))
+    -> (K  : matrix[points,points](matrix[3,3](float)),
+        fe : vector[points](vector[3](float)))
   stiffness = s.k;
 
   % Spring force

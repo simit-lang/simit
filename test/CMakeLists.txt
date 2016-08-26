@@ -22,7 +22,7 @@ target_link_libraries(${TESTS_F32} ${PROJECT_NAME})
 
 set(SIMIT_TEST_INPUT_DIR ${SIMIT_TEST_DIR}/input)
 add_definitions(-DTEST_INPUT_DIR="${SIMIT_TEST_INPUT_DIR}")
-add_definitions(-DEXAMPLES_DIR="${SIMIT_EXAMPLES_DIR}")
+add_definitions(-DAPPS_DIR="${SIMIT_APPS_DIR}")
 
 if (CUDA_FOUND)
   add_definitions(-DGPU)

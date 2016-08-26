@@ -13,12 +13,12 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-const g    = [0.0, -10.0, 0.0]';
+const g    = [0.0, -9.81, 0.0]';
 const h    = 1e-6;
 const damp = 0.01;
 
-func compute_a(s : Spring, p : (Point*2))
--> (a : vector[points](vector[3](float)))
+func acceleration(s : Spring, p : (Point*2))
+    -> a : vector[points](vector[3](float))
   dx = p(1).x - p(0).x;
   l = norm(dx);
   U = dx/l;
@@ -34,7 +34,7 @@ func compute_a(s : Spring, p : (Point*2))
 end
 
 export func timestep()
-  a = map compute_a to springs reduce +;
+  a = map acceleration to springs reduce +;
   points.v = (1.0 - damp) * points.v + h*a;
   points.x = points.x + points.v;
 end
