@@ -64,25 +64,23 @@ void Function::bind(const std::string& name, simit::Set *set) {
         break;
     }
 
-    uassert(setFieldTypeComponentType == elemFieldType->getComponentType())
-        << "field type does not match function argument type "
-        << util::quote(*elemFieldType);
+    const string fieldTypeErrorString =
+        name + "." + fieldData->name + " type does not match Simit type " +
+        util::quote(*elemFieldType);
 
-    uassert(setFieldType->getOrder() == elemFieldType->order())
-        << "field type does not match function argument type "
-        << util::quote(*elemFieldType);
+    uassert(setFieldTypeComponentType == elemFieldType->getComponentType() &&
+            setFieldType->getOrder() == elemFieldType->order())
+        << fieldTypeErrorString;
 
     const vector<ir::IndexDomain> &fieldDims = elemFieldType->getDimensions();
     for (size_t i=0; i < elemFieldType->order(); ++i) {
       uassert(fieldDims[i].getIndexSets().size() == 1)
-          << "field type does not match function argument type "
-          << util::quote(*elemFieldType);
+          << fieldTypeErrorString;
 
       size_t argFieldRange = fieldDims[i].getIndexSets()[0].getSize();
 
       uassert(setFieldType->getDimension(i) == argFieldRange)
-          << "field type does not match function argument type "
-          << util::quote(*elemFieldType);
+          << fieldTypeErrorString;
     }
   }
 #endif
