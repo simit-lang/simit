@@ -32,7 +32,7 @@ TEST(apps, esprings) {
   x(p0) = {-1.0, 0.0, 0.0};
   x(p1) = { 0.0, 0.0, 0.0};
   x(p2) = { 1.0, 0.0, 0.0};
-  v(p0) = {-0.1, 0.0, 0.0};
+  v(p0) = {-0.8, 0.0, 0.0};
   v(p1) = { 0.0, 0.0, 0.0};
   v(p2) = { 0.0, 0.0, 0.0};
   m(p0) =  0.5;
@@ -40,10 +40,10 @@ TEST(apps, esprings) {
   m(p2) =  2.0;
   fixed(p1) = true;
 
-  k(s0)  = 10;
-  k(s1)  = 5;
-  l0(s0) = 0.1;
-  l0(s1) = 1.5;
+  k(s0)  = 1;
+  k(s1)  = 2;
+  l0(s0) = 0.8;
+  l0(s1) = 1.2;
 
   Function func = loadFunction(APP_FILE_NAME("springs"), "timestep");
   if (!func.defined()) FAIL();
@@ -52,8 +52,8 @@ TEST(apps, esprings) {
   func.runSafe();
   func.runSafe();
 
-  SIMIT_ASSERT_FLOAT_EQ(-1.1859030137248419,      x(p0)(0));
-  SIMIT_ASSERT_FLOAT_EQ(-0.000029296303449362936, x(p0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-2.5760651710122078,      x(p0)(0));
+  SIMIT_ASSERT_FLOAT_EQ(-2.9331861307425285e-05, x(p0)(1));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     x(p0)(2));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     x(p1)(0));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     x(p1)(1));
@@ -62,8 +62,8 @@ TEST(apps, esprings) {
   SIMIT_ASSERT_FLOAT_EQ(-0.000029331899999999999, x(p2)(1));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     x(p2)(2));
 
-  SIMIT_ASSERT_FLOAT_EQ(-0.090487014476480193,    v(p0)(0));
-  SIMIT_ASSERT_FLOAT_EQ(-0.000019486303449362937, v(p0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-0.78406907101309153,    v(p0)(0));
+  SIMIT_ASSERT_FLOAT_EQ(-1.9521861307425286e-05, v(p0)(1));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     v(p0)(2));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     v(p1)(0));
   SIMIT_ASSERT_FLOAT_EQ( 0.0,                     v(p1)(1));
