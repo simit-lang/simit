@@ -45,6 +45,8 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "return") return Token::Type::RETURN;
   if (token == "print") return Token::Type::PRINT;
   if (token == "println") return Token::Type::PRINTLN;
+  if (token == "new") return Token::Type::NEW; 
+  if (token == "delete") return Token::Type::DELETE;
   if (token == "and") return Token::Type::AND; 
   if (token == "or") return Token::Type::OR;
   if (token == "not") return Token::Type::NOT;
