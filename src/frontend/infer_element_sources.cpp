@@ -138,10 +138,17 @@ void InferElementSources::visit(TensorReadExpr::Ptr expr) {
         continue;
       }
 
-      not_supported_yet;
+      for (const auto elem : to<NamedTupleType>(idxVarType)->elems) {
+        if (elem->name->ident == idxTupleElem) {
+          idxElemType = elem->element;
+          break;
+        }
+      }
     } else if (isa<UnnamedTupleType>(idxVarType)) {
       idxElemType = to<UnnamedTupleType>(idxVarType)->element;
-    } else {
+    }
+
+    if (!idxElemType) {
       continue;
     }
 

@@ -71,7 +71,9 @@ private:
   fir::Expr::Ptr                      parseNegExpr();
   fir::Expr::Ptr                      parseExpExpr();
   fir::Expr::Ptr                      parseTransposeExpr();
-  fir::Expr::Ptr                      parseCallOrReadExpr();
+  fir::Expr::Ptr                      parseTensorReadExpr();
+  fir::Expr::Ptr                      parseFieldReadExpr();
+  fir::Expr::Ptr                      parseSetReadExpr();
   fir::Expr::Ptr                      parseFactor();
   fir::VarExpr::Ptr                   parseVarExpr();
   fir::RangeConst::Ptr                parseRangeConst();
@@ -119,7 +121,7 @@ private:
   
   void  skipTo(std::vector<Token::Type>);
   Token consume(Token::Type); 
-  bool  tryconsume(Token::Type type) { return tokens.consume(type); }
+  bool  tryConsume(Token::Type type) { return tokens.consume(type); }
 
 private:
   SymbolTable decls;

@@ -192,7 +192,7 @@ fir::FuncDecl::Ptr Parser::parseFuncDecl() {
                      fir::FuncDecl::Type::EXPORTED : 
                      fir::FuncDecl::Type::INTERNAL;
     
-    tryconsume(Token::Type::EXPORT);
+    tryConsume(Token::Type::EXPORT);
     consume(Token::Type::FUNC);
     
     funcDecl->name = parseIdent();
@@ -227,11 +227,11 @@ fir::FuncDecl::Ptr Parser::parseFuncDecl() {
 std::vector<fir::GenericParam::Ptr> Parser::parseGenericParams() {
   std::vector<fir::GenericParam::Ptr> genericParams;
 
-  if (tryconsume(Token::Type::LA)) {
+  if (tryConsume(Token::Type::LA)) {
     do {
       const fir::GenericParam::Ptr genericParam = parseGenericParam();
       genericParams.push_back(genericParam);
-    } while (tryconsume(Token::Type::COMMA));
+    } while (tryConsume(Token::Type::COMMA));
     consume(Token::Type::RA);
   }
 
@@ -270,7 +270,7 @@ std::vector<fir::Argument::Ptr> Parser::parseArguments() {
     do {
       const fir::Argument::Ptr argument = parseArgumentDecl();
       arguments.push_back(argument);
-    } while (tryconsume(Token::Type::COMMA));
+    } while (tryConsume(Token::Type::COMMA));
   }
   consume(Token::Type::RP);
 
@@ -299,12 +299,12 @@ fir::Argument::Ptr Parser::parseArgumentDecl() {
 std::vector<fir::IdentDecl::Ptr> Parser::parseResults() {
   std::vector<fir::IdentDecl::Ptr> results;
 
-  if (tryconsume(Token::Type::RARROW)) {
-    if (tryconsume(Token::Type::LP)) {
+  if (tryConsume(Token::Type::RARROW)) {
+    if (tryConsume(Token::Type::LP)) {
       do {
         const fir::IdentDecl::Ptr result = parseIdentDecl();
         results.push_back(result);
-      } while (tryconsume(Token::Type::COMMA));
+      } while (tryConsume(Token::Type::COMMA));
       consume(Token::Type::RP);
     } else {
       const fir::IdentDecl::Ptr result = parseIdentDecl();
@@ -373,9 +373,9 @@ fir::VarDecl::Ptr Parser::parseVarDecl() {
     varDecl->setBeginLoc(varToken);
   
     varDecl->name = parseIdent();
-    if (tryconsume(Token::Type::COL)) {
+    if (tryConsume(Token::Type::COL)) {
       varDecl->type = parseTensorType();
-      if (tryconsume(Token::Type::ASSIGN)) {
+      if (tryConsume(Token::Type::ASSIGN)) {
         varDecl->initVal = parseExpr();
       }
     } else {
@@ -406,7 +406,7 @@ fir::ConstDecl::Ptr Parser::parseConstDecl() {
     constDecl->setBeginLoc(constToken);
     
     constDecl->name = parseIdent();
-    if (tryconsume(Token::Type::COL)) {
+    if (tryConsume(Token::Type::COL)) {
       constDecl->type = parseTensorType();
     }
     consume(Token::Type::ASSIGN);
@@ -648,7 +648,7 @@ fir::PrintStmt::Ptr Parser::parsePrintStmt() {
     do {
       const fir::Expr::Ptr arg = parseExpr();
       printStmt->args.push_back(arg);
-    } while (tryconsume(Token::Type::COMMA));
+    } while (tryConsume(Token::Type::COMMA));
    
     const Token endToken = consume(Token::Type::SEMICOL);
     printStmt->setEndLoc(endToken);
@@ -674,13 +674,13 @@ fir::ApplyStmt::Ptr Parser::parseApplyStmt() {
  
     applyStmt->map->func = parseIdent();
   
-    if (tryconsume(Token::Type::LA)) {
+    if (tryConsume(Token::Type::LA)) {
       applyStmt->map->genericArgs = parseIndexSets();
       consume(Token::Type::RA);
     }
 
-    if (tryconsume(Token::Type::LP)) {
-      if (!tryconsume(Token::Type::RP)) {
+    if (tryConsume(Token::Type::LP)) {
+      if (!tryConsume(Token::Type::RP)) {
         applyStmt->map->partialActuals = parseExprParams();
         consume(Token::Type::RP);
       }
@@ -716,7 +716,7 @@ fir::ExprStmt::Ptr Parser::parseExprOrAssignStmt() {
           auto assignStmt = std::make_shared<fir::AssignStmt>();
           
           assignStmt->lhs.push_back(expr);
-          while (tryconsume(Token::Type::COMMA)) {
+          while (tryConsume(Token::Type::COMMA)) {
             const fir::Expr::Ptr expr = parseExpr();
             assignStmt->lhs.push_back(expr);
           }
@@ -770,14 +770,14 @@ fir::MapExpr::Ptr Parser::parseMapExpr() {
   const fir::Identifier::Ptr func = parseIdent();
  
   std::vector<fir::IndexSet::Ptr> genericArgs;
-  if (tryconsume(Token::Type::LA)) {
+  if (tryConsume(Token::Type::LA)) {
     genericArgs = parseIndexSets();
     consume(Token::Type::RA);
   }
     
   std::vector<fir::Expr::Ptr> partialActuals;
-  if (tryconsume(Token::Type::LP)) {
-    if (!tryconsume(Token::Type::RP)) {
+  if (tryConsume(Token::Type::LP)) {
+    if (!tryConsume(Token::Type::RP)) {
       partialActuals = parseExprParams();
       consume(Token::Type::RP);
     }
@@ -787,11 +787,11 @@ fir::MapExpr::Ptr Parser::parseMapExpr() {
   const fir::SetIndexSet::Ptr target = parseSetIndexSet();
 
   fir::SetIndexSet::Ptr through;
-  if (tryconsume(Token::Type::THROUGH)) {
+  if (tryConsume(Token::Type::THROUGH)) {
     through = parseSetIndexSet();
   }
 
-  if (tryconsume(Token::Type::REDUCE)) {
+  if (tryConsume(Token::Type::REDUCE)) {
     const auto mapExpr = std::make_shared<fir::ReducedMapExpr>();
     mapExpr->setBeginLoc(mapToken);
     
@@ -824,7 +824,7 @@ fir::MapExpr::Ptr Parser::parseMapExpr() {
 fir::Expr::Ptr Parser::parseOrExpr() {
   fir::Expr::Ptr expr = parseAndExpr(); 
 
-  while (tryconsume(Token::Type::OR)) {
+  while (tryConsume(Token::Type::OR)) {
     auto orExpr = std::make_shared<fir::OrExpr>();
     
     orExpr->lhs = expr;
@@ -840,7 +840,7 @@ fir::Expr::Ptr Parser::parseOrExpr() {
 fir::Expr::Ptr Parser::parseAndExpr() {
   fir::Expr::Ptr expr = parseXorExpr(); 
 
-  while (tryconsume(Token::Type::AND)) {
+  while (tryConsume(Token::Type::AND)) {
     auto andExpr = std::make_shared<fir::AndExpr>();
     
     andExpr->lhs = expr;
@@ -856,7 +856,7 @@ fir::Expr::Ptr Parser::parseAndExpr() {
 fir::Expr::Ptr Parser::parseXorExpr() {
   fir::Expr::Ptr expr = parseEqExpr(); 
 
-  while (tryconsume(Token::Type::XOR)) {
+  while (tryConsume(Token::Type::XOR)) {
     auto xorExpr = std::make_shared<fir::XorExpr>();
     
     xorExpr->lhs = expr;
@@ -1020,7 +1020,7 @@ fir::Expr::Ptr Parser::parseNegExpr() {
 fir::Expr::Ptr Parser::parseExpExpr() {
   fir::Expr::Ptr expr = parseTransposeExpr();
 
-  if (tryconsume(Token::Type::EXP)) {
+  if (tryConsume(Token::Type::EXP)) {
     auto expExpr = std::make_shared<fir::ExpExpr>();
     
     expExpr->lhs = expr;
@@ -1032,9 +1032,9 @@ fir::Expr::Ptr Parser::parseExpExpr() {
   return expr;
 }
 
-// transpose_expr: call_or_read_expr {'''}
+// transpose_expr: tensor_read_expr {'''}
 fir::Expr::Ptr Parser::parseTransposeExpr() {
-  fir::Expr::Ptr expr = parseCallOrReadExpr();
+  fir::Expr::Ptr expr = parseTensorReadExpr();
 
   while (peek().type == Token::Type::TRANSPOSE) {
     auto transposeExpr = std::make_shared<fir::TransposeExpr>();
@@ -1049,65 +1049,67 @@ fir::Expr::Ptr Parser::parseTransposeExpr() {
   return expr;
 }
 
-// call_or_read_expr: factor {('(' [read_params] ')') | ('[' [expr_params] ']')
-//                            | ('.' ident)}
-fir::Expr::Ptr Parser::parseCallOrReadExpr() {
+// tensor_read_expr: field_read_expr {'(' [read_params] ')'}
+fir::Expr::Ptr Parser::parseTensorReadExpr() {
+  fir::Expr::Ptr expr = parseFieldReadExpr();
+
+  while (tryConsume(Token::Type::LP)) {
+    auto tensorRead = std::make_shared<fir::TensorReadExpr>();
+    tensorRead->tensor = expr;
+    
+    if (peek().type != Token::Type::RP) {
+      tensorRead->indices = parseReadParams();
+    }
+    
+    const Token rightParenToken = consume(Token::Type::RP);
+    tensorRead->setEndLoc(rightParenToken);
+
+    expr = tensorRead;
+  }
+
+  return expr;
+}
+
+// field_read_expr: set_read_expr ['.' ident]
+fir::Expr::Ptr Parser::parseFieldReadExpr() {
+  fir::Expr::Ptr expr = parseSetReadExpr();
+
+  if (tryConsume(Token::Type::PERIOD)) {
+    auto fieldRead = std::make_shared<fir::FieldReadExpr>();
+    
+    fieldRead->setOrElem = expr;
+    fieldRead->field = parseIdent();
+    
+    expr = fieldRead;
+  }
+
+  return expr;
+}
+
+// set_read_expr: factor ['[' [expr_params [';' expr_params]] ']']
+fir::Expr::Ptr Parser::parseSetReadExpr() {
   fir::Expr::Ptr expr = parseFactor();
 
-  while (true) {
-    switch (peek().type) {
-      case Token::Type::LP:
-      {
-        auto tensorRead = std::make_shared<fir::TensorReadExpr>();
-        tensorRead->tensor = expr;
-        
-        consume(Token::Type::LP);
-        if (peek().type != Token::Type::RP) {
-          tensorRead->indices = parseReadParams();
-        }
-        
-        const Token rightParenToken = consume(Token::Type::RP);
-        tensorRead->setEndLoc(rightParenToken);
+  if (tryConsume(Token::Type::LB)) {
+    auto setRead = std::make_shared<fir::SetReadExpr>();
+    setRead->set = expr;
 
-        expr = tensorRead;
-        break;
-      }
-      case Token::Type::LB:
-      {
-        auto setRead = std::make_shared<fir::SetReadExpr>();
-        setRead->set = expr;
-
-        consume(Token::Type::LB);
-        if (peek().type != Token::Type::RB) {
-          setRead->indices = parseExprParams();
-        }
-        if (tryconsume(Token::Type::SEMICOL)) {
-          auto sink = parseExprParams();
-          std::copy(sink.begin(), sink.end(),
-                    std::back_inserter(setRead->indices));
-        }
-
-        const Token rightBracketToken = consume(Token::Type::RB);
-        setRead->setEndLoc(rightBracketToken);
-
-        expr = setRead;
-        break;
-      }
-      case Token::Type::PERIOD:
-      {
-        auto fieldRead = std::make_shared<fir::FieldReadExpr>();
-        fieldRead->setOrElem = expr;
-        
-        consume(Token::Type::PERIOD);
-        fieldRead->field = parseIdent();
-        
-        expr = fieldRead;
-        break;
-      }
-      default:
-        return expr;
+    if (peek().type != Token::Type::RB) {
+      setRead->indices = parseExprParams();
     }
+    if (tryConsume(Token::Type::SEMICOL)) {
+      auto sink = parseExprParams();
+      std::copy(sink.begin(), sink.end(),
+                std::back_inserter(setRead->indices));
+    }
+
+    const Token rightBracketToken = consume(Token::Type::RB);
+    setRead->setEndLoc(rightBracketToken);
+
+    expr = setRead;
   }
+
+  return expr;
 }
 
 // factor: ('(' expr ')') | call_expr | unnamed_tuple_read_expr 
@@ -1214,7 +1216,7 @@ fir::CallExpr::Ptr Parser::parseCallExpr() {
   
   call->func = parseIdent();
 
-  if (tryconsume(Token::Type::LA)) {
+  if (tryConsume(Token::Type::LA)) {
     call->genericArgs = parseIndexSets();
     consume(Token::Type::RA);
   }
@@ -1275,7 +1277,7 @@ std::vector<fir::ReadParam::Ptr> Parser::parseReadParams() {
   do {
     const fir::ReadParam::Ptr param = parseReadParam();
     readParams.push_back(param);
-  } while (tryconsume(Token::Type::COMMA));
+  } while (tryConsume(Token::Type::COMMA));
 
   return readParams;
 }
@@ -1304,7 +1306,7 @@ std::vector<fir::Expr::Ptr> Parser::parseExprParams() {
   do {
     const fir::Expr::Ptr param = parseExpr();
     exprParams.push_back(param);
-  } while (tryconsume(Token::Type::COMMA));
+  } while (tryConsume(Token::Type::COMMA));
 
   return exprParams;
 }
@@ -1374,7 +1376,7 @@ fir::SetType::Ptr Parser::parseUnstructuredSetType() {
   const Token rightCurlyToken = consume(Token::Type::RC);
   setType->setEndLoc(rightCurlyToken);
   
-  if (tryconsume(Token::Type::LP)) {
+  if (tryConsume(Token::Type::LP)) {
     setType->endpoints = parseEndpoints();
 
     const Token rightParenToken = consume(Token::Type::RP);
@@ -1420,7 +1422,7 @@ std::vector<fir::Endpoint::Ptr> Parser::parseEndpoints() {
     auto endpoint = std::make_shared<fir::Endpoint>();
     endpoint->set = parseSetIndexSet();
     endpoints.push_back(endpoint);
-  } while (tryconsume(Token::Type::COMMA));
+  } while (tryConsume(Token::Type::COMMA));
 
   return endpoints;
 }
@@ -1446,7 +1448,7 @@ fir::TupleType::Ptr Parser::parseNamedTupleType() {
   do {
     const fir::TupleElement::Ptr elem = parseTupleElement();
     tupleType->elems.push_back(elem);
-  } while (tryconsume(Token::Type::COMMA));
+  } while (tryConsume(Token::Type::COMMA));
   
   const Token rightParenToken = consume(Token::Type::RP);
   tupleType->setEndLoc(rightParenToken);
@@ -1523,7 +1525,7 @@ fir::NDTensorType::Ptr Parser::parseVectorBlockType() {
   const Token tensorToken = consume(Token::Type::VECTOR);
   tensorType->setBeginLoc(tensorToken);
 
-  if (tryconsume(Token::Type::LB)) {
+  if (tryConsume(Token::Type::LB)) {
     const fir::IndexSet::Ptr indexSet = parseIndexSet();
     tensorType->indexSets.push_back(indexSet);
     consume(Token::Type::RB);
@@ -1552,7 +1554,7 @@ fir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
   const Token tensorToken = consume(Token::Type::MATRIX);
   tensorType->setBeginLoc(tensorToken);
 
-  if (tryconsume(Token::Type::LB)) {
+  if (tryConsume(Token::Type::LB)) {
     fir::IndexSet::Ptr indexSet = parseIndexSet();
     tensorType->indexSets.push_back(indexSet);
     consume(Token::Type::COMMA);
@@ -1585,7 +1587,7 @@ fir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   const Token tensorToken = consume(Token::Type::TENSOR);
   tensorType->setBeginLoc(tensorToken);
 
-  if (tryconsume(Token::Type::LB)) {
+  if (tryConsume(Token::Type::LB)) {
     tensorType->indexSets = parseIndexSets();
     consume(Token::Type::RB);
   }
@@ -1660,7 +1662,7 @@ std::vector<fir::IndexSet::Ptr> Parser::parseIndexSets() {
   do {
     const fir::IndexSet::Ptr indexSet = parseIndexSet();
     indexSets.push_back(indexSet);
-  } while (tryconsume(Token::Type::COMMA));
+  } while (tryConsume(Token::Type::COMMA));
 
   return indexSets;
 }
@@ -1863,7 +1865,7 @@ fir::DenseTensorLiteral::Ptr Parser::parseDenseMatrixLiteral() {
   do {
     const fir::DenseTensorLiteral::Ptr vec = parseDenseVectorLiteral();
     mat->elems.push_back(vec);
-  } while (tryconsume(Token::Type::SEMICOL));
+  } while (tryConsume(Token::Type::SEMICOL));
 
   return (mat->elems.size() == 1) ? mat->elems[0] : mat;
 }
@@ -2038,7 +2040,7 @@ fir::Test::Ptr Parser::parseTest() {
     {
       consume(Token::Type::LP);
 
-      if (!tryconsume(Token::Type::RP)) {
+      if (!tryConsume(Token::Type::RP)) {
         test->args = parseExprParams();
         consume(Token::Type::RP);
       }

@@ -34,6 +34,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   program = fir::ConstantFolding().rewrite(program);
   fir::ConstChecker(errors).check(program);
   fir::InferElementSources().infer(program);
+  std::cout << *program << std::endl;
   fir::CloneGenericFunctions(intrinsics).specialize(program);
   fir::TypeChecker(intrinsics, errors).check(program);
 

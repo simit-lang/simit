@@ -38,6 +38,7 @@ private:
   virtual void visit(Endpoint::Ptr);
   virtual void visit(UnstructuredSetType::Ptr);
   virtual void visit(LatticeLinkSetType::Ptr);
+  virtual void visit(TupleElement::Ptr);
   virtual void visit(NamedTupleType::Ptr);
   virtual void visit(UnnamedTupleType::Ptr);
   virtual void visit(NDTensorType::Ptr);
@@ -211,13 +212,13 @@ private:
       };
 
     public:
-      typedef std::unordered_map<std::string, Type::Ptr> ElementMap;
+      typedef std::unordered_map<std::string, Type::Ptr> TypeMap;
       typedef util::ScopedMap<std::string, SymbolType>   SymbolTable;
       typedef SymbolTable::SearchScope                   Scope;
 
     private:
       typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
-      typedef std::unordered_map<std::string, ElementMap>    ElementDeclMap;
+      typedef std::unordered_map<std::string, TypeMap>    ElementDeclMap;
       typedef std::unordered_map<FIRNode::Ptr, SetType::Ptr> SetDefinitionMap;
 
     public:
@@ -250,7 +251,7 @@ private:
         return funcReplace.at(sig);
       }
 
-      void addElementType(const std::string& name, const ElementMap &map) {
+      void addElementType(const std::string& name, const TypeMap &map) {
         elementDecls[name] = map;
       }
 

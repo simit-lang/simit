@@ -3,11 +3,13 @@
 #include <iostream>
 #include <algorithm>
 #include <exception>
+#include <unordered_set>
 
 #include "error.h"
 #include "fir.h"
 #include "intrinsics.h"
 #include "type_checker.h"
+#include "util/collections.h"
 #include "util/util.h"
 
 namespace simit {
@@ -114,8 +116,24 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
   }
 }
 
+void TypeChecker::visit(TupleElement::Ptr elem) {
+  retTypeChecked = typeCheck(elem->element);
+}
+
 void TypeChecker::visit(NamedTupleType::Ptr type) {
-  not_supported_yet;
+  std::unordered_set<std::string> elems;
+  for (const auto elem : type->elems) {
+    const bool typeChecked = typeCheck(elem);
+    retTypeChecked = typeChecked && retTypeChecked;
+
+    const std::string elemName = elem->name->ident;
+
+    if (util::contains(elems, elemName)) {
+      reportRedefinition("tuple element", elemName, elem);
+    }
+
+    elems.insert(elemName);
+  }
 }
 
 void TypeChecker::visit(UnnamedTupleType::Ptr type) {
@@ -152,14 +170,14 @@ void TypeChecker::visit(IdentDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
-  Environment::ElementMap elemFields;
+  Environment::TypeMap elemFields;
   for (auto field : decl->fields) {
     const std::string fieldName = field->name->ident;
     const Type::Ptr fieldType = field->type;
 
     const bool typeChecked = typeCheck(field);
 
-    if (elemFields.find(fieldName) != elemFields.end()) {
+    if (util::contains(elemFields, fieldName)) {
       reportRedefinition("element field", fieldName, field);
     }
 
@@ -1298,7 +1316,38 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(NamedTupleReadExpr::Ptr expr) {
-  not_supported_yet;
+  const ExprType lhsType = inferType(expr->tuple);
+  
+  if (!lhsType.defined) {
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  iassert(lhsType.isSingleValue());
+  
+  if (!isa<NamedTupleType>(lhsType.type[0])) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of tuple access to be a named tuple "
+           << "but got a " << toString(lhsType.type[0]);
+    reportError(errMsg.str(), expr->tuple);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  const auto tupleType = to<NamedTupleType>(lhsType.type[0]);
+  const auto elemName = expr->elem->ident;
+
+  for (const auto elem : tupleType->elems) {
+    if (elem->name->ident == elemName) {
+      retType = ExprType(elem->element, lhsType.access);
+      return;
+    }
+  }
+
+  std::stringstream errMsg;
+  errMsg << "undefined tuple element '" << elemName << "'";
+  reportError(errMsg.str(), expr->elem);
+  retType = ExprType(lhsType.access);
 }
 
 void TypeChecker::visit(UnnamedTupleReadExpr::Ptr expr) {
@@ -1318,8 +1367,17 @@ void TypeChecker::visit(UnnamedTupleReadExpr::Ptr expr) {
   }
 
   iassert(lhsType.isSingleValue());
-  const auto tupleType = to<UnnamedTupleType>(lhsType.type[0]);
 
+  if (!isa<UnnamedTupleType>(lhsType.type[0])) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of tuple access to be an unnamed tuple "
+           << "but got a " << toString(lhsType.type[0]);
+    reportError(errMsg.str(), expr->tuple);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  const auto tupleType = to<UnnamedTupleType>(lhsType.type[0]);
   retType = ExprType(tupleType->element, lhsType.access);
 }
 
@@ -2669,7 +2727,9 @@ std::string TypeChecker::toString(Type::Ptr type, bool printQuotes) {
       oss << " from set '" << *elemType->source << "'";
     }
   } else if (isa<NamedTupleType>(type)) {
-    not_supported_yet;
+    const auto tupleType = to<NamedTupleType>(type);
+
+    // TODO: Print source sets
   } else if (isa<UnnamedTupleType>(type)) {
     const auto tupleType = to<UnnamedTupleType>(type);
 
