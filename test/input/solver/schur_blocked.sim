@@ -17,22 +17,20 @@ extern E : set{Edge}(V,V);
 extern D : set{Dirichlet}(V);
 
 func stiffness(e : Edge, v : (Vertex*2)) -> A : matrix[V,V](matrix[2,2](float))
-  fixed = [2.0, 1.0; 1.0, 2.0];
-  free  = [1.0, 1.0; 1.0, 1.0];
-%  var fixed : matrix[2,2](float) = [2.0, 1.0; 1.0, 2.0];
-%  var free  : matrix[2,2](float) = [1.0, 1.0; 1.0, 1.0];
+  var fix : matrix[2,2](float) = [2.0, 1.0; 1.0, 2.0];
+  var fre  : matrix[2,2](float) = [1.0, 1.0; 1.0, 1.0];
   if (v(0).fixed)
-    A(v(0),v(0)) = fixed;
+    A(v(0),v(0)) = fix;
   else
-    A(v(0),v(0)) = free;
+    A(v(0),v(0)) = fre;
   end
   if (v(1).fixed)
-    A(v(1),v(1)) = fixed;
+    A(v(1),v(1)) = fix;
   else
-    A(v(1),v(1)) = free;
+    A(v(1),v(1)) = fre;
   end
-  A(v(0),v(1)) = free;
-  A(v(1),v(0)) = free;
+  A(v(0),v(1)) = fre;
+  A(v(1),v(0)) = fre;
 end
 
 func dirichlet(d : Dirichlet, v : (Vertex*1)) -> C : matrix[D,V](matrix[2,2](float))
@@ -41,18 +39,18 @@ end
 
 export func main()
   A = map stiffness to E reduce +;
-%  C = map dirichlet to D reduce +;
-%  println A;
-%  println C;
+  C = map dirichlet to D reduce +;
+  println A;
+  println C;
 
-%  solverA = chol(A);
-%  t = lltsolve(solverA, V.f);
-%  T = lltmatsolve(solverA, C');
-%  B = C*T;
-%  rhs = C*t - D.b;
-%  solverB = chol(B);
-%  l = lltsolve(solverB, rhs);
-%  V.x = -(T*l) + t;
-%  cholfree(solverA);
-
+  solverA = chol(A);
+  t = lltsolve(solverA, V.f);
+  T = lltmatsolve(solverA, C');
+  B = C*T;
+  rhs = C*t - D.b;
+  solverB = chol(B);
+  l = lltsolve(solverB, rhs);
+  V.x = -(T*l) + t;
+  cholfree(solverA);
+  cholfree(solverB);
 end
