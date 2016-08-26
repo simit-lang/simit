@@ -1065,10 +1065,6 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
   return os << "]";
 }
 
-//template <typename T>
-//std::ostream &operator<<(std::ostream& os, const TensorRef<T>& t) {
-//  return os << static_cast<T>(t);
-//}
 
 // Graph generators
 void createElements(Set *elements, unsigned num);
