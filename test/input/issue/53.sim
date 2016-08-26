@@ -1,0 +1,4 @@
+func main(a : vector[2](int)) -> b : vector[2](int)
+  free = a;
+  b = free*2;
+end
