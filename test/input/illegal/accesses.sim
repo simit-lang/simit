@@ -157,7 +157,7 @@ element E
 end
 
 extern P : set{E};
-extern S : lattice[2]{E}(P);
+extern S : grid{E}[2](P);
 
 func foo()
   S[P,1;1,1];
@@ -168,7 +168,7 @@ element E
 end
 
 extern P : set{E};
-extern S : lattice[2]{E}(P);
+extern S : grid{E}[2](P);
 
 func foo()
   S[1,1;1,1,1];
@@ -180,7 +180,7 @@ end
 
 extern P : set{E};
 extern Q : set{E}(P,P);
-extern S : lattice[2]{E}(P);
+extern S : grid{E}[2](P);
 
 func foo()
   Q[1,1;1,1];
@@ -191,7 +191,7 @@ element E
 end
 
 extern P : set{E};
-extern S : lattice[2]{E}(P);
+extern S : grid{E}[2](P);
 
 func foo()
   S[1,1;:,1];

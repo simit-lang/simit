@@ -81,9 +81,9 @@ private:
   LLVMIRBuilder *builder;
 };
 
-/// Lattice edge set layout:
+/// Grid edge set layout:
 /// <sizes_ptr> <eps_ptr> <nbrs_start_ptr> <nbrs_ptr> <f1> <f2> ...
-class LatticeEdgeSetLayout : public SetLayout {
+class GridSetLayout : public SetLayout {
 public:
   virtual llvm::Value* getSize(unsigned i);
   virtual llvm::Value* getTotalSize();
@@ -93,7 +93,7 @@ public:
   static llvm::Value* makeSet(Set *actual, ir::Type type);
   static void writeSet(Set *actual, ir::Type type, void *externPtr);
   
-  LatticeEdgeSetLayout(ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder)
+  GridSetLayout(ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder)
       : set(set), value(value), builder(builder) {}
 
 private:

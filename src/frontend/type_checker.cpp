@@ -88,29 +88,29 @@ void TypeChecker::visit(UnstructuredSetType::Ptr type) {
   }
 }
 
-void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
+void TypeChecker::visit(GridSetType::Ptr type) {
   const bool elementTypeChecked = typeCheck(type->element);
-  const bool latticeSetTypeChecked = typeCheck(type->latticePointSet);
+  const bool gridSetTypeChecked = typeCheck(type->underlyingPointSet);
 
-  retTypeChecked = elementTypeChecked && latticeSetTypeChecked;
+  retTypeChecked = elementTypeChecked && gridSetTypeChecked;
  
-  const auto latticeSetDef = type->latticePointSet->set->setDef;
-  const auto latticeSetName = type->latticePointSet->set->setName;
+  const auto gridSetDef = type->underlyingPointSet->set->setDef;
+  const auto gridSetName = type->underlyingPointSet->set->setName;
 
-  // Check lattice point set is an unstructured set
-  if (!isa<UnstructuredSetType>(latticeSetDef)) {
+  // Check underlying point set is an unstructured set
+  if (!isa<UnstructuredSetType>(gridSetDef)) {
     std::stringstream errMsg;
-    errMsg << "expected lattice point set of unstructured kind, but set '"
-           << latticeSetName << "' is not an unstructured set";
-    reportError(errMsg.str(), type->latticePointSet);
+    errMsg << "expected underlying point set of unstructured kind, but set '"
+           << gridSetName << "' is not an unstructured set";
+    reportError(errMsg.str(), type->underlyingPointSet);
   }
-  // Check lattice point set is cardinality zero
-  else if (!to<UnstructuredSetType>(latticeSetDef)->endpoints.empty()) {
+  // Check underlying point set is cardinality zero
+  else if (!to<UnstructuredSetType>(gridSetDef)->endpoints.empty()) {
     std::stringstream errMsg;
-    errMsg << "expected lattice point set of zero cardinality, but set '" 
-           << latticeSetName << "' has cardinality "
-           << to<UnstructuredSetType>(latticeSetDef)->endpoints.size();
-    reportError(errMsg.str(), type->latticePointSet);
+    errMsg << "expected underlying point set of zero cardinality, but set '" 
+           << gridSetName << "' has cardinality "
+           << to<UnstructuredSetType>(gridSetDef)->endpoints.size();
+    reportError(errMsg.str(), type->underlyingPointSet);
   }
 }
 
@@ -1289,7 +1289,7 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
 
     if (indexType.defined && !indexType.isScalarInt()) {
       std::stringstream errMsg;
-      errMsg << "lattice set access expects an integral index but "
+      errMsg << "underlying set access expects an integral index but "
              << "got an index of type " << toString(indexType);
       reportError(errMsg.str(), index);
     }
@@ -1330,18 +1330,18 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
     // TODO: No good way to check indices = #dims
 
     if (!to<UnstructuredSetType>(type)->endpoints.empty()) {
-      const auto msg = "lattice point set cannot have non-zero cardinality";
+      const auto msg = "underlying point set cannot have non-zero cardinality";
       reportError(msg, expr->set);
     }
   }
-  // Case 2: Lattice edge set, double set of indices (#indices = 2 * dims)
-  else if (isa<LatticeLinkSetType>(type)) {
-    const unsigned dims = to<LatticeLinkSetType>(type)->dimensions;
+  // Case 2: Grid edge set, double set of indices (#indices = 2 * dims)
+  else if (isa<GridSetType>(type)) {
+    const unsigned dims = to<GridSetType>(type)->dimensions;
     
     // Check number of indices = 2 * dims.
     if (expr->indices.size() != (2 * dims)) {
       std::stringstream errMsg;
-      errMsg << "lattice edge set access expects 2 * dimensions = "  
+      errMsg << "grid edge set access expects 2 * dimensions = "  
              << (2 * dims) << " indices but got " << expr->indices.size();
       reportError(errMsg.str(), expr->indices[0]);
     }
@@ -1702,7 +1702,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     targetSetType = env.getSetDefinition(expr->target);
   }
   
-  // If through is declared, check that it is a lattice link set.
+  // If through is declared, check that it is a grid edge set.
   if (expr->through) {
     if (!typeCheck(expr->through)) {
       retTypeChecked = false;
@@ -1713,18 +1713,18 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     } else {
       throughSetType = env.getSetDefinition(expr->through);
 
-      if (!isa<LatticeLinkSetType>(throughSetType)) {
+      if (!isa<GridSetType>(throughSetType)) {
         std::stringstream errMsg;
-        errMsg << opString << " operation can only be applied through lattice "
-               << "link sets";
+        errMsg << opString << " operation can only be applied through grid "
+               << "edge sets";
         reportError(errMsg.str(), expr->through);
       }
-      else if (to<LatticeLinkSetType>(throughSetType)
-               ->latticePointSet->set->setName !=
+      else if (to<GridSetType>(throughSetType)
+               ->underlyingPointSet->set->setName !=
                expr->target->setName) {
         std::stringstream errMsg;
-        errMsg << opString << " operation can only be mapped through lattice "
-               << "link set with target " << expr->target->setName
+        errMsg << opString << " operation can only be mapped through grid "
+               << "edge set with target " << expr->target->setName
                << " as an endpoint";
         reportError(errMsg.str(), expr->through);
       }
@@ -1802,7 +1802,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
   
-  // Through declaration adds link set as an argument.
+  // Through declaration adds grid edge set as an argument.
   if (throughSetType) {
     actualsType.push_back(ExprType(throughSetType, Access::READ));
   }
@@ -2436,21 +2436,21 @@ bool TypeChecker::Environment::compareIndexSets(IndexSet::Ptr l,
     if (isa<UnstructuredSetType>(lType)) {
       return lType == rType;
     }
-    else if (isa<LatticeLinkSetType>(lType)) {
-      // Pointers may not be identical if LatticeLinkSetType
-      if (!isa<LatticeLinkSetType>(rType)) {
+    else if (isa<GridSetType>(lType)) {
+      // Pointers may not be identical if GridSetType
+      if (!isa<GridSetType>(rType)) {
         return false;
       }
 
-      auto lLatType = to<LatticeLinkSetType>(lType);
-      auto rLatType = to<LatticeLinkSetType>(rType);
+      auto lLatType = to<GridSetType>(lType);
+      auto rLatType = to<GridSetType>(rType);
 
       if (lLatType->dimensions != rLatType->dimensions) {
         return false;
       }
 
-      return compareIndexSets(lLatType->latticePointSet->set,
-                              rLatType->latticePointSet->set);
+      return compareIndexSets(lLatType->underlyingPointSet->set,
+                              rLatType->underlyingPointSet->set);
     }
     else {
       return false;
@@ -2542,30 +2542,30 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
 
       return true;
     }
-    else if (isa<LatticeLinkSetType>(lgentype)) {
-      if (!isa<LatticeLinkSetType>(rgentype)) {
+    else if (isa<GridSetType>(lgentype)) {
+      if (!isa<GridSetType>(rgentype)) {
         return false;
       }
 
-      const auto ltype = to<LatticeLinkSetType>(lgentype);
-      const auto rtype = to<LatticeLinkSetType>(rgentype);
+      const auto ltype = to<GridSetType>(lgentype);
+      const auto rtype = to<GridSetType>(rgentype);
 
       if (ltype->dimensions != rtype->dimensions) {
         return false;
       }
 
-      if (!compareTypes(ltype->latticePointSet->element,
-                        rtype->latticePointSet->element)) {
+      if (!compareTypes(ltype->underlyingPointSet->element,
+                        rtype->underlyingPointSet->element)) {
         return false;
       }
       
-      if (ltype->latticePointSet->set->setName !=
-          rtype->latticePointSet->set->setName) {
+      if (ltype->underlyingPointSet->set->setName !=
+          rtype->underlyingPointSet->set->setName) {
         return false;
       }
 
-      return compareTypes(ltype->latticePointSet->set->setDef,
-                          rtype->latticePointSet->set->setDef);
+      return compareTypes(ltype->underlyingPointSet->set->setDef,
+                          rtype->underlyingPointSet->set->setDef);
     }
 
     return false;

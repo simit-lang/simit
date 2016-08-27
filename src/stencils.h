@@ -19,7 +19,7 @@ class Func;
 struct StencilContent {
   map<vector<int>, int> layout;
   // HACK: Store as a Var so we don't run into declaration loops with Expr
-  Var latticeSet;
+  Var gridSet;
 
   // Unresolved Stencil form: just a reference to assembly func and out var
   std::string assemblyFunc;
@@ -44,8 +44,8 @@ public:
   map<vector<int>, int> getLayout() const;
   map<int, vector<int>> getLayoutReversed() const;
 
-  bool hasLatticeSet() const;
-  Var getLatticeSet() const;
+  bool hasGridSet() const;
+  Var getGridSet() const;
 };
 
 std::ostream& operator<<(std::ostream&, const StencilLayout&);
@@ -54,7 +54,7 @@ std::ostream& operator<<(std::ostream&, const StencilLayout&);
 vector<int> getOffsets(vector<Expr> offsets);
 
 /// Analyze kernel function to build a stencil layout
-StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet);
+StencilContent* buildStencil(Func kernel, Var stencilVar, Var gridSet);
 
 }} // namespace simit::ir
 

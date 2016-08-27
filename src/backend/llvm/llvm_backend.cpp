@@ -362,8 +362,8 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
     case ir::IndexRead::Endpoints:
       val = layout->getEpsArray();
       break;
-    case ir::IndexRead::LatticeDim:
-      iassert(indexRead.edgeSet.type().isLatticeLinkSet());
+    case ir::IndexRead::GridDim:
+      iassert(indexRead.edgeSet.type().isGridSet());
       val = layout->getSize(indexRead.index);
       break;
     default:
@@ -1231,7 +1231,7 @@ void LLVMBackend::compile(const ir::For& forLoop) {
     case ForDomain::Edges:
       not_supported_yet;
       break;
-    case ForDomain::Lattice:
+    case ForDomain::Grid:
       not_supported_yet;
       break;
     case ForDomain::NeighborsOf:

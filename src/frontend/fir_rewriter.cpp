@@ -33,9 +33,9 @@ void FIRRewriter::visit(UnstructuredSetType::Ptr type) {
   node = type;
 }
 
-void FIRRewriter::visit(LatticeLinkSetType::Ptr type) {
+void FIRRewriter::visit(GridSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
-  type->latticePointSet = rewrite<Endpoint>(type->latticePointSet);
+  type->underlyingPointSet = rewrite<Endpoint>(type->underlyingPointSet);
   node = type;
 }
 

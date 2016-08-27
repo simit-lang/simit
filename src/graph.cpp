@@ -11,8 +11,8 @@ Set::~Set() {
     delete f;
   }
   free(endpoints);
-  free(latticePoints);
-  free(latticeLinks);
+  free(gridPoints);
+  free(gridEdges);
 }
 
 void Set::increaseCapacity() {

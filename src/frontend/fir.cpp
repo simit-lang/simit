@@ -145,16 +145,16 @@ FIRNode::Ptr UnstructuredSetType::cloneNode() {
   return node;
 }
 
-void LatticeLinkSetType::copy(FIRNode::Ptr node) {
-  const auto setType = to<LatticeLinkSetType>(node);
+void GridSetType::copy(FIRNode::Ptr node) {
+  const auto setType = to<GridSetType>(node);
   Type::copy(setType);
   element = setType->element->clone<ElementType>();
-  latticePointSet = setType->latticePointSet->clone<Endpoint>();
+  underlyingPointSet = setType->underlyingPointSet->clone<Endpoint>();
   dimensions = setType->dimensions;
 }
 
-FIRNode::Ptr LatticeLinkSetType::cloneNode() {
-  const auto node = std::make_shared<LatticeLinkSetType>();
+FIRNode::Ptr GridSetType::cloneNode() {
+  const auto node = std::make_shared<GridSetType>();
   node->copy(shared_from_this());
   return node;
 }

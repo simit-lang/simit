@@ -9,7 +9,7 @@ namespace ir {
 class Type;
 struct SetType;
 struct UnstructuredSetType;
-struct LatticeLinkSetType;
+struct GridSetType;
 struct TensorType;
 struct ArrayType;
 struct ScalarType;
@@ -43,7 +43,7 @@ llvm::StructType*  llvmType(const ir::SetType*,    unsigned addrspace=0,
                             bool packed=false);
 llvm::StructType*  llvmType(const ir::UnstructuredSetType&,
                             unsigned addrspace=0, bool packed=false);
-llvm::StructType*  llvmType(const ir::LatticeLinkSetType&,
+llvm::StructType*  llvmType(const ir::GridSetType&,
                             unsigned addrspace=0, bool packed=false);
 llvm::PointerType* llvmType(const ir::TensorType&, unsigned addrspace=0);
 llvm::PointerType* llvmType(const ir::ArrayType&,  unsigned addrspace=0);

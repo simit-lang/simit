@@ -310,7 +310,7 @@ private:
     // expression
     Type targetType = op->target.type();
     iassert(targetType.isSet());
-    if (targetType.isLatticeLinkSet() ||
+    if (targetType.isGridSet() ||
         (targetType.isUnstructuredSet() &&
          targetType.toUnstructuredSet()->getCardinality() == 0)) {
       for (const Var& var : op->vars) {

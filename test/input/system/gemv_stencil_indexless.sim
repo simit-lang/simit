@@ -8,10 +8,10 @@ element Link
 end
 
 extern points : set{Point};
-extern springs : lattice[1]{Link}(points);
+extern springs : grid{Link}[1](points);
 
 func vonNeumann(orig : Point,
-                l : lattice[1]{Link}(points))
+                l : grid{Link}[1](points))
     -> (vnMat : tensor[points,points](float))
     vnMat(orig,orig) = l[0;1].a + l[0;-1].a;
     vnMat(orig,points[1]) = l[0;1].a;

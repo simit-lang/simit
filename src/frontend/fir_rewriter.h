@@ -18,7 +18,7 @@ struct FIRRewriter : public FIRVisitor {
   virtual void visit(ElementType::Ptr op) { node = op; }
   virtual void visit(Endpoint::Ptr);
   virtual void visit(UnstructuredSetType::Ptr);
-  virtual void visit(LatticeLinkSetType::Ptr);
+  virtual void visit(GridSetType::Ptr);
   virtual void visit(TupleLength::Ptr op) { node = op; }
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarType::Ptr op) { node = op; }
