@@ -23,5 +23,4 @@ export func main()
   C = map f to F reduce +;
   A = B - C;
   V.a = A * V.b;
-  println V.a;
 end
