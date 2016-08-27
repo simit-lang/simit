@@ -62,11 +62,11 @@ void FIRPrinter::visit(UnstructuredSetType::Ptr type) {
   }
 }
 
-void FIRPrinter::visit(LatticeLinkSetType::Ptr type) {
-  oss << "lattice[" << type->dimensions << "]{";
+void FIRPrinter::visit(GridSetType::Ptr type) {
+  oss << "grid{";
   type->element->accept(this);
-  oss << "}(";
-  type->latticePointSet->accept(this);
+  oss << "}[" << type->dimensions << "](";
+  type->underlyingPointSet->accept(this);
   oss << ")";
 }
 

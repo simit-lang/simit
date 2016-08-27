@@ -205,12 +205,12 @@ struct Length : public ExprNode {
 /// An IndexRead retrieves an index from an edge set.  An example of an index
 /// is the endpoints of the edges in the set.
 struct IndexRead : public ExprNode {
-  enum Kind { Endpoints, LatticeDim };
+  enum Kind { Endpoints, GridDim };
   Expr edgeSet;
   Kind kind;
   unsigned int index;
   static Expr make(Expr edgeSet, Kind kind);
-  // Read the index'th lattice dimensions. kind must be LatticeDim.
+  // Read the index'th grid dimensions. kind must be GridDim.
   static Expr make(Expr edgeSet, Kind kind, int index);
   void accept(IRVisitorStrict *v) const {v->visit((const IndexRead*)this);}
 };
@@ -381,7 +381,7 @@ struct ForRange : public StmtNode {
 
 struct ForDomain {
   enum Kind { IndexSet, Endpoints, Edges, Neighbors, NeighborsOf,
-              Diagonal, Lattice };
+              Diagonal, Grid };
   Kind kind;
 
   /// An index set
@@ -391,8 +391,8 @@ struct ForDomain {
   Expr set;
   Var var;
 
-  /// The list of lattice index vars for Lattice domains
-  vector<Var> latticeVars;
+  /// The list of grid index vars for Grid domains
+  vector<Var> gridVars;
   
 
   ForDomain() {}
@@ -405,9 +405,9 @@ struct ForDomain {
     iassert(kind == NeighborsOf);
   }
   ForDomain(Expr set, Var var, int dims, string varName="")
-      : kind(Lattice), set(set), var(var) {
+      : kind(Grid), set(set), var(var) {
     for (int i = 0; i < dims; ++i) {
-      latticeVars.push_back(Var(varName+"_d"+to_string(i), Int));
+      gridVars.push_back(Var(varName+"_d"+to_string(i), Int));
     }
   }
 };
@@ -476,8 +476,8 @@ struct TupleRead : public ExprNode {
   void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
 };
 
-/// Expression that reads a set element, used by lattice graphs for stencil
-/// assembly using lattice offsets for element indexing.
+/// Expression that reads a set element, used by grid graphs for stencil
+/// assembly using grid offsets for element indexing.
 struct SetRead : public ExprNode {
   Expr set;
   std::vector<Expr> indices;

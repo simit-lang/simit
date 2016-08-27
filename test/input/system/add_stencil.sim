@@ -8,7 +8,7 @@ element Link
 end
 
 extern points : set{Point};
-extern springs : lattice[2]{Link}(points);
+extern springs : grid{Link}[2](points);
 extern springs2 : set{Link}(points,points);
 
 func f(l : Link, p : (Point*2)) -> (A : tensor[points,points](float))
@@ -19,7 +19,7 @@ func f(l : Link, p : (Point*2)) -> (A : tensor[points,points](float))
 end
 
 func vonNeumann(orig : Point,
-                l : lattice[2]{Link}(points))
+                l : grid{Link}[2](points))
     -> (vnMat : tensor[points,points](float))
     vnMat(orig,orig) = l[0,0;0,1].a + l[0,0;0,-1].a +
                      l[0,0;1,0].a + l[0,0;-1,0].a;

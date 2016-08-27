@@ -140,9 +140,9 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
       uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
     }
-    else if (argType.isLatticeLinkSet()) {
-      uassert(set->getKind() == simit::Set::LatticeLink)
-          << "Must bind a lattice link set to " << name;
+    else if (argType.isGridSet()) {
+      uassert(set->getKind() == simit::Set::Grid)
+          << "Must bind a grid edge set to " << name;
     }
     else {
       not_supported_yet;
@@ -158,13 +158,13 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
       uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
     }
-    else if (globalType.isLatticeLinkSet()) {
-      uassert(set->getKind() == simit::Set::LatticeLink)
-          << "Must bind a lattice link set to " << name;
-      unsigned ndims = globalType.toLatticeLinkSet()->dimensions;
+    else if (globalType.isGridSet()) {
+      uassert(set->getKind() == simit::Set::Grid)
+          << "Must bind a grid edge set to " << name;
+      unsigned ndims = globalType.toGridSet()->dimensions;
       vector<int> dimensions = set->getDimensions();
       uassert(dimensions.size() == ndims)
-          << "Lattice link set with wrong number of dimensions: "
+          << "Grid edge set with wrong number of dimensions: "
           << dimensions.size() << " passed, but " << ndims
           << " required";
     }
@@ -299,10 +299,10 @@ Function::FuncType LLVMFunction::init() {
           iassert(iss.size() == 2);
           iassert(iss[0] == iss[1])
               << "Stencil tensor index must be for a homogeneous matrix";
-          size_t latticeSize = size(iss[0]);
+          size_t gridSize = size(iss[0]);
           const StencilLayout& stencil = ti.getStencilLayout();
           size_t stensize = stencil.getLayout().size();
-          size_t matSize = stensize * latticeSize * blockSize * componentSize;
+          size_t matSize = stensize * gridSize * blockSize * componentSize;
           *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
         }
         else {

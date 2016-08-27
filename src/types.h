@@ -26,7 +26,7 @@ struct TensorType;
 struct ElementType;
 struct SetType;
 struct UnstructuredSetType;
-struct LatticeLinkSetType;
+struct GridSetType;
 struct TupleType;
 struct ArrayType;
 
@@ -49,7 +49,7 @@ public:
   bool isElement()         const { return kind()==Element; }
   bool isSet()             const { return kind()==Set; }
   bool isUnstructuredSet() const;
-  bool isLatticeLinkSet()  const;
+  bool isGridSet()  const;
   bool isTuple()           const { return kind()==Tuple; }
   bool isArray()           const { return kind()==Array; }
   bool isOpaque()          const { return kind()==Opaque; }
@@ -64,7 +64,7 @@ public:
   const ElementType* toElement() const {iassert(isElement()); return element;}
   const SetType*     toSet()     const {iassert(isSet());     return set;}
   const UnstructuredSetType* toUnstructuredSet() const;
-  const LatticeLinkSetType* toLatticeLinkSet() const;
+  const GridSetType* toGridSet() const;
   const TupleType*   toTuple()   const {iassert(isTuple());   return tuple;}
   const ArrayType*   toArray()   const {iassert(isArray());   return array;}
 
@@ -273,19 +273,19 @@ struct UnstructuredSetType : SetType {
   ~UnstructuredSetType();
 };
 
-struct LatticeLinkSetType : SetType {
-  /// Dimensionality of the lattice. This set must be of size d_1 x d_2 x ...
-  /// d_Nd x d. This type of set forces a LATTICE structure, such that the point
+struct GridSetType : SetType {
+  /// Dimensionality of the grid. This set must be of size d_1 x d_2 x ...
+  /// d_Nd x d. This type of set forces a GRID structure, such that the point
   /// in the underlying set at coordinate (... i_j, ...) neighbors points as
   /// coordinates (... i_j-1, ...) and (... i_j+1 ...), for all possible j. The
-  /// determination of boundary conditions is also delegated to the lattice link
+  /// determination of boundary conditions is also delegated to the grid edge
   /// set definition, though we assume periodic for now.
   size_t dimensions;
-  /// Underlying point set of the lattice. Elements of this edge set connect
-  /// neighboring grid points in the lattice.
-  IndexSet latticePointSet;
+  /// Underlying point set of the grid. Elements of this edge set connect
+  /// neighboring grid points in the grid.
+  IndexSet underlyingPointSet;
 
-  static Type make(Type elementType, IndexSet latticePointSet,
+  static Type make(Type elementType, IndexSet underlyingPointSet,
                    size_t dimensions);
 };
 
@@ -377,7 +377,7 @@ bool operator==(const ScalarType&, const ScalarType&);
 bool operator==(const TensorType&, const TensorType&);
 bool operator==(const ElementType&, const ElementType&);
 bool operator==(const UnstructuredSetType&, const UnstructuredSetType&);
-bool operator==(const LatticeLinkSetType&, const LatticeLinkSetType&);
+bool operator==(const GridSetType&, const GridSetType&);
 bool operator==(const TupleType&, const TupleType&);
 bool operator==(const ArrayType&, const ArrayType&);
 
@@ -385,7 +385,7 @@ bool operator!=(const ScalarType&, const ScalarType&);
 bool operator!=(const TensorType&, const TensorType&);
 bool operator!=(const ElementType&, const ElementType&);
 bool operator!=(const UnstructuredSetType&, const UnstructuredSetType&);
-bool operator!=(const LatticeLinkSetType&, const LatticeLinkSetType&);
+bool operator!=(const GridSetType&, const GridSetType&);
 bool operator!=(const TupleType&, const TupleType&);
 bool operator!=(const ArrayType&, const ArrayType&);
 
@@ -394,7 +394,7 @@ std::ostream& operator<<(std::ostream&, const ScalarType&);
 std::ostream& operator<<(std::ostream&, const TensorType&);
 std::ostream& operator<<(std::ostream&, const ElementType&);
 std::ostream& operator<<(std::ostream&, const UnstructuredSetType&);
-std::ostream& operator<<(std::ostream&, const LatticeLinkSetType&);
+std::ostream& operator<<(std::ostream&, const GridSetType&);
 std::ostream& operator<<(std::ostream&, const TupleType&);
 std::ostream& operator<<(std::ostream&, const ArrayType&);
 

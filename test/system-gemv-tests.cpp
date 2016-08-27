@@ -68,9 +68,9 @@ TEST(system, gemv_stencil) {
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   // Build points
-  ElementRef p0 = springs.getLatticePoint({0});
-  ElementRef p1 = springs.getLatticePoint({1});
-  ElementRef p2 = springs.getLatticePoint({2});
+  ElementRef p0 = springs.getGridPoint({0});
+  ElementRef p1 = springs.getGridPoint({1});
+  ElementRef p2 = springs.getGridPoint({2});
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -82,9 +82,9 @@ TEST(system, gemv_stencil) {
 
 
   // Build springs
-  ElementRef s0 = springs.getLatticeLink({0},0);
-  ElementRef s1 = springs.getLatticeLink({1},0);
-  ElementRef s2 = springs.getLatticeLink({2},0);
+  ElementRef s0 = springs.getGridEdge({0},0);
+  ElementRef s1 = springs.getGridEdge({1},0);
+  ElementRef s2 = springs.getGridEdge({2},0);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
@@ -124,9 +124,9 @@ TEST(system, gemv_stencil_indexless) {
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   // Build points
-  ElementRef p0 = springs.getLatticePoint({0});
-  ElementRef p1 = springs.getLatticePoint({1});
-  ElementRef p2 = springs.getLatticePoint({2});
+  ElementRef p0 = springs.getGridPoint({0});
+  ElementRef p1 = springs.getGridPoint({1});
+  ElementRef p2 = springs.getGridPoint({2});
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -138,9 +138,9 @@ TEST(system, gemv_stencil_indexless) {
 
 
   // Build springs
-  ElementRef s0 = springs.getLatticeLink({0},0);
-  ElementRef s1 = springs.getLatticeLink({1},0);
-  ElementRef s2 = springs.getLatticeLink({2},0);
+  ElementRef s0 = springs.getGridEdge({0},0);
+  ElementRef s1 = springs.getGridEdge({1},0);
+  ElementRef s2 = springs.getGridEdge({2},0);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
@@ -175,16 +175,16 @@ TEST(system, gemv_stencil_2d) {
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
   // Springs
-  Set springs(points,{3,2}); // rectangular lattice
+  Set springs(points,{3,2}); // rectangular grid
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   // Build points
-  ElementRef p00 = springs.getLatticePoint({0,0});
-  ElementRef p01 = springs.getLatticePoint({1,0});
-  ElementRef p02 = springs.getLatticePoint({2,0});
-  ElementRef p10 = springs.getLatticePoint({0,1});
-  ElementRef p11 = springs.getLatticePoint({1,1});
-  ElementRef p12 = springs.getLatticePoint({2,1});
+  ElementRef p00 = springs.getGridPoint({0,0});
+  ElementRef p01 = springs.getGridPoint({1,0});
+  ElementRef p02 = springs.getGridPoint({2,0});
+  ElementRef p10 = springs.getGridPoint({0,1});
+  ElementRef p11 = springs.getGridPoint({1,1});
+  ElementRef p12 = springs.getGridPoint({2,1});
 
   b.set(p00, 1.0);
   b.set(p01, 2.0);
@@ -199,18 +199,18 @@ TEST(system, gemv_stencil_2d) {
 
 
   // Build springs
-  ElementRef s000 = springs.getLatticeLink({0,0},0);
-  ElementRef s001 = springs.getLatticeLink({1,0},0);
-  ElementRef s002 = springs.getLatticeLink({2,0},0);
-  ElementRef s010 = springs.getLatticeLink({0,1},0);
-  ElementRef s011 = springs.getLatticeLink({1,1},0);
-  ElementRef s012 = springs.getLatticeLink({2,1},0);
-  ElementRef s100 = springs.getLatticeLink({0,0},1);
-  ElementRef s101 = springs.getLatticeLink({1,0},1);
-  ElementRef s102 = springs.getLatticeLink({2,0},1);
-  ElementRef s110 = springs.getLatticeLink({0,1},1);
-  ElementRef s111 = springs.getLatticeLink({1,1},1);
-  ElementRef s112 = springs.getLatticeLink({2,1},1);
+  ElementRef s000 = springs.getGridEdge({0,0},0);
+  ElementRef s001 = springs.getGridEdge({1,0},0);
+  ElementRef s002 = springs.getGridEdge({2,0},0);
+  ElementRef s010 = springs.getGridEdge({0,1},0);
+  ElementRef s011 = springs.getGridEdge({1,1},0);
+  ElementRef s012 = springs.getGridEdge({2,1},0);
+  ElementRef s100 = springs.getGridEdge({0,0},1);
+  ElementRef s101 = springs.getGridEdge({1,0},1);
+  ElementRef s102 = springs.getGridEdge({2,0},1);
+  ElementRef s110 = springs.getGridEdge({0,1},1);
+  ElementRef s111 = springs.getGridEdge({1,1},1);
+  ElementRef s112 = springs.getGridEdge({2,1},1);
 
   a.set(s000, 1.0);
   a.set(s001, 2.0);
@@ -261,16 +261,16 @@ TEST(system, gemv_stencil_2d_indexless) {
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
   // Springs
-  Set springs(points,{3,2}); // rectangular lattice
+  Set springs(points,{3,2}); // rectangular grid
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   // Build points
-  ElementRef p00 = springs.getLatticePoint({0,0});
-  ElementRef p01 = springs.getLatticePoint({1,0});
-  ElementRef p02 = springs.getLatticePoint({2,0});
-  ElementRef p10 = springs.getLatticePoint({0,1});
-  ElementRef p11 = springs.getLatticePoint({1,1});
-  ElementRef p12 = springs.getLatticePoint({2,1});
+  ElementRef p00 = springs.getGridPoint({0,0});
+  ElementRef p01 = springs.getGridPoint({1,0});
+  ElementRef p02 = springs.getGridPoint({2,0});
+  ElementRef p10 = springs.getGridPoint({0,1});
+  ElementRef p11 = springs.getGridPoint({1,1});
+  ElementRef p12 = springs.getGridPoint({2,1});
 
   b.set(p00, 1.0);
   b.set(p01, 2.0);
@@ -285,18 +285,18 @@ TEST(system, gemv_stencil_2d_indexless) {
 
 
   // Build springs
-  ElementRef s000 = springs.getLatticeLink({0,0},0);
-  ElementRef s001 = springs.getLatticeLink({1,0},0);
-  ElementRef s002 = springs.getLatticeLink({2,0},0);
-  ElementRef s010 = springs.getLatticeLink({0,1},0);
-  ElementRef s011 = springs.getLatticeLink({1,1},0);
-  ElementRef s012 = springs.getLatticeLink({2,1},0);
-  ElementRef s100 = springs.getLatticeLink({0,0},1);
-  ElementRef s101 = springs.getLatticeLink({1,0},1);
-  ElementRef s102 = springs.getLatticeLink({2,0},1);
-  ElementRef s110 = springs.getLatticeLink({0,1},1);
-  ElementRef s111 = springs.getLatticeLink({1,1},1);
-  ElementRef s112 = springs.getLatticeLink({2,1},1);
+  ElementRef s000 = springs.getGridEdge({0,0},0);
+  ElementRef s001 = springs.getGridEdge({1,0},0);
+  ElementRef s002 = springs.getGridEdge({2,0},0);
+  ElementRef s010 = springs.getGridEdge({0,1},0);
+  ElementRef s011 = springs.getGridEdge({1,1},0);
+  ElementRef s012 = springs.getGridEdge({2,1},0);
+  ElementRef s100 = springs.getGridEdge({0,0},1);
+  ElementRef s101 = springs.getGridEdge({1,0},1);
+  ElementRef s102 = springs.getGridEdge({2,0},1);
+  ElementRef s110 = springs.getGridEdge({0,1},1);
+  ElementRef s111 = springs.getGridEdge({1,1},1);
+  ElementRef s112 = springs.getGridEdge({2,1},1);
 
   a.set(s000, 1.0);
   a.set(s001, 2.0);

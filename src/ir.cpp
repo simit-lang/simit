@@ -89,9 +89,9 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
     case ForDomain::Edges:
       os << d.set << ".edges[" << d.var << "]";
       break;
-    case ForDomain::Lattice:
-      os << "lattice[";
-      for (const Var& v : d.latticeVars) {
+    case ForDomain::Grid:
+      os << "grid[";
+      for (const Var& v : d.gridVars) {
         os << v << ",";
       }
       os << "]";
@@ -500,8 +500,8 @@ Expr IndexRead::make(Expr edgeSet, Kind kind) {
 }
 
 Expr IndexRead::make(Expr edgeSet, Kind kind, int index) {
-  iassert(edgeSet.type().isLatticeLinkSet());
-  iassert(kind == LatticeDim);
+  iassert(edgeSet.type().isGridSet());
+  iassert(kind == GridDim);
 
   IndexRead *node = new IndexRead;
   node->type = TensorType::make(ScalarType(ScalarType::Int));
@@ -903,10 +903,10 @@ Expr SetRead::make(Expr set, std::vector<Expr> indices) {
     // set, we probably need to track this globally at some point.
     // For now, this is checked during map lowering.
   }
-  else if (set.type().isLatticeLinkSet()) {
+  else if (set.type().isGridSet()) {
     // Indices should index both the source offset and sink offset
     // giving 2*dims indices.
-    iassert(indices.size() == set.type().toLatticeLinkSet()->dimensions*2);
+    iassert(indices.size() == set.type().toGridSet()->dimensions*2);
   }
   else {
     not_supported_yet;

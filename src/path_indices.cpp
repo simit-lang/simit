@@ -263,7 +263,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         case Link::vv: {
           const ir::StencilLayout& stencil = link->getStencil();
           const simit::Set& throughSet =
-              *builder->getBinding(stencil.getLatticeSet());
+              *builder->getBinding(stencil.getGridSet());
           
           map<unsigned, vector<unsigned>> pathNeighbors;
 
@@ -276,14 +276,14 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
             pathNeighbors.insert({v.getIdent(), vector<unsigned>()});
             for (auto &kv : stencil.getLayoutReversed()) {
               const vector<int> &offsets = kv.second;
-              vector<int> base = throughSet.getLatticePointCoords(v);
+              vector<int> base = throughSet.getGridPointCoords(v);
               iassert(offsets.size() == base.size());
               for (unsigned i = 0; i < base.size(); ++i) {
                 base[i] += offsets[i] + throughSet.getDimensions()[i];
                 base[i] = base[i] % throughSet.getDimensions()[i];
               }
               pathNeighbors.at(v.getIdent()).push_back(
-                  throughSet.getLatticePoint(base).getIdent());
+                  throughSet.getGridPoint(base).getIdent());
             }
           }
           pi = pack(pathNeighbors, false);
