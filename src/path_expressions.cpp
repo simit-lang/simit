@@ -139,12 +139,12 @@ PathExpression PathExpression::reverse() {
 
     virtual void visit(const Or *pe) {
       expr = Or::make(pe->getFreeVars(), pe->getQuantifiedVars(),
-                       rewrite(pe->getRhs()), rewrite(pe->getLhs()));
+                      rewrite(pe->getRhs()), rewrite(pe->getLhs()));
     }
 
     virtual void visit(const RenamedPathExpression *pe) {
       auto pathExpr = rewrite(pe->getPathExpression());
-      expr = pathExpr(pe->getPathEndpoint(1), pe->getPathEndpoint(0));
+      expr = pathExpr(pe->getPathEndpoint(0), pe->getPathEndpoint(1));
     }
   };
   return ReverseRewriter().rewrite(*this);
