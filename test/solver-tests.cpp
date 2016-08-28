@@ -110,6 +110,35 @@ TEST(solver, lu) {
   SIMIT_ASSERT_FLOAT_EQ(18.75, x(v2));
 }
 
+TEST(DISABLED_solver, lu_blocked) {
+  Set V;
+  auto b = V.addField<simit_float,2>("b");
+  auto x = V.addField<simit_float,2>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = {10.0, 20.0};
+  b(v1) = {30.0, 40.0};
+  b(v2) = {50.0, 60.0};
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ( 1.0000, x(v0)(0));
+  SIMIT_ASSERT_FLOAT_EQ( 8.5000, x(v0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-1.0000, x(v1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(-3.5000, x(v1)(1));
+  SIMIT_ASSERT_FLOAT_EQ( 6.4167, x(v2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(12.6667, x(v2)(1));
+}
+
 TEST(solver, lumat) {
   Set V;
   FieldRef<simit_float> x = V.addField<simit_float>("x");
