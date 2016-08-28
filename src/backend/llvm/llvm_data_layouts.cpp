@@ -15,11 +15,11 @@ namespace backend {
 
 llvm::Value* UnstructuredSetLayout::getSize(unsigned i) {
   iassert(i == 0) << "Only 1 explicit dimension for unstructured sets";
-  return builder->CreateExtractValue(value, {0}, util::toString(set)+".size()");
+  return llvmCreateExtractValue(builder, value, {0}, util::toString(set)+".size()");
 }
 
 llvm::Value* UnstructuredSetLayout::getTotalSize() {
-  return builder->CreateExtractValue(value, {0}, util::toString(set)+".size()");
+  return llvmCreateExtractValue(builder, value, {0}, util::toString(set)+".size()");
 }
 
 int UnstructuredSetLayout::getFieldsOffset() {
@@ -65,7 +65,7 @@ void UnstructuredSetLayout::writeSet(
 }
 
 llvm::Value* UnstructuredEdgeSetLayout::getEpsArray() {
-  return builder->CreateExtractValue(value, {1}, util::toString(set)+".eps()");
+  return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
 }
 
 int UnstructuredEdgeSetLayout::getFieldsOffset() {
@@ -119,10 +119,10 @@ void UnstructuredEdgeSetLayout::writeSet(Set *actual, ir::Type type,
 
 llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
   iassert(i < set.type().toLatticeLinkSet()->dimensions);
-  auto sizes =
-      builder->CreateExtractValue(value, {0}, util::toString(set)+".sizes()");
+  auto sizes = llvmCreateExtractValue(builder, value, {0},
+                                      util::toString(set)+".sizes()");
   std::string name = string(sizes->getName()) + "[" + std::to_string(i) + "]";
-  auto out = builder->CreateInBoundsGEP(sizes, llvmInt(i), name);
+  auto out = llvmCreateInBoundsGEP(builder, sizes, llvmInt(i), name);
   return builder->CreateLoad(out);
 }
 
@@ -141,7 +141,7 @@ llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
 llvm::Value* LatticeEdgeSetLayout::getEpsArray() {
   iassert(!kIndexlessStencils)
       << "Endpoints array undefined when in indexless mode";
-  return builder->CreateExtractValue(value, {1}, util::toString(set)+".eps()");
+  return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
 }
 
 int LatticeEdgeSetLayout::getFieldsOffset() {
@@ -219,7 +219,7 @@ void LatticeEdgeSetLayout::writeSet(Set *actual, ir::Type type,void *externPtr){
 }
 
 std::shared_ptr<SetLayout> getSetLayout(
-    ir::Expr set, llvm::Value *value, SimitIRBuilder *builder) {
+    ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder) {
   iassert(set.type().isSet());
   if (set.type().isUnstructuredSet()) {
     if (set.type().toUnstructuredSet()->getCardinality() == 0) {

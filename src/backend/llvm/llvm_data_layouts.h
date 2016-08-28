@@ -6,6 +6,8 @@
 
 #include "ir.h"
 
+#include "llvm_codegen.h"
+
 namespace llvm {
 class Value;
 }
@@ -18,7 +20,6 @@ class Type;
 }
 
 namespace backend {
-class SimitIRBuilder;
 
 class SetLayout {
 public:
@@ -46,14 +47,14 @@ public:
   static llvm::Value* makeSet(Set *actual, ir::Type type);
   static void writeSet(Set *actual, ir::Type type, void *externPtr);
 
-  UnstructuredSetLayout(ir::Expr set, llvm::Value *value, SimitIRBuilder *builder)
+  UnstructuredSetLayout(ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder)
       : set(set), value(value), builder(builder) {
     iassert(set.type().isUnstructuredSet());
   }
 private:
   ir::Expr set;
   llvm::Value *value;
-  SimitIRBuilder *builder;
+  LLVMIRBuilder *builder;
 };
 
 
@@ -69,7 +70,7 @@ public:
   static void writeSet(Set *actual, ir::Type type, void *externPtr);
 
   UnstructuredEdgeSetLayout(ir::Expr set, llvm::Value *value,
-                            SimitIRBuilder *builder)
+                            LLVMIRBuilder *builder)
       : UnstructuredSetLayout(set, value, builder),
         set(set), value(value), builder(builder) {
     iassert(set.type().isUnstructuredSet());
@@ -77,7 +78,7 @@ public:
 private:
   ir::Expr set;
   llvm::Value *value;
-  SimitIRBuilder *builder;
+  LLVMIRBuilder *builder;
 };
 
 /// Lattice edge set layout:
@@ -92,17 +93,17 @@ public:
   static llvm::Value* makeSet(Set *actual, ir::Type type);
   static void writeSet(Set *actual, ir::Type type, void *externPtr);
   
-  LatticeEdgeSetLayout(ir::Expr set, llvm::Value *value, SimitIRBuilder *builder)
+  LatticeEdgeSetLayout(ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder)
       : set(set), value(value), builder(builder) {}
 
 private:
   ir::Expr set;
   llvm::Value *value;
-  SimitIRBuilder *builder;
+  LLVMIRBuilder *builder;
 };
 
 std::shared_ptr<SetLayout> getSetLayout(
-    ir::Expr set, llvm::Value *value, SimitIRBuilder *builder);
+    ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder);
 
 /// Build llvm set struct from runtime Set object
 llvm::Value* makeSet(Set *actual, ir::Type type);

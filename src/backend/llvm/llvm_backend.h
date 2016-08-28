@@ -39,8 +39,6 @@ namespace ir {
 
 namespace backend {
 
-class SimitIRBuilder;
-
 extern const std::string VAL_SUFFIX;
 extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
@@ -67,7 +65,9 @@ protected:
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
-  std::unique_ptr<SimitIRBuilder> builder;
+
+  std::unique_ptr<llvm::IRBuilder<true, llvm::ConstantFolder,
+                                  llvm::IRBuilderDefaultInserter<true>>> builder;
 
   using BackendImpl::compile;
   virtual Function* compile(ir::Func func, const ir::Storage& storage);

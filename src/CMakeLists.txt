@@ -18,6 +18,7 @@ endforeach()
 
 set(SIMIT_HEADERS ${SIMIT_HEADERS})
 set(SIMIT_SOURCES ${SIMIT_SOURCES})
+set(SIMIT_SOURCES_NO_RTTI "")
 
 # Collect LLVM components from subprojects
 set(LLVM_COMPONENTS mcjit;bitwriter;linker;passes)  # bitreader asmparser irreader mirparser
@@ -31,6 +32,10 @@ add_definitions(${SIMIT_DEFINITIONS})
 include_directories(${SIMIT_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${SIMIT_LIBRARIES})
+
+# Handle no RTTI sources
+set_source_files_properties(${SIMIT_SOURCES_NO_RTTI} PROPERTIES COMPILE_FLAGS "-fno-rtti")
+message("-- Compiling these sources with no RTTI: ${SIMIT_SOURCES_NO_RTTI}")
 
 
 # LLVM
