@@ -10,6 +10,7 @@
 #include "ir_transforms.h"
 #include "substitute.h"
 #include "ir_builder.h"
+#include "macros.h"
 
 using namespace std;
 
@@ -22,7 +23,7 @@ bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs);
 /// Static namegen (hacky: fix later)
 std::string tmpNameGen() {
   static int i = 0;
-  return "tmp" + std::to_string(i++);
+  return INTERNAL_PREFIX("spilledTmp") + std::to_string(i++);
 }
 
 bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
@@ -33,6 +34,29 @@ bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
     }
   }
   return false;
+}
+
+inline bool isMatrixTransposeElwise(const IndexExpr* iexpr) {
+  if (iexpr->resultVars.size() != 2 || isa<IndexedTensor>(iexpr->value)) {
+    return false;
+  }
+
+  bool result = true;
+  match(iexpr->value,
+    std::function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
+      if (result == false) {
+        return;
+      }
+      if (op->indexVars.size() != iexpr->resultVars.size() ||
+          !std::equal(op->indexVars.begin(), op->indexVars.end(),
+                      iexpr->resultVars.rbegin())) {
+        result = false;
+        return;
+      }
+    })
+  );
+
+  return result;
 }
 
 /// Flattens nested IndexExprs.
@@ -104,6 +128,22 @@ private:
     if (!isa<IndexedTensor>(b)) {
       b = spill(b);
     }
+
+    // Handle operations on a matrix and its transpose by spilling the 
+    // transposed matrix.
+    iassert(!isa<Literal>(a) && !isa<Literal>(b));
+    const auto aTensor = to<IndexedTensor>(a);
+    const auto bTensor = to<IndexedTensor>(b);
+    if (aTensor->indexVars.size() == 2 && bTensor->indexVars.size() == 2 && 
+        aTensor->indexVars[0] == bTensor->indexVars[1] && 
+        aTensor->indexVars[1] == bTensor->indexVars[0]) {
+      const auto transposedB = IRBuilder().transposedMatrix(bTensor->tensor);
+      const auto spilledB = spill(transposedB);
+      
+      const auto bTensor = to<IndexedTensor>(spilledB);
+      b = IndexedTensor::make(bTensor->tensor, aTensor->indexVars);
+    }
+
     return pair<Expr,Expr>(a,b);
   }
 
@@ -204,6 +244,17 @@ private:
     }
     else {
       IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const IndexExpr *op) {
+    IRRewriter::visit(op);
+
+    // If expression corresponds to transpose of a matrix element-wise 
+    // operation, spill result of element-wise operation.
+    const auto iexpr = to<IndexExpr>(expr);
+    if (isMatrixTransposeElwise(iexpr)) {
+      expr = IndexExpr::make(iexpr->resultVars, spill(iexpr->value)); 
     }
   }
 };
