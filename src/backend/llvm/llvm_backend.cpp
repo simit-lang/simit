@@ -62,7 +62,7 @@ shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
   return engineBuilder;
 }
 
-LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
+LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
@@ -338,7 +338,8 @@ void LLVMBackend::compile(const ir::Load& load) {
   llvm::Value *index = compile(load.index);
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
-  llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+  llvm::Value *bufferLoc = llvmCreateInBoundsGEP(
+      builder.get(), buffer, index, locName);
 
   string valName = string(buffer->getName()) + VAL_SUFFIX;
   val = builder->CreateLoad(bufferLoc, valName);
@@ -382,9 +383,9 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
       val = builder->CreateFNeg(a);
       break;
     case ScalarType::Complex: {
-      llvm::Value *realNeg = builder->CreateFNeg(builder->ComplexGetReal(a));
-      llvm::Value *imagNeg = builder->CreateFNeg(builder->ComplexGetImag(a));
-      val = builder->CreateComplex(realNeg, imagNeg);
+      llvm::Value *realNeg = builder->CreateFNeg(llvmComplexGetReal(builder.get(), a));
+      llvm::Value *imagNeg = builder->CreateFNeg(llvmComplexGetImag(builder.get(), a));
+      val = llvmCreateComplex(builder.get(), realNeg, imagNeg);
       break;
     }
     case ScalarType::Boolean:
@@ -408,13 +409,13 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
       val = builder->CreateFAdd(a, b);
       break;
     case ScalarType::Complex: {
-      llvm::Value *realA = builder->ComplexGetReal(a);
-      llvm::Value *imagA = builder->ComplexGetImag(a);
-      llvm::Value *realB = builder->ComplexGetReal(b);
-      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *realA = llvmComplexGetReal(builder.get(), a);
+      llvm::Value *imagA = llvmComplexGetImag(builder.get(), a);
+      llvm::Value *realB = llvmComplexGetReal(builder.get(), b);
+      llvm::Value *imagB = llvmComplexGetImag(builder.get(), b);
       llvm::Value *real = builder->CreateFAdd(realA, realB);
       llvm::Value *imag = builder->CreateFAdd(imagA, imagB);
-      val = builder->CreateComplex(real, imag);
+      val = llvmCreateComplex(builder.get(), real, imag);
       break;
     }
     case ScalarType::Boolean:
@@ -438,13 +439,13 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
       val = builder->CreateFSub(a, b);
       break;
     case ScalarType::Complex: {
-      llvm::Value *realA = builder->ComplexGetReal(a);
-      llvm::Value *imagA = builder->ComplexGetImag(a);
-      llvm::Value *realB = builder->ComplexGetReal(b);
-      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *realA = llvmComplexGetReal(builder.get(), a);
+      llvm::Value *imagA = llvmComplexGetImag(builder.get(), a);
+      llvm::Value *realB = llvmComplexGetReal(builder.get(), b);
+      llvm::Value *imagB = llvmComplexGetImag(builder.get(), b);
       llvm::Value *real = builder->CreateFSub(realA, realB);
       llvm::Value *imag = builder->CreateFSub(imagA, imagB);
-      val = builder->CreateComplex(real, imag);
+      val = llvmCreateComplex(builder.get(), real, imag);
       break;
     }
     case ScalarType::Boolean:
@@ -468,17 +469,17 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
       val = builder->CreateFMul(a, b);
       break;
     case ScalarType::Complex: {
-      llvm::Value *realA = builder->ComplexGetReal(a);
-      llvm::Value *imagA = builder->ComplexGetImag(a);
-      llvm::Value *realB = builder->ComplexGetReal(b);
-      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *realA = llvmComplexGetReal(builder.get(), a);
+      llvm::Value *imagA = llvmComplexGetImag(builder.get(), a);
+      llvm::Value *realB = llvmComplexGetReal(builder.get(), b);
+      llvm::Value *imagB = llvmComplexGetImag(builder.get(), b);
       llvm::Value *real = builder->CreateFSub(
           builder->CreateFMul(realA, realB),
           builder->CreateFMul(imagA, imagB));
       llvm::Value *imag = builder->CreateFAdd(
           builder->CreateFMul(realA, imagB),
           builder->CreateFMul(imagA, realB));
-      val = builder->CreateComplex(real, imag);
+      val = llvmCreateComplex(builder.get(), real, imag);
       break;
     }
     case ScalarType::Boolean:
@@ -505,10 +506,10 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
       break;
     case ScalarType::Complex: {
       // Computed using the naive ((ac+bd)/(c^2+d^2), (bc-ad)/(c^2+d^2))
-      llvm::Value *realA = builder->ComplexGetReal(a);
-      llvm::Value *imagA = builder->ComplexGetImag(a);
-      llvm::Value *realB = builder->ComplexGetReal(b);
-      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *realA = llvmComplexGetReal(builder.get(), a);
+      llvm::Value *imagA = llvmComplexGetImag(builder.get(), a);
+      llvm::Value *realB = llvmComplexGetReal(builder.get(), b);
+      llvm::Value *imagB = llvmComplexGetImag(builder.get(), b);
       llvm::Value *denom = builder->CreateFAdd(
           builder->CreateFMul(realB, realB),
           builder->CreateFMul(imagB, imagB));
@@ -520,7 +521,7 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
           builder->CreateFMul(realA, imagB));
       llvm::Value *real = builder->CreateFDiv(num1, denom);
       llvm::Value *imag = builder->CreateFDiv(num2, denom);
-      val = builder->CreateComplex(real, imag);
+      val = llvmCreateComplex(builder.get(), real, imag);
       break;
     }
     case ScalarType::Boolean:
@@ -564,11 +565,11 @@ void LLVMBackend::compile(Type op) {                                           \
   const TensorType *ttype = op.a.type().toTensor();                            \
   switch (ttype->getComponentType().kind) {                                    \
     case ScalarType::Float:                                                    \
-      val = builder->float_cmp(a, b);                                          \
+      val = llvm##float_cmp(builder.get(), a, b);                              \
       break;                                                                   \
     case ScalarType::Int:                                                      \
     case ScalarType::Boolean:                                                  \
-      val = builder->int_cmp(a, b);                                            \
+      val = llvm##int_cmp(builder.get(), a, b);                                \
       break;                                                                   \
     default:                                                                   \
       not_supported_yet;                                                       \
@@ -995,22 +996,22 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   }
   else if (callStmt.callee == ir::intrinsics::complexNorm()) {
     std::string fname = "complexNorm" + floatTypeName;
-    call = emitCall(fname, {builder->ComplexGetReal(args[0]),
-      builder->ComplexGetImag(args[0])}, llvmFloatType());
+    call = emitCall(fname, {llvmComplexGetReal(builder.get(), args[0]),
+      llvmComplexGetImag(builder.get(), args[0])}, llvmFloatType());
   }
   else if (callStmt.callee == ir::intrinsics::createComplex()) {
-    call = builder->CreateComplex(args[0], args[1]);
+    call = llvmCreateComplex(builder.get(), args[0], args[1]);
   }
   else if (callStmt.callee == ir::intrinsics::complexGetReal()) {
-    call = builder->ComplexGetReal(args[0]);
+    call = llvmComplexGetReal(builder.get(), args[0]);
   }
   else if (callStmt.callee == ir::intrinsics::complexGetImag()) {
-    call = builder->ComplexGetImag(args[0]);
+    call = llvmComplexGetImag(builder.get(), args[0]);
   }
   else if (callStmt.callee == ir::intrinsics::complexConj()) {
-    auto real = builder->ComplexGetReal(args[0]);
-    auto imag = builder->CreateFNeg(builder->ComplexGetImag(args[0]));
-    call = builder->CreateComplex(real, imag);
+    auto real = llvmComplexGetReal(builder.get(), args[0]);
+    auto imag = builder->CreateFNeg(llvmComplexGetImag(builder.get(), args[0]));
+    call = llvmCreateComplex(builder.get(), real, imag);
   }
   else {
     ierror << "intrinsic " << callStmt.callee.getName() << " not found";
@@ -1057,7 +1058,7 @@ void LLVMBackend::compile(const ir::Store& store) {
   iassert(value != nullptr);
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
-  llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+  llvm::Value *bufferLoc = llvmCreateInBoundsGEP(builder.get(), buffer, index, locName);
   builder->CreateStore(value, bufferLoc);
 }
 
@@ -1136,7 +1137,7 @@ void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(ifThenElse.condition);
-  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
+  llvm::Value *condEval = llvmCreateICmpEQ(builder.get(), builder->getTrue(), cond);
 
 
   llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CTX, "then",
@@ -1179,11 +1180,11 @@ void LLVMBackend::compile(const ir::ForRange& forLoop) {
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CTX,
                                                        iName+"_loop_end",
                                                        llvmFunc);
-  llvm::Value *firstCmp = builder->CreateICmpSLT(rangeStart, rangeEnd);
+  llvm::Value *firstCmp = llvmCreateICmpSLT(builder.get(), rangeStart, rangeEnd);
   builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopBodyStart);
 
-  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
+  llvm::PHINode *i = llvmCreatePHI(builder.get(), LLVM_INT32, 2, iName);
   i->addIncoming(rangeStart, entryBlock);
 
   // Loop Body
@@ -1196,8 +1197,8 @@ void LLVMBackend::compile(const ir::ForRange& forLoop) {
                                           iName+"_nxt", false, true);
   i->addIncoming(i_nxt, loopBodyEnd);
 
-  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, rangeEnd,
-                                                 iName+"_cmp");
+  llvm::Value *exitCond = llvmCreateICmpSLT(builder.get(), i_nxt, rangeEnd,
+                                            iName+"_cmp");
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 
@@ -1241,11 +1242,11 @@ void LLVMBackend::compile(const ir::For& forLoop) {
       llvm::BasicBlock::Create(LLVM_CTX, iName+"_loop_body", llvmFunc);
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CTX,
                                                        iName+"_loop_end", llvmFunc);
-  llvm::Value *firstCmp = builder->CreateICmpSLT(llvmInt(0), iNum);
+  llvm::Value *firstCmp = llvmCreateICmpSLT(builder.get(), llvmInt(0), iNum);
   builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopBodyStart);
 
-  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
+  llvm::PHINode *i = llvmCreatePHI(builder.get(), LLVM_INT32, 2, iName);
   i->addIncoming(builder->getInt32(0), entryBlock);
 
   // Loop Body
@@ -1258,7 +1259,7 @@ void LLVMBackend::compile(const ir::For& forLoop) {
                                           iName+"_nxt", false, true);
   i->addIncoming(i_nxt, loopBodyEnd);
 
-  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, iNum, iName+"_cmp");
+  llvm::Value *exitCond = llvmCreateICmpSLT(builder.get(), i_nxt, iNum, iName+"_cmp");
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 }
@@ -1267,7 +1268,7 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(whileLoop.condition);
-  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
+  llvm::Value *condEval = llvmCreateICmpEQ(builder.get(), builder->getTrue(), cond);
 
 
   llvm::BasicBlock *bodyBlock = llvm::BasicBlock::Create(LLVM_CTX, "body",
@@ -1289,7 +1290,7 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
   llvmFunc->getBasicBlockList().push_back(checkBlock);
   builder->SetInsertPoint(checkBlock);
   llvm::Value *cond2 = compile(whileLoop.condition);
-  llvm::Value *condEval2 = builder->CreateICmpEQ(builder->getTrue(), cond2);
+  llvm::Value *condEval2 = llvmCreateICmpEQ(builder.get(), builder->getTrue(), cond2);
 
   builder->CreateCondBr(condEval2, priorBodyBlock, exitBlock);
   
@@ -1370,8 +1371,8 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
   
   assert(elemType->hasField(fieldName));
   unsigned fieldLoc = fieldsOffset + elemType->fieldNames.at(fieldName);
-  return builder->CreateExtractValue(setOrElemValue, {fieldLoc},
-                                     setOrElemValue->getName()+"."+fieldName);
+  return llvmCreateExtractValue(builder.get(), setOrElemValue, {fieldLoc},
+                                setOrElemValue->getName()+"."+fieldName);
 }
 
 llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
@@ -1419,8 +1420,8 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       llvm::Value* coordArrayPtr = symtable.get(tensorIndex.getRowptrArray());
       llvm::Value* coordArray = builder->CreateAlignedLoad(coordArrayPtr, 8);
       llvm::Value* coordArrayLast
-          = builder->CreateInBoundsGEP(coordArray, dimSize,
-                                       "coords"+LEN_SUFFIX+PTR_SUFFIX);
+          = llvmCreateInBoundsGEP(builder.get(), coordArray, dimSize,
+                                  "coords"+LEN_SUFFIX+PTR_SUFFIX);
       len = builder->CreateAlignedLoad(coordArrayLast, 8);
 
       // Multiply by block size
@@ -1464,8 +1465,8 @@ llvm::Value *LLVMBackend::emitComputeLen(const IndexSet &is) {
       break;
     case IndexSet::Set: {
       llvm::Value *setValue = compile(is.getSet());
-      return builder->CreateExtractValue(setValue, {0},
-                                         setValue->getName()+LEN_SUFFIX);
+      return llvmCreateExtractValue(builder.get(), setValue, {0},
+                                    setValue->getName()+LEN_SUFFIX);
     }
     case IndexSet::Single:
       unreachable;
@@ -1477,8 +1478,8 @@ llvm::Value *LLVMBackend::emitComputeLen(const IndexSet &is) {
   return nullptr;
 }
 
-llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
-  llvm::Value *loc = builder->CreateGEP(array, index);
+llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index) {
+  llvm::Value *loc = llvmCreateInBoundsGEP(builder.get(), array, index);
   return builder->CreateLoad(loc);
 }
 
@@ -1567,8 +1568,8 @@ void LLVMBackend::emitPrintf(llvm::Value *str, std::vector<llvm::Value*> args) {
   // Split any complex structs into two doubles
   for (size_t i = 0; i < args.size(); ++i) {
     if (args[i]->getType()->isStructTy()) {
-      llvm::Value *real = builder->ComplexGetReal(args[i]);
-      llvm::Value *imag = builder->ComplexGetImag(args[i]);
+      llvm::Value *real = llvmComplexGetReal(builder.get(), args[i]);
+      llvm::Value *imag = llvmComplexGetImag(builder.get(), args[i]);
       args[i] = real;
       args.insert(args.begin()+i+1, imag);
     }
