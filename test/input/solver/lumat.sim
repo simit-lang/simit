@@ -1,37 +1,34 @@
 element Vertex
-  b : float;
   x : float;
-  fixed : bool;
 end
 
 element Edge
 end
 
-extern V : set{Vertex};
-extern E : set{Edge}(V,V);
-
-func dist_a(s : Edge, p : (Vertex*2)) -> (A : tensor[V,V](float))
-  if (p(0).fixed)
-    A(p(0),p(0)) = 2.0;
-  else
-    A(p(0),p(0)) = 1.0;
-  end
-  if (p(1).fixed)
-    A(p(1),p(1)) = 2.0;
-  else
-    A(p(1),p(1)) = 1.0;
-  end
-  A(p(0),p(1)) = 2.0;
-  A(p(1),p(0)) = 1.0;
+element Tag
+  b : float;
 end
 
-extern func getB() -> (B : matrix[V,V](float));
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+extern T : set{Tag}(V);
+
+func asm(e : Edge, v : (Vertex*2)) -> A : matrix[V,V](float)
+  A(v(0),v(0)) = 2.0;
+  A(v(1),v(1)) = 2.0;
+  A(v(0),v(1)) = 2.0;
+  A(v(1),v(0)) = 1.0;
+end
+
+func dirichlet(t : Tag, v : (Vertex*1)) -> B : matrix[T,V](float)
+  B(t,v(0)) = 1.0;
+end
 
 export func main()
-  A = map dist_a to E reduce +;
+  A = map asm to E reduce +;
+  B = map dirichlet to T reduce +;
   solver = lu(A);
-  B = getB();
-  X = lumatsolve(solver, B);
-  V.x = X * V.b;
+  X = lumatsolve(solver, B');
+  V.x = X * T.b;
   lufree(solver);
 end
