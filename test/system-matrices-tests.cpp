@@ -404,6 +404,48 @@ TEST(system, add_twice) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
+TEST(system, add_transpose) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1.0;
+  b(v1) = 2.0;
+  b(v2) = 3.0;
+
+  Set E(V,V);
+  FieldRef<simit_float> e = E.addField<simit_float>("e");
+  ElementRef e0 = E.add(v0,v1);
+  e(e0) = 1.0;
+
+  Set F(V,V);
+  FieldRef<simit_float> f = F.addField<simit_float>("e");
+  ElementRef f0 = F.add(v0,v2);
+  f(f0) = 4.0;
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.bind("F", &F);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(24.0, (double)a(v0));
+  ASSERT_EQ(5.0, (double)a(v1));
+  ASSERT_EQ(28.0, (double)a(v2));
+
+  // Check that inputs are preserved
+  ASSERT_EQ(1.0, (double)b(v0));
+  ASSERT_EQ(2.0, (double)b(v1));
+  ASSERT_EQ(3.0, (double)b(v2));
+}
+
 TEST(system, gemm) {
   // Points
   Set points;
