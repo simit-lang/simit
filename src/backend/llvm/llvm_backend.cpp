@@ -1093,7 +1093,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
       emitMemSet(fieldPtr, llvmInt(0,8), fieldSize, compSize);
     }
     else {
-      not_supported_yet << "assigning non-zero scalar value to a tensor";
+      not_supported_yet;
     }
   }
   else {
