@@ -851,6 +851,44 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
   }
 }
 
+// TODO: This method is only needed for custom intrinsic checking, and should be
+//       removed once the type system has been extended so that intrinsics types
+//       can be expressed and checked normally.
+void TypeChecker::typeCheckOrder(Expr::Ptr arg, ExprType argType, size_t order){
+  size_t actualOrder = getOrder(to<TensorType>(argType.type[0]));
+  if (!argType.isNumericTensor() || actualOrder != order) {
+    std::string tensorTypeName;
+    if (order == 0) {
+      tensorTypeName = "scalar";
+    }
+    else if (order == 1) {
+      tensorTypeName = "vector";
+    }
+    else if (order == 2) {
+      tensorTypeName = "matrix";
+    }
+    else {
+      tensorTypeName = std::to_string(order) + "-tensor";
+    }
+    std::stringstream errMsg;
+    errMsg << "expected a numeric " << tensorTypeName
+           << " as argument but got an argument of type " << toString(argType);
+    reportError(errMsg.str(), arg);
+  }
+}
+
+// TODO: This method is a convenience method for custom intrinsic checking, and
+// should be removed once the type system has been extended so that intrinsics
+// types can be expressed and checked normally.
+void TypeChecker::typeCheckIsOpaque(Expr::Ptr arg, ExprType argType) {
+  if (!argType.isOpaque()) {
+    std::stringstream errMsg;
+    errMsg << "expected an opaque type as argument but got an argument of type "
+           << toString(argType);
+    reportError(errMsg.str(), arg);
+  }
+}
+
 void TypeChecker::visit(CallExpr::Ptr expr) {
   // Type check generic arguments.
   std::vector<bool> validGenericArg(expr->genericArgs.size());
@@ -1016,6 +1054,50 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     return;
   }
 
+  // Because of restrictions in the type system (no support for generic blocked
+  // tensors) some intrinsics have undefined types and must be handled as
+  // special cases.
+  if (funcName == ir::intrinsics::norm().getName()) {
+    iassert(expr->args.size() == 1);
+    typeCheckOrder(expr->args[0], argTypes[0], 1);
+    return;
+  }
+  else if (funcName == ir::intrinsics::dot().getName()) {
+    iassert(expr->args.size() == 2);
+    typeCheckOrder(expr->args[0], argTypes[0], 1);
+    typeCheckOrder(expr->args[1], argTypes[1], 1);
+
+    // Check that first and second arguments are vectors of same length
+    // containing elements of same type.
+    if (!env.compareTypes(argTypes[0].type[0], argTypes[1].type[0], true)) {
+      std::stringstream errMsg;
+      errMsg << "cannot call function 'dot' on arguments of type "
+             << toString(argTypes[0]) << " and type " << toString(argTypes[1]);
+      reportError(errMsg.str(), expr);
+    }
+    return;
+  }
+  else if (funcName == ir::intrinsics::lu().getName() ||
+           funcName == ir::intrinsics::chol().getName()) {
+    iassert(expr->args.size() == 1);
+    typeCheckOrder(expr->args[0], argTypes[0], 2);
+    return;
+  }
+  else if (funcName == ir::intrinsics::lusolve().getName() ||
+           funcName == ir::intrinsics::lltsolve().getName()) {
+    iassert(expr->args.size() == 2);
+    typeCheckIsOpaque(expr->args[0], argTypes[0]);
+    typeCheckOrder(expr->args[1], argTypes[1], 1);
+    return;
+  }
+  else if (funcName == ir::intrinsics::lumatsolve().getName() ||
+           funcName == ir::intrinsics::lltmatsolve().getName()) {
+    iassert(expr->args.size() == 2);
+    typeCheckIsOpaque(expr->args[0], argTypes[0]);
+    typeCheckOrder(expr->args[1], argTypes[1], 2);
+    return;
+  }
+
   for (unsigned i = 0; i < expr->args.size(); ++i) {
     const Argument::Ptr funcArg = func->args[i];
     const Expr::Ptr arg = expr->args[i];
@@ -1025,18 +1107,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       continue;
     }
 
-    // Check that argument is of type expected by callee.
-    if (funcName == ir::intrinsics::norm().getName() ||
-        funcName == ir::intrinsics::dot().getName()) {
-      // Check that argument is a numeric tensor of appropriate order.
-      if (!argType.isNumericTensor() || 
-          getOrder(to<TensorType>(argType.type[0])) != 1) {
-        std::stringstream errMsg;
-        errMsg << "expected a numeric vector as argument but got an "
-               << "argument of type " << toString(argType);
-        reportError(errMsg.str(), arg);
-      }
-    } else if (!env.compareTypes(argType.type[0], funcArg->type)) {
+    if (!env.compareTypes(argType.type[0], funcArg->type)) {
       std::stringstream errMsg;
       iassert(funcArg->type != nullptr);
       errMsg << "expected argument of type " << toString(funcArg->type)
@@ -1047,19 +1118,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     // Check that inout argument is writable.
     if (funcArg->isInOut() && !argType.isWritable()) {
       reportError("inout argument must be writable", arg);
-    }
-  }
-
-  // Handle some of the more complex generic functions as special cases.
-  if (funcName == ir::intrinsics::dot().getName()) {
-    // Check that first and second arguments are vectors of same length 
-    // containing elements of same type.
-    if (!env.compareTypes(argTypes[0].type[0], argTypes[1].type[0], true)) {
-      std::stringstream errMsg;
-      errMsg << "cannot call function 'dot' on arguments of type "
-             << toString(argTypes[0]) << " and type " 
-             << toString(argTypes[1]);
-      reportError(errMsg.str(), expr);
     }
   }
 }
