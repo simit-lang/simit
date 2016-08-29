@@ -36,6 +36,9 @@ llvm::Value *llvmComplexGetImag(LLVMIRBuilder *builder, llvm::Value *c);
 llvm::Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, llvm::Value *buffer,
                                    llvm::Value *index,
                                    const llvm::Twine &name = "");
+llvm::Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, llvm::Value *buffer,
+                                   std::vector<llvm::Value*> indices,
+                                   const llvm::Twine &name = "");
 llvm::Value *llvmCreateExtractValue(LLVMIRBuilder *builder, llvm::Value *,
                                     llvm::ArrayRef<unsigned>,
                                     const llvm::Twine &name = "");

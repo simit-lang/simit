@@ -6,6 +6,12 @@
 
 #include "llvm_types.h"
 
+/**
+ * This file is compiled with -fno-rtti to avoid undefined RTTI info for LLVM
+ * classes to be linked in. It appears certain methods of IRBuilder need to
+ * wrapped in this way.
+ */
+
 using namespace llvm;
 using namespace std;
 
@@ -58,6 +64,11 @@ Constant *llvmPtr(PointerType* type, const void* data) {
 Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, Value *buffer, Value *index,
                              const Twine &name) {
   return builder->CreateInBoundsGEP(buffer, index, name);
+}
+
+Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, Value *buffer,
+                             std::vector<Value*> indices, const Twine &name) {
+  return builder->CreateInBoundsGEP(buffer, indices, name);
 }
 
 Value *llvmCreateExtractValue(LLVMIRBuilder *builder, Value *agg,
