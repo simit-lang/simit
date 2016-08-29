@@ -450,22 +450,22 @@ void GPUBackend::compile(const ir::CallStmt& op) {
     }
     else if (op.callee == ir::intrinsics::complexNorm()) {
       std::string fname = "complexNorm" + floatTypeName;
-      call = emitCall(fname, {builder->ComplexGetReal(args[0]),
-              builder->ComplexGetImag(args[0])}, llvmFloatType());
+      call = emitCall(fname, {llvmComplexGetReal(builder.get(), args[0]),
+              llvmComplexGetImag(builder.get(), args[0])}, llvmFloatType());
     }
     else if (op.callee == ir::intrinsics::createComplex()) {
-      call = builder->CreateComplex(args[0], args[1]);
+      call = llvmCreateComplex(builder.get(), args[0], args[1]);
     }
     else if (op.callee == ir::intrinsics::complexGetReal()) {
-      call = builder->ComplexGetReal(args[0]);
+      call = llvmComplexGetReal(builder.get(), args[0]);
     }
     else if (op.callee == ir::intrinsics::complexGetImag()) {
-      call = builder->ComplexGetImag(args[0]);
+      call = llvmComplexGetImag(builder.get(), args[0]);
     }
     else if (op.callee == ir::intrinsics::complexConj()) {
-      auto real = builder->ComplexGetReal(args[0]);
-      auto imag = builder->CreateFNeg(builder->ComplexGetImag(args[0]));
-      call = builder->CreateComplex(real, imag);
+      auto real = llvmComplexGetReal(builder.get(), args[0]);
+      auto imag = builder->CreateFNeg(llvmComplexGetImag(builder.get(), args[0]));
+      call = llvmCreateComplex(builder.get(), real, imag);
     }
     else {
       ierror << "intrinsic " << op.callee.getName() << " not found";
@@ -504,7 +504,8 @@ void GPUBackend::compile(const ir::Store& op) {
     llvm::Value *index = compile(op.index);
     llvm::Value *value = compile(op.value);
     std::string locName = std::string(buffer->getName()) + PTR_SUFFIX;
-    llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+    llvm::Value *bufferLoc = llvmCreateInBoundsGEP(
+        builder.get(), buffer, index, locName);
     switch (op.cop) {
       case ir::CompoundOperator::Add: {
         emitAtomicLoadAdd(bufferLoc, value);
@@ -652,15 +653,15 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
-  llvm::Value *cond = builder->CreateICmpULT(getTidX(),
+  llvm::Value *cond = llvmCreateICmpSLT(builder.get(), getTidX(),
     emitComputeLen(kernelSharding.xDomain));
   if (kernelSharding.ySharded) {
-    llvm::Value *yCond = builder->CreateICmpULT(getTidY(),
+    llvm::Value *yCond = llvmCreateICmpSLT(builder.get(), getTidY(),
     emitComputeLen(kernelSharding.yDomain));
     cond = builder->CreateAnd(cond, yCond);
   }
   if (kernelSharding.zSharded) {
-    llvm::Value *zCond = builder->CreateICmpULT(getTidZ(),
+    llvm::Value *zCond = llvmCreateICmpSLT(builder.get(), getTidZ(),
     emitComputeLen(kernelSharding.zDomain));
     cond = builder->CreateAnd(cond, zCond);
   }
@@ -796,10 +797,10 @@ void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
     // Complex - split into two atomic instructions
     std::vector<llvm::Value*> realIndices = {llvmInt(0), llvmInt(0)};
     std::vector<llvm::Value*> imagIndices = {llvmInt(0), llvmInt(1)};
-    emitAtomicFLoadAdd(builder->CreateGEP(ptr, realIndices),
-                       builder->ComplexGetReal(value));
-    emitAtomicFLoadAdd(builder->CreateGEP(ptr, imagIndices),
-                       builder->ComplexGetImag(value));
+    emitAtomicFLoadAdd(llvmCreateInBoundsGEP(builder.get(), ptr, realIndices),
+                       llvmComplexGetReal(builder.get(), value));
+    emitAtomicFLoadAdd(llvmCreateInBoundsGEP(builder.get(), ptr, imagIndices),
+                       llvmComplexGetImag(builder.get(), value));
   }
   else {
     ierror << "Unknown LLVM value type for atomic load add. " <<
@@ -936,9 +937,12 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   }
 #ifdef SIMIT_DEBUG
   emitPrintf("Grid dims: %d %d %d\n", {
-      builder->CreateExtractValue(gridDims, llvm::ArrayRef<unsigned>({0})),
-      builder->CreateExtractValue(gridDims, llvm::ArrayRef<unsigned>({1})),
-      builder->CreateExtractValue(gridDims, llvm::ArrayRef<unsigned>({2}))});
+      llvmCreateExtractValue(builder.get(), gridDims,
+                             llvm::ArrayRef<unsigned>({0})),
+      llvmCreateExtractValue(builder.get(), gridDims,
+                             llvm::ArrayRef<unsigned>({1})),
+      llvmCreateExtractValue(builder.get(), gridDims,
+                             llvm::ArrayRef<unsigned>({2}))});
 #endif
 
   std::vector<llvm::Constant*> initBlockDims = {
@@ -955,9 +959,12 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
 #ifdef SIMIT_DEBUG
   emitPrintf("Block dims: %d %d %d\n", {
-      builder->CreateExtractValue(blockDims, llvm::ArrayRef<unsigned>({0})),
-      builder->CreateExtractValue(blockDims, llvm::ArrayRef<unsigned>({1})),
-      builder->CreateExtractValue(blockDims, llvm::ArrayRef<unsigned>({2}))});
+      llvmCreateExtractValue(builder.get(), blockDims,
+                             llvm::ArrayRef<unsigned>({0})),
+      llvmCreateExtractValue(builder.get(), blockDims,
+                             llvm::ArrayRef<unsigned>({1})),
+      llvmCreateExtractValue(builder.get(), blockDims,
+                             llvm::ArrayRef<unsigned>({2}))});
 #endif
 
   // Build param buffer
@@ -1011,8 +1018,8 @@ void GPUBackend::emitPrintf(std::string format,
     }
     // Split complex structs into two doubles
     else if (arg->getType()->isStructTy()) {
-      llvm::Value *real = builder->ComplexGetReal(args[i]);
-      llvm::Value *imag = builder->ComplexGetImag(args[i]);
+      llvm::Value *real = llvmComplexGetReal(builder.get(), args[i]);
+      llvm::Value *imag = llvmComplexGetImag(builder.get(), args[i]);
       args[i] = builder->CreateFPExt(real, LLVM_DOUBLE);
       args.insert(args.begin()+i+1, builder->CreateFPExt(imag, LLVM_DOUBLE));
     }
@@ -1169,7 +1176,8 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
-  llvm::Value *cond = builder->CreateICmpULT(getTidX(), symtable.get(lengthArg));
+  llvm::Value *cond = llvmCreateICmpSLT(
+      builder.get(), getTidX(), symtable.get(lengthArg));
   builder->CreateCondBr(cond, bodyStart, earlyExit);
 
   builder->SetInsertPoint(earlyExit);
@@ -1191,7 +1199,8 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   }
   iassert(value != nullptr);
 
-  llvm::Value *ptr = builder->CreateGEP(symtable.get(targetArg), getTidX());
+  llvm::Value *ptr = llvmCreateInBoundsGEP(
+      builder.get(), symtable.get(targetArg), getTidX());
   builder->CreateStore(value, ptr);
 
   // Kernel should always return void
@@ -1238,7 +1247,8 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
-  llvm::Value *cond = builder->CreateICmpULT(getTidX(), symtable.get(sizeVar));
+  llvm::Value *cond = llvmCreateICmpSLT(
+      builder.get(), getTidX(), symtable.get(sizeVar));
   builder->CreateCondBr(cond, bodyStart, earlyExit);
 
   builder->SetInsertPoint(earlyExit);
@@ -1249,9 +1259,9 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
 
   // Perform multiply and add
   llvm::Value *val1 = builder->CreateLoad(
-      builder->CreateGEP(symtable.get(vec1Var), getTidX()));
+      llvmCreateInBoundsGEP(builder.get(), symtable.get(vec1Var), getTidX()));
   llvm::Value *val2 = builder->CreateLoad(
-      builder->CreateGEP(symtable.get(vec2Var), getTidX()));
+      llvmCreateInBoundsGEP(builder.get(), symtable.get(vec2Var), getTidX()));
   llvm::Value *mul;
   iassert(val1->getType()->isFloatTy());
   mul = builder->CreateFMul(val1, val2);
@@ -1281,7 +1291,8 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
       iassert(bufIndex % 4 == 0) << "Cannot accept non 4-byte aligned params";
       bufIndex += (localAlign - bufIndex%localAlign);
     }
-    llvm::Value *bufPtr = builder->CreateGEP(buffer, llvmInt(bufIndex));
+    llvm::Value *bufPtr = llvmCreateInBoundsGEP(
+        builder.get(), buffer, llvmInt(bufIndex));
     llvm::Value *valPtr = builder->CreateBitCast(
         bufPtr,
         // Pointer to arg type, addrspace 0
