@@ -374,6 +374,7 @@ void TypeChecker::visit(ExprStmt::Ptr stmt) {
 
 void TypeChecker::visit(AssignStmt::Ptr stmt) {
   const ExprType exprType = inferType(stmt->expr);
+
   retTypeChecked = exprType.defined;
 
   std::vector<ExprType> lhsTypes;
@@ -397,7 +398,7 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 
   if (retTypeChecked) {
     for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
-      // Check that type of value returned by expression on right-hand side 
+      // Check that type of value returned by expression on right-hand side
       // is assignable and corresponds to type of target on left-hand side.
       if (lhsTypes[i].defined) {
         if (lhsTypes[i].isVoid()) {
@@ -408,14 +409,13 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
         } else if (!env.compareTypes(lhsTypes[i].type[0], exprType.type[i])) {
           const bool rhsIsScalar = isa<ScalarType>(exprType.type[i]);
           const bool lhsIsTensor = isa<TensorType>(lhsTypes[i].type[0]);
-          
+
           // Check for assignment of a scalar to a non-scalar tensor.
           bool invalidAssign = !rhsIsScalar || !lhsIsTensor;
 
           if (!invalidAssign) {
             const auto rhsScalarType = to<ScalarType>(exprType.type[i]);
             const auto lhsTensorType = to<TensorType>(lhsTypes[i].type[0]);
-
             if (rhsScalarType->type != getComponentType(lhsTensorType)) {
               invalidAssign = true;
             }
@@ -423,8 +423,8 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 
           if (invalidAssign) {
             std::stringstream errMsg;
-            errMsg << "cannot assign a value of type " 
-                   << toString(exprType.type[i]) << " to a target of type " 
+            errMsg << "cannot assign a value of type "
+                   << toString(exprType.type[i]) << " to a target of type "
                    << toString(lhsTypes[i]);
             reportError(errMsg.str(), stmt->lhs[i]);
           }
@@ -447,7 +447,7 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
       }
     }
   }
-  
+
   for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
     // Mark target variable as having been declared if necessary.
     if (isa<VarExpr>(stmt->lhs[i])) {
@@ -1056,7 +1056,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
   // Because of restrictions in the type system (no support for generic blocked
   // tensors) some intrinsics have undefined types and must be handled as
-  // special cases.
+  // special cases. TODO: Remove these restrictions and these special cases.
   if (funcName == ir::intrinsics::norm().getName()) {
     iassert(expr->args.size() == 1);
     typeCheckOrder(expr->args[0], argTypes[0], 1);
