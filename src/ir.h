@@ -140,7 +140,7 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr,
 
 
 /// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
-enum class CompoundOperator { None, Add };
+enum class CompoundOperator { None, Add, Sub };
 std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
 
