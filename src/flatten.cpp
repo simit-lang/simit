@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "ir.h"
 #include "intrinsics.h"
@@ -36,27 +37,41 @@ bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
   return false;
 }
 
-inline bool isMatrixTransposeElwise(const IndexExpr* iexpr) {
-  if (iexpr->resultVars.size() != 2 || isa<IndexedTensor>(iexpr->value)) {
+// Check for permutation without repetition
+bool isPermutation(const std::vector<IndexVar> &as, 
+                   const std::vector<IndexVar> &bs) {
+  return std::is_permutation(as.begin(), as.end(), bs.begin()) &&
+         std::is_permutation(bs.begin(), bs.end(), as.begin());
+}
+
+bool isEqual(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs) {
+  return as.size() == bs.size() && std::equal(as.begin(), as.end(), bs.begin());
+}
+
+bool isTransposeOfTensorElwise(const IndexExpr* iexpr) {
+  if (iexpr->resultVars.size() < 2 || isa<IndexedTensor>(iexpr->value)) {
     return false;
   }
 
-  bool result = true;
+  bool isElwise = true;
+  std::vector<IndexVar> vars;
+
   match(iexpr->value,
     std::function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
-      if (result == false) {
+      if (isElwise == false) {
         return;
       }
-      if (op->indexVars.size() != iexpr->resultVars.size() ||
-          !std::equal(op->indexVars.begin(), op->indexVars.end(),
-                      iexpr->resultVars.rbegin())) {
-        result = false;
-        return;
+
+      if (vars.empty()) {
+        vars = op->indexVars;
+      } else if (!isEqual(op->indexVars, vars)) {
+        isElwise = false;
       }
     })
   );
 
-  return result;
+  return isElwise && !isEqual(vars, iexpr->resultVars) &&
+         isPermutation(vars, iexpr->resultVars);
 }
 
 /// Flattens nested IndexExprs.
@@ -129,14 +144,15 @@ private:
       b = spill(b);
     }
 
-    // Handle operations on a matrix and its transpose by spilling the 
-    // transposed matrix.
-    iassert(!isa<Literal>(a) && !isa<Literal>(b));
+    // Handle operation on a tensor and its transpose by spilling the 
+    // transposed tensor.
     const auto aTensor = to<IndexedTensor>(a);
     const auto bTensor = to<IndexedTensor>(b);
-    if (aTensor->indexVars.size() == 2 && bTensor->indexVars.size() == 2 && 
-        aTensor->indexVars[0] == bTensor->indexVars[1] && 
-        aTensor->indexVars[1] == bTensor->indexVars[0]) {
+    const auto &aIndexVars = aTensor->indexVars;
+    const auto &bIndexVars = bTensor->indexVars;
+    if (aIndexVars.size() >= 2 && bIndexVars.size() >= 2 && 
+        !isEqual(aIndexVars, bIndexVars) && 
+        isPermutation(aIndexVars, bIndexVars)) {
       const auto transposedB = IRBuilder().transposedMatrix(bTensor->tensor);
       const auto spilledB = spill(transposedB);
       
@@ -250,10 +266,11 @@ private:
   void visit(const IndexExpr *op) {
     IRRewriter::visit(op);
 
-    // If expression corresponds to transpose of a matrix element-wise 
+    // If expression corresponds to transpose of a system tensor element-wise 
     // operation, spill result of element-wise operation.
     const auto iexpr = to<IndexExpr>(expr);
-    if (isMatrixTransposeElwise(iexpr)) {
+    if (isTransposeOfTensorElwise(iexpr) && 
+        expr.type().toTensor()->hasSystemDimensions()) {
       expr = IndexExpr::make(iexpr->resultVars, spill(iexpr->value)); 
     }
   }
@@ -293,9 +310,12 @@ Stmt flattenIndexExpressions(Stmt stmt) {
 }
 
 Func flattenIndexExpressions(Func func) {
-  Stmt body = flattenIndexExpressions(NormAndDotRewriter().rewrite(func.getBody()));
+  Stmt body = NormAndDotRewriter().rewrite(func.getBody());
+  body = flattenIndexExpressions(body);
+  
   func = Func(func, body);
   func = insertVarDecls(func);
+  
   return func;
 }
 
