@@ -1,0 +1,24 @@
+element Vertex
+  b : float;
+  x : float;
+end
+
+element Edge
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func dist_a(s : Edge, p : (Vertex*2)) -> (A : tensor[V,V](float))
+  A(p(0),p(0)) = 2.0;
+  A(p(1),p(1)) = 2.0;
+  A(p(0),p(1)) = 2.0;
+  A(p(1),p(0)) = 1.0;
+end
+
+export func main()
+  A = map dist_a to E reduce +;
+  solver = lu(A);
+  V.x = lusolve(solver, V.b);
+  lufree(solver);
+end

@@ -519,7 +519,7 @@ public:
 
   void* getFieldData(const std::string &fieldName) {
     uassert(fieldNames.find(fieldName) != fieldNames.end())
-        << "Cannot find " << fieldName;
+        << "The Set has no field " << fieldName;
     return fields[fieldNames.at(fieldName)]->data;
   }
 
@@ -1065,10 +1065,6 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
   return os << "]";
 }
 
-//template <typename T>
-//std::ostream &operator<<(std::ostream& os, const TensorRef<T>& t) {
-//  return os << static_cast<T>(t);
-//}
 
 // Graph generators
 void createElements(Set *elements, unsigned num);

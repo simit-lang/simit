@@ -1,6 +1,5 @@
 element Vertex
   x : float;
-  fixed : bool;
 end
 
 element Edge
@@ -15,17 +14,9 @@ extern E : set{Edge}(V,V);
 extern T : set{Tag}(V);
 
 func asm(e : Edge, v : (Vertex*2)) -> A : matrix[V,V](float)
-  if (v(0).fixed)
-    A(v(0),v(0)) = 2.0;
-  else
-    A(v(0),v(0)) = 1.0;
-  end
-  if (v(1).fixed)
-    A(v(1),v(1)) = 2.0;
-  else
-    A(v(1),v(1)) = 1.0;
-  end
-  A(v(0),v(1)) = 1.0;
+  A(v(0),v(0)) = 2.0;
+  A(v(1),v(1)) = 2.0;
+  A(v(0),v(1)) = 2.0;
   A(v(1),v(0)) = 1.0;
 end
 
@@ -36,8 +27,8 @@ end
 export func main()
   A = map asm to E reduce +;
   B = map dirichlet to T reduce +;
-  solver = chol(A);
-  X = lltmatsolve(solver, B');
+  solver = lu(A);
+  X = lumatsolve(solver, B');
   V.x = X * T.b;
-  cholfree(solver);
+  lufree(solver);
 end

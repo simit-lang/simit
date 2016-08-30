@@ -367,6 +367,8 @@ private:
   void typeCheckBinaryElwise(BinaryExpr::Ptr, bool = false);
   void typeCheckBinaryBoolean(BinaryExpr::Ptr);
   void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
+  void typeCheckOrder(Expr::Ptr arg, ExprType argType, size_t order);
+  void typeCheckIsOpaque(Expr::Ptr arg, ExprType argType);
 
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 

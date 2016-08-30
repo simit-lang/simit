@@ -42,6 +42,10 @@ const Func& inv();
 
 // Solvers
 const Func& solve();
+const Func& lu();
+const Func& lufree();
+const Func& lusolve();
+const Func& lumatsolve();
 const Func& chol();
 const Func& cholfree();
 const Func& lltsolve();

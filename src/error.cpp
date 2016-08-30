@@ -58,13 +58,13 @@ ErrorReport::ErrorReport(const char *file, const char *func, int line,
       (*msg) << " in " << func << " in file " << file << ":" << line << endl;
       break;
     case Internal:
-      (*msg) << "Internal ";
+      (*msg) << "Compiler bug";
       if (warning) {
-        (*msg) << "warning";
-      } else {
-        (*msg) << "error";
+        (*msg) << "(warning)";
       }
       (*msg) << " at " << file << ":" << line << " in " << func;
+      (*msg) << endl << "Please report it to http://issues.simit-lang.org";
+
       if (conditionString) {
         (*msg)  << endl << " Condition failed: " << conditionString;
       }

@@ -1,0 +1,24 @@
+element Vertex
+  b : vector[2](float);
+  x : vector[2](float);
+end
+
+element Edge
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func asm(e : Edge, v : (Vertex*2)) -> A : matrix[V,V](matrix[2,2](float))
+  A(v(0),v(0)) = [4.0, 2.0; 2.0, 4.0];
+  A(v(1),v(1)) = [4.0, 2.0; 2.0, 4.0];
+  A(v(0),v(1)) = [4.0, 2.0; 2.0, 4.0];
+  A(v(1),v(0)) = [1.0, 0.0; 0.0, 1.0];
+end
+
+export func main()
+  A = map asm to E reduce +;
+  solver = lu(A);
+  V.x = lusolve(solver, V.b);
+  lufree(solver);
+end

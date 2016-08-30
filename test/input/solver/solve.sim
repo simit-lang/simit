@@ -1,6 +1,6 @@
 element Vertex
   b : float;
-  c : float;
+  x : float;
 end
 
 element Edge
@@ -10,15 +10,14 @@ end
 extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
-func dist_a(s : Edge, p : (Vertex*2)) -> (A : tensor[V,V](float))
-  A(p(0),p(0)) = 5.0*s.a;
-  A(p(0),p(1)) = s.a;
-  A(p(1),p(0)) = s.a;
-  A(p(1),p(1)) = 5.0*s.a;
+func asm(e : Edge, p : (Vertex*2)) -> A : matrix[V,V](float)
+  A(p(0),p(0)) = 5.0 * e.a;
+  A(p(0),p(1)) =       e.a;
+  A(p(1),p(0)) =       e.a;
+  A(p(1),p(1)) = 5.0 * e.a;
 end
 
 export func main()
-  A = map dist_a to E reduce +;
-  c = A \ V.b;
-  V.c = A * c;
+  A = map asm to E reduce +;
+  V.x = A \ V.b;
 end

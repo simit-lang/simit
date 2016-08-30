@@ -1079,6 +1079,11 @@ void LLVMBackend::compile(const ir::Store& store) {
                                 store.value));
       break;
     }
+    case CompoundOperator::Sub: {
+      value = compile(Sub::make(Load::make(store.buffer, store.index),
+                                store.value));
+      break;
+    }
   }
   iassert(value != nullptr);
 
@@ -1133,6 +1138,12 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
       }
       case ir::CompoundOperator::Add: {
         valuePtr = compile(Add::make(
+            FieldRead::make(fieldWrite.elementOrSet, fieldWrite.fieldName),
+                                     fieldWrite.value));
+        break;
+      }
+      case ir::CompoundOperator::Sub: {
+        valuePtr = compile(Sub::make(
             FieldRead::make(fieldWrite.elementOrSet, fieldWrite.fieldName),
                                      fieldWrite.value));
         break;
@@ -1569,12 +1580,12 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
   auto llvmArgIt = llvmFunc->getArgumentList().begin();
   auto simitArgIt = arguments.begin();
   for (; simitArgIt < arguments.end(); ++simitArgIt, ++llvmArgIt) {
-    symtable.insert(*simitArgIt, llvmArgIt);
+    symtable.insert(*simitArgIt, &(*llvmArgIt));
   }
 
   auto simitResIt = results.begin();
   for (; simitResIt < results.end(); ++simitResIt, ++llvmArgIt) {
-    symtable.insert(*simitResIt, llvmArgIt);
+    symtable.insert(*simitResIt, &(*llvmArgIt));
   }
 
   return llvmFunc;

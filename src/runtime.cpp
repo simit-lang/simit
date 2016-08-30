@@ -201,16 +201,15 @@ do {                                                            \
 
 template <typename Float>
 void solve(int n,  int m,  int* rowptr, int* colidx,
-           int nn, int mm, Float* Avals, Float* xvals, Float* bvals) {
+           int nn, int mm, Float* Avals, Float* bvals, Float* xvals) {
 #ifdef EIGEN
   auto A = csr2eigen<Float,ColMajor>(n, m, rowptr, colidx, nn, mm, Avals);
-  auto b = new Map<Matrix<Float,Dynamic,1>>(bvals, n);
   auto x = new Map<Matrix<Float,Dynamic,1>>(xvals, m);
+  auto b = new Map<Matrix<Float,Dynamic,1>>(bvals, n);
 
-  ConjugateGradient<SparseMatrix<Float>,Lower,IdentityPreconditioner> solver;
-  solver.setMaxIterations(50);
+  SparseLU<SparseMatrix<Float, ColMajor>> solver;
   solver.compute(A);
-  *b = solver.solve(*x);
+  *x = solver.solve(*b);
 #else
   SOLVER_ERROR;
 #endif
@@ -223,6 +222,120 @@ extern "C" void cMatSolve_f32(int n,  int m,  int* rowptr, int* colidx,
                               int nn, int mm, float* A, float* x, float* b) {
   return solve(n, m, rowptr, colidx, nn, mm, A, x, b);
 }
+
+/// LU factorization. Returns a solver object that can be used with
+/// `lusolve` and `lumatsolve`. The solver object must be freed using
+/// `lufree`.
+template <typename Float>
+int lu(int An,  int Am,  int* Arowptr, int* Acolidx,
+       int Ann, int Amm, Float* Avals,
+       void** solverPtr) {
+#ifdef EIGEN
+  auto A = csr2eigen<Float,Eigen::ColMajor>(An, Am, Arowptr, Acolidx,
+                                            Ann, Amm, Avals);
+  auto solver = new SparseLU<SparseMatrix<Float,ColMajor>>();
+  solver->compute(A);
+  *solverPtr = static_cast<void*>(solver);
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" int slu(int An,  int Am,  int* Arowptr, int* Acolidx,
+                   int Ann, int Amm, float* Avals,
+                   void** solver) {
+  return lu(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
+}
+extern "C" int dlu(int An,  int Am,  int* Arowptr, int* Acolidx,
+                   int Ann, int Amm, double* Avals,
+                   void** solver) {
+  return lu(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, solver);
+}
+
+
+/// Free an LU solver.
+template <typename Float>
+int lufree(void** solverPtr) {
+#ifdef EIGEN
+  auto solver=static_cast<SparseLU<SparseMatrix<Float,ColMajor>>*>(*solverPtr);
+  delete solver;
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" int slufree(void** solverPtr) {
+  return lufree<float>(solverPtr);
+}
+extern "C" int dlufree(void** solverPtr){
+  return lufree<double>(solverPtr);
+}
+
+/// Solve `t=L^{-1}*b` and `x=L'^{-1}*t`, where `A=LL'` is the matrix that was
+/// factorized with the provided solver using `chol`.
+template <typename Float>
+int lusolve(void** solverPtr, int nb, Float *bvals, int nx, Float *xvals) {
+#ifdef EIGEN
+  auto solver=static_cast<SparseLU<SparseMatrix<Float,ColMajor>>*>(*solverPtr);
+  auto b = dense2eigen(nb, bvals);
+  auto x = Eigen::Matrix<Float,Eigen::Dynamic,1>(nx);
+  x = solver->solve(b);
+  for (int i=0; i<nx; ++i) {
+    xvals[i] = x(i);
+  }
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" {
+  int slusolve(void** solverPtr, int bn, float *bvals, int xn, float *xvals) {
+    return lusolve(solverPtr, bn, bvals, xn, xvals);
+  }
+  int dlusolve(void** solverPtr, int bn, double *bvals, int xn, double *xvals){
+    return lusolve(solverPtr, bn, bvals, xn, xvals);
+  }
+}
+
+/// Solve `T=L^{-1}*B` and `X=L'^{-1}*T`, where `A=LL'` is the matrix that was
+/// factorized with the provided solver using `chol`.
+template <typename Float>
+int lumatsolve(void** solverPtr,
+                int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                int Bnn, int Bmm, Float* Bvals,
+                int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                int Xnn, int Xmm, Float** Xvals){
+#ifdef EIGEN
+  auto solver=static_cast<SparseLU<SparseMatrix<Float,ColMajor>>*>(*solverPtr);
+  auto B = csr2eigen<Float>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+  SparseMatrix<Float> X(Xn, Xm);
+  X = solver->solve(B);
+  X = X.transpose();
+  eigen2csr<Float>(X, Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" int slumatsolve(void** solverPtr,
+                            int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                            int Bnn, int Bmm, float* Bvals,
+                            int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                            int Xnn, int Xmm, float** Xvals) {
+  return lumatsolve(solverPtr,
+                     Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
+                     Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
+}
+extern "C" int dlumatsolve(void** solverPtr,
+                            int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                            int Bnn, int Bmm, double* Bvals,
+                            int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
+                            int Xnn, int Xmm, double** Xvals) {
+  return lumatsolve(solverPtr,
+                     Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
+                     Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
+}
+
 
 /// Cholesky factorization. Returns a solver object that can be used with
 /// `lltsolve` and `lltmatsolve`. The solver object must be freed using

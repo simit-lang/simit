@@ -55,6 +55,8 @@ struct Token {
     TEST,
     PRINT,
     PRINTLN,
+    NEW,
+    DELETE,
     RARROW,
     LP,
     RP,

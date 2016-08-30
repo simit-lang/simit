@@ -250,11 +250,7 @@ private:
   }
 
   void visit(const Sub* op) {
-    not_supported_yet;
-    /// TODO: Add support for CompoundOperator::Sub
-    //      this->subsetLoops = unionMerge(createSubsetLoops(op->a),
-    //                                     createSubsetLoops(op->b),
-    //                                     CompoundOperator::Sub);
+    visitBinaryUnionOperator(op, CompoundOperator::Sub);
   }
 
   void visit(const Mul *op) {
