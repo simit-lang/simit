@@ -1096,11 +1096,12 @@ fir::Expr::Ptr Parser::parseSetReadExpr() {
 
     if (peek().type != Token::Type::RB) {
       setRead->indices = parseExprParams();
-    }
-    if (tryConsume(Token::Type::SEMICOL)) {
-      auto sink = parseExprParams();
-      std::copy(sink.begin(), sink.end(),
-                std::back_inserter(setRead->indices));
+    
+      if (tryConsume(Token::Type::SEMICOL)) {
+        auto sink = parseExprParams();
+        std::copy(sink.begin(), sink.end(),
+                  std::back_inserter(setRead->indices));
+      }
     }
 
     const Token rightBracketToken = consume(Token::Type::RB);
