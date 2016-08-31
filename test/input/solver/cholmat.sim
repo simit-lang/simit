@@ -37,7 +37,7 @@ export func main()
   A = map asm to E reduce +;
   B = map dirichlet to T reduce +;
   solver = chol(A);
-  X = lltmatsolve(solver, B');
+  X = lltmatsolve<V,T,V>(solver, B');
   V.x = X * T.b;
   cholfree(solver);
 end

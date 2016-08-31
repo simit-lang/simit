@@ -40,12 +40,12 @@ export func main()
   C = map dirichlet to D reduce +;
 
   solverA = chol(A);
-  t = lltsolve(solverA, V.f);
-  T = lltmatsolve(solverA, C');
+  t = lltsolve<V,V>(solverA, V.f);
+  T = lltmatsolve<V,D,V>(solverA, C');
   B = C*T;
   rhs = C*t - D.b;
   solverB = chol(B);
-  l = lltsolve(solverB, rhs);
+  l = lltsolve<V,D>(solverB, rhs);
   V.x = -(T*l) + t;
   cholfree(solverA);
   cholfree(solverB);
