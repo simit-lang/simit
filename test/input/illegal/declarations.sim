@@ -11,15 +11,15 @@ end
 
 extern Q : set{E};
 extern P : set{E}(Q);
-extern S : grid{E}[1](P);
+extern S : grid[1]{E}(P);
 
 %%% bad-grid-link-set-type-2
 element E
 end
 
 extern P : set{E};
-extern S : grid{E}[1](P);
-extern T : grid{E}[1](S);
+extern S : grid[1]{E}(P);
+extern T : grid[1]{E}(S);
 
 %%% bad-tensor-type-1
 element E
