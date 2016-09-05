@@ -177,6 +177,10 @@ std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
       os << "+";
       break;
     }
+    case CompoundOperator::Sub: {
+      os << "-";
+      break;
+    }
   }
   return os;
 }

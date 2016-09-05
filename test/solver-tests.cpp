@@ -88,14 +88,12 @@ TEST(solver, lu) {
   Set V;
   FieldRef<simit_float> b = V.addField<simit_float>("b");
   FieldRef<simit_float> x = V.addField<simit_float>("x");
-  FieldRef<bool> fixed = V.addField<bool>("fixed");
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
   ElementRef v2 = V.add();
   b(v0) = 10.0;
   b(v1) = 20.0;
   b(v2) = 30.0;
-  fixed(v0) = true;
 
   Set E(V,V);
   E.add(v0,v1);
@@ -107,37 +105,68 @@ TEST(solver, lu) {
   func.bind("E", &E);
   func.runSafe();
 
-  SIMIT_ASSERT_FLOAT_EQ(-40.0, x(v0));
-  SIMIT_ASSERT_FLOAT_EQ( 45.0, x(v1));
-  SIMIT_ASSERT_FLOAT_EQ(-15.0, x(v2));
+  SIMIT_ASSERT_FLOAT_EQ(12.50, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-7.50, x(v1));
+  SIMIT_ASSERT_FLOAT_EQ(18.75, x(v2));
+}
+
+TEST(DISABLED_solver, lu_blocked) {
+  Set V;
+  auto b = V.addField<simit_float,2>("b");
+  auto x = V.addField<simit_float,2>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = {10.0, 20.0};
+  b(v1) = {30.0, 40.0};
+  b(v2) = {50.0, 60.0};
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ( 1.0000, x(v0)(0));
+  SIMIT_ASSERT_FLOAT_EQ( 8.5000, x(v0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-1.0000, x(v1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(-3.5000, x(v1)(1));
+  SIMIT_ASSERT_FLOAT_EQ( 6.4167, x(v2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(12.6667, x(v2)(1));
 }
 
 TEST(solver, lumat) {
   Set V;
-  FieldRef<simit_float> b = V.addField<simit_float>("b");
-  FieldRef<bool> fixed = V.addField<bool>("fixed");
   FieldRef<simit_float> x = V.addField<simit_float>("x");
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
   ElementRef v2 = V.add();
-  b(v0) = 1.0;
-  b(v1) = 1.0;
-  b(v2) = 1.0;
-  fixed(v0) = true;
 
   Set E(V,V);
   E.add(v0,v1);
   E.add(v1,v2);
 
+  Set T(V);
+  FieldRef<simit_float> b = T.addField<simit_float>("b");
+  ElementRef d0 = T.add(v0);
+  ElementRef d1 = T.add(v2);
+  b(d0) = 1.0;
+  b(d1) = 2.0;
+
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("V", &V);
   func.bind("E", &E);
+  func.bind("T", &T);
   func.runSafe();
 
-  SIMIT_ASSERT_FLOAT_EQ(-43.0, x(v0));
-  SIMIT_ASSERT_FLOAT_EQ( 48.5, x(v1));
-  SIMIT_ASSERT_FLOAT_EQ(-16.5, x(v2));
+  SIMIT_ASSERT_FLOAT_EQ( 1.750, (simit_float)x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-1.250, (simit_float)x(v1));
+  SIMIT_ASSERT_FLOAT_EQ( 1.625, (simit_float)x(v2));
 }
 
 TEST(solver, chol) {
@@ -168,60 +197,9 @@ TEST(solver, chol) {
   SIMIT_ASSERT_FLOAT_EQ( 60.0, x(v2));
 }
 
-template<typename Float>
-void getB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
-          int Bnn, int Bmm, Float** Bvals) {
-  Eigen::SparseMatrix<Float,Eigen::RowMajor> B(Bn, Bm);
-  B.insert(0,0) = 10;
-  B.insert(1,0) = 20;
-  B.insert(2,0) = 30;
-  B.insert(1,1) = 1;
-  B.insert(0,2) = 1;
-  B.insert(2,2) = 2;
-  eigen2csr(B, Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
-}
-extern "C"
-void sgetB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
-           int Bnn, int Bmm, float** Bvals) {
-  getB(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
-}
-extern "C"
-void dgetB(int Bn,  int Bm,  int** Browptr, int** Bcolidx,
-           int Bnn, int Bmm, double** Bvals) {
-  getB(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
-}
-
 TEST(solver, cholmat) {
   Set V;
-  FieldRef<simit_float> b = V.addField<simit_float>("b");
-  FieldRef<bool> fixed = V.addField<bool>("fixed");
   FieldRef<simit_float> x = V.addField<simit_float>("x");
-  ElementRef v0 = V.add();
-  ElementRef v1 = V.add();
-  ElementRef v2 = V.add();
-  b(v0) = 1.0;
-  b(v1) = 1.0;
-  b(v2) = 1.0;
-  fixed(v0) = true;
-
-  Set E(V,V);
-  E.add(v0,v1);
-  E.add(v1,v2);
-
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-  func.bind("V", &V);
-  func.bind("E", &E);
-  func.runSafe();
-
-  SIMIT_ASSERT_FLOAT_EQ( 22.0, x(v0));
-  SIMIT_ASSERT_FLOAT_EQ(-33.0, x(v1));
-  SIMIT_ASSERT_FLOAT_EQ( 65.0, x(v2));
-}
-
-TEST(solver, cholmat_rectangular) {
-  Set V;
-  FieldRef<simit_float> b = V.addField<simit_float>("b");
   FieldRef<bool> fixed = V.addField<bool>("fixed");
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
@@ -232,23 +210,23 @@ TEST(solver, cholmat_rectangular) {
   E.add(v0,v1);
   E.add(v1,v2);
 
-  Set D(V);
-  FieldRef<simit_float> a = D.addField<simit_float>("a");
-  ElementRef d0 = D.add(v0);
-  ElementRef d1 = D.add(v2);
-  a(d0) = 1.0;
-  a(d1) = 2.0;
+  Set T(V);
+  FieldRef<simit_float> b = T.addField<simit_float>("b");
+  ElementRef d0 = T.add(v0);
+  ElementRef d1 = T.add(v2);
+  b(d0) = 1.0;
+  b(d1) = 2.0;
 
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("V", &V);
   func.bind("E", &E);
-  func.bind("D", &D);
+  func.bind("T", &T);
   func.runSafe();
 
-  SIMIT_ASSERT_FLOAT_EQ( 3.0, (simit_float)b(v0));
-  SIMIT_ASSERT_FLOAT_EQ(-5.0, (simit_float)b(v1));
-  SIMIT_ASSERT_FLOAT_EQ( 7.0, (simit_float)b(v2));
+  SIMIT_ASSERT_FLOAT_EQ( 3.0, (simit_float)x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(-5.0, (simit_float)x(v1));
+  SIMIT_ASSERT_FLOAT_EQ( 7.0, (simit_float)x(v2));
 }
 
 TEST(solver, schur) {
