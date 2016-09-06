@@ -7,7 +7,7 @@
 using namespace std;
 using namespace simit::ir;
 
-#include "llvm_defines.h"
+#include "llvm_context.h"
 
 namespace simit {
 namespace backend {
