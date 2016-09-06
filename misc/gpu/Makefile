@@ -2,7 +2,7 @@
 
 # CLANG ?= /scratch/llvm32/bin/clang
 CLANG ?= clang
-TARGET_DIR=../../src/gpu_backend
+TARGET_DIR=../../src/backend/gpu/
 ARCHS=compute_20 compute_30 compute_35
 LIBDEVICE_BC_FILES=$(ARCHS:%=libdevice.%.bc)
 LIBDEVICE_C_FILES=$(LIBDEVICE_BC_FILES:%.bc=$(TARGET_DIR)/initmod.%.cpp)

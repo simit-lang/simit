@@ -17,9 +17,11 @@ public:
       // TODO: Abstract away this logic
       Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
       Type valueType = op->value.type();
-      if (fieldType.toTensor()->order() == valueType.toTensor()->order() &&
-          fieldType.toTensor()->hasSystemDimensions()) {
-        auto indexed = builder.unaryElwiseExpr(IRBuilder::None, op->value);
+      const TensorType *ftype = fieldType.toTensor();
+      const TensorType *vtype = valueType.toTensor();
+      if (ftype->order() == vtype->order() &&
+          ftype->hasSystemDimensions()) {
+        auto indexed = builder.unaryElwiseExpr(IRBuilder::Copy, op->value);
         stmt = FieldWrite::make(op->elementOrSet, op->fieldName,
                                 indexed, op->cop);
         return;
@@ -32,7 +34,7 @@ public:
     if (!isa<IndexExpr>(op->value)) {
       Type valueType = op->value.type();
       if (valueType.toTensor()->hasSystemDimensions()) {
-        auto indexed = builder.unaryElwiseExpr(IRBuilder::None, op->value);
+        auto indexed = builder.unaryElwiseExpr(IRBuilder::Copy, op->value);
         stmt = AssignStmt::make(op->var, indexed, op->cop);
         return;
       }

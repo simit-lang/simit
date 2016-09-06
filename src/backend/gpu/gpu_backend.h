@@ -6,6 +6,7 @@
 
 #include "ir_visitor.h"
 #include "gpu_ir.h"
+#include "gpu_var_cleaner.h"
 
 #define CUDA_GENERIC_ADDRSPACE 0
 #define CUDA_GLOBAL_ADDRSPACE 1
@@ -22,6 +23,8 @@
 #include "fuse_kernels.h"
 #include "kernel_rw_analysis.h"
 #include "localize_temps.h"
+#include "rewrite_compound_ops.h"
+#include "rewrite_memsets.h"
 #include "rewrite_system_assign.h"
 #include "shard_gpu_loops.h"
 #include "var_decl_rewriter.h"
@@ -35,14 +38,17 @@ namespace backend {
 
 class GPUBackend : public LLVMBackend {
 public:
-  GPUBackend() {}
+  GPUBackend();
   ~GPUBackend() {}
 
 protected:
-  // CUDA variables
-  int cuDevMajor, cuDevMinor;
-  
-  const int blockSize = 128;
+  // Global Var cleaner, to allow maintaining state
+  ir::GpuVarCleaner cleaner;
+
+  // For now: Constant GPU blocking
+  const int xBlockSize = 16;
+  const int yBlockSize = 16;
+  const int zBlockSize = 16;
 
   // Tracking whether we're in a kernel
   bool inKernel;
@@ -59,7 +65,6 @@ protected:
   virtual void compile(const ir::VarExpr&);
   virtual void compile(const ir::Load&);
   virtual void compile(const ir::FieldRead&);
-  virtual void compile(const ir::Call&);
   virtual void compile(const ir::Length&);
   virtual void compile(const ir::IndexRead&);
 
@@ -99,6 +104,7 @@ protected:
   // Emits calls to nvvm intrinsics
   llvm::Value *emitBarrier();
   llvm::Value *emitCheckRoot();
+  llvm::Value *getTid(std::string);
   llvm::Value *getTidX();
   llvm::Value *getTidY();
   llvm::Value *getTidZ();
@@ -127,8 +133,10 @@ protected:
 
   virtual void emitMemSet(llvm::Value *dst, llvm::Value *val,
                           llvm::Value *size, unsigned align);
+
   void emitShardedMemSet(ir::Type targetType, llvm::Value *target,
                          llvm::Value *size);
+
   void emitShardedDot(ir::Type vec1Type, ir::Type vec2Type, ir::Type resType,
                       llvm::Value *vec1, llvm::Value *vec2,
                       llvm::Value *size, llvm::Value *result);
@@ -138,7 +146,11 @@ protected:
                    unsigned align,
                    bool alignToArgSize);
 
+  std::string getUniqueName(std::string name);
+
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
+
+  void cleanVars(const ir::Environment &env);
 };
 
 }

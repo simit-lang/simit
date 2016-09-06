@@ -2,6 +2,7 @@ element Point
   b : float;
   c : float;
   d : float;
+  i : int;
 end
 
 element Spring
@@ -20,13 +21,11 @@ end
 
 export func main()
   A = map dist_a to springs reduce +;
-  var i = 0;
   for p in points
-    if i == 1
+    if p.i == 1
       points.c = A(p,:)';
-    elif i == 2
+    elif p.i == 2
       points.d = A(:,p);
     end
-    i = i + 1;
   end
 end

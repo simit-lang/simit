@@ -8,6 +8,7 @@
 #include <map>
 
 #include "backend/backend_impl.h"
+#include "llvm_defines.h"
 
 #include "storage.h"
 #include "var.h"
@@ -19,9 +20,6 @@ class LLVMContext;
 class Module;
 class EngineBuilder;
 class ExecutionEngine;
-class ConstantFolder;
-template<bool> class IRBuilderDefaultInserter;
-template<bool, typename, typename> class IRBuilder;
 class Constant;
 class Type;
 class Value;
@@ -30,7 +28,6 @@ class Function;
 class DataLayout;
 }
 
-
 namespace simit {
 
 namespace ir {
@@ -38,8 +35,6 @@ namespace ir {
 }
 
 namespace backend {
-
-class SimitIRBuilder;
 
 extern const std::string VAL_SUFFIX;
 extern const std::string PTR_SUFFIX;
@@ -67,7 +62,8 @@ protected:
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
-  std::unique_ptr<SimitIRBuilder> builder;
+
+  std::unique_ptr<LLVMIRBuilder> builder;
 
   using BackendImpl::compile;
   virtual Function* compile(ir::Func func, const ir::Storage& storage);
@@ -150,7 +146,7 @@ protected:
 
   /// Produce LLVM globals for everything in `env` and store in `globals`
   /// and in `symtable` appropriately.
-  virtual void emitGlobals(const ir::Environment& env);
+  virtual void emitGlobals(const ir::Environment& env, bool packed=true);
 
   virtual void emitPrintf(llvm::Value *str, 
                           std::vector<llvm::Value*> args={});
