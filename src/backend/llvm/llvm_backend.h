@@ -8,6 +8,7 @@
 #include <map>
 
 #include "backend/backend_impl.h"
+#include "llvm_defines.h"
 
 #include "storage.h"
 #include "var.h"
@@ -19,9 +20,6 @@ class LLVMContext;
 class Module;
 class EngineBuilder;
 class ExecutionEngine;
-class ConstantFolder;
-template<bool> class IRBuilderDefaultInserter;
-template<bool, typename, typename> class IRBuilder;
 class Constant;
 class Type;
 class Value;
@@ -29,7 +27,6 @@ class Instruction;
 class Function;
 class DataLayout;
 }
-
 
 namespace simit {
 
@@ -66,8 +63,7 @@ protected:
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
 
-  std::unique_ptr<llvm::IRBuilder<true, llvm::ConstantFolder,
-                                  llvm::IRBuilderDefaultInserter<true>>> builder;
+  std::unique_ptr<LLVMIRBuilder> builder;
 
   using BackendImpl::compile;
   virtual Function* compile(ir::Func func, const ir::Storage& storage);

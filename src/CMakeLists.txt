@@ -35,7 +35,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${SIMIT_LIBRARIES})
 
 # Handle no RTTI sources
 set_source_files_properties(${SIMIT_SOURCES_NO_RTTI} PROPERTIES COMPILE_FLAGS "-fno-rtti")
-message("-- Compiling these sources with no RTTI: ${SIMIT_SOURCES_NO_RTTI}")
 
 
 # LLVM

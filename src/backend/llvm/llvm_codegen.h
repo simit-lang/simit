@@ -8,11 +8,10 @@
 #include "llvm/IR/Constants.h"
 
 #include "llvm_defines.h"
+#include "llvm_context.h"
+
 
 namespace llvm {
-class ConstantFolder;
-template<bool> class IRBuilderDefaultInserter;
-template<bool, typename, typename> class IRBuilder;
 class PHINode;
 }
 
@@ -24,9 +23,6 @@ class Var;
 }
 
 namespace backend {
-
-typedef llvm::IRBuilder<true, llvm::ConstantFolder,
-                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
 // Interface to functions on the builder that need to be compiled non-RTTI
 llvm::Value *llvmCreateComplex(LLVMIRBuilder *builder,
