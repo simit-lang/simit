@@ -75,3 +75,8 @@ void inv3_f32(float * a, float * inv){
   inv[7] = cof12 * determ;
   inv[8] = cof22 * determ;
 }
+
+float __nv_sqrtf(float v);
+float complexNorm_f32(float r, float i) {
+  return __nv_sqrtf(r*r+i*i);
+}

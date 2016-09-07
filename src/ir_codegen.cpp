@@ -12,77 +12,80 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+Expr getZeroVal(const TensorType *type) {
+  switch (type->getComponentType().kind) {
+    case ScalarType::Int:
+      return Literal::make(0);
+    case ScalarType::Float:
+      return Literal::make(0.0);
+    case ScalarType::Boolean:
+      return Literal::make(false);
+    case ScalarType::Complex:
+      return Literal::make(double_complex(0.0, 0.0));
+    default:
+      unreachable;
+      return Expr();
+  }
+}
+
 Stmt initializeLhsToZero(Stmt stmt) {
   class ReplaceRhsWithZero : public IRRewriter {
-    using IRRewriter::visit;
-    
     void visit(const AssignStmt *op) {
-      Expr zeroVal;
-      switch (op->var.getType().toTensor()->getComponentType().kind) {
-        case ScalarType::Int:
-          zeroVal = Literal::make(0);
-          break;
-        case ScalarType::Float:
-          zeroVal = Literal::make(0.0);
-          break;
-        case ScalarType::Boolean:
-          zeroVal = Literal::make(false);
-          break;
-        case ScalarType::Complex:
-          zeroVal = Literal::make(double_complex(0.0, 0.0));
-          break;
-        default:
-          unreachable;
-          break;
-      }
+      Expr zeroVal = getZeroVal(op->var.getType().toTensor());
       stmt = AssignStmt::make(op->var, zeroVal);
     }
 
     void visit(const FieldWrite *op) {
-      Expr zeroVal;
-      switch (op->value.type().toTensor()->getComponentType().kind) {
-        case ScalarType::Int:
-          zeroVal = Literal::make(0);
-          break;
-        case ScalarType::Float:
-          zeroVal = Literal::make(0.0);
-          break;
-        case ScalarType::Boolean:
-          zeroVal = Literal::make(false);
-          break;
-        case ScalarType::Complex:
-          zeroVal = Literal::make(double_complex(0.0, 0.0));
-          break;
-        default:
-          unreachable;
-          break;
-      }
-      stmt = FieldWrite::make(op->elementOrSet, op->fieldName, 0.0);
+      Expr zeroVal = getZeroVal(op->value.type().toTensor());
+      stmt = FieldWrite::make(op->elementOrSet, op->fieldName, zeroVal);
     }
 
     void visit(const TensorWrite *op) {
-      Expr zeroVal;
-      switch (op->value.type().toTensor()->getComponentType().kind) {
-        case ScalarType::Int:
-          zeroVal = Literal::make(0);
-          break;
-        case ScalarType::Float:
-          zeroVal = Literal::make(0.0);
-          break;
-        case ScalarType::Boolean:
-          zeroVal = Literal::make(false);
-          break;
-        case ScalarType::Complex:
-          zeroVal = Literal::make(double_complex(0.0, 0.0));
-          break;
-        default:
-          unreachable;
-          break;
-      }
+      Expr zeroVal = getZeroVal(op->tensor.type().toTensor());
       stmt = TensorWrite::make(op->tensor, op->indices, zeroVal);
     }
   };
   return ReplaceRhsWithZero().rewrite(stmt);
+}
+
+Stmt initializeTensorToZero(Stmt stmt) {
+  class BuildInitLoopNest : public IRRewriter {
+    Stmt makeLoopNest(Expr tensor) {
+      const TensorType *ttype = tensor.type().toTensor();
+      std::vector<Var> indices;
+      std::vector<Expr> indicesExpr;
+      std::vector<IndexSet> domains;
+      for (auto &is : ttype->getOuterDimensions()) {
+        indices.push_back(Var("index", Int));
+        indicesExpr.push_back(indices.back());
+        domains.push_back(is);
+      }
+
+      Stmt stmt;
+      // Recursively build write statement with any inner loops
+      if (!isScalar(ttype->getBlockType())) {
+        stmt = makeLoopNest(TensorRead::make(tensor, indicesExpr));
+      }
+      else {
+        stmt = TensorWrite::make(tensor, indicesExpr, getZeroVal(ttype));
+      }
+
+      // Wrap in current level loops
+      for (int i = domains.size()-1; i >= 0; --i) {
+        stmt = For::make(indices[i], domains[i], stmt);
+      }
+      return stmt;
+    }
+
+    void visit(const AssignStmt *op) {
+      stmt = makeLoopNest(op->var);
+    }
+
+    void visit(const FieldWrite *op) {
+      stmt = makeLoopNest(FieldRead::make(op->elementOrSet, op->fieldName));
+    }
+  };
+  return BuildInitLoopNest().rewrite(stmt);
 }
 
 Stmt find(const Var &result, const std::vector<Expr> &exprs, string name,

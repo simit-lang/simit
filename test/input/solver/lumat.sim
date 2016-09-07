@@ -28,7 +28,7 @@ export func main()
   A = map asm to E reduce +;
   B = map dirichlet to T reduce +;
   solver = lu(A);
-  X = lumatsolve(solver, B');
+  X = lumatsolve<V,T,V>(solver, B');
   V.x = X * T.b;
   lufree(solver);
 end

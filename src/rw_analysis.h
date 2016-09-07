@@ -1,6 +1,8 @@
 #ifndef SIMIT_RW_ANALYSIS
 #define SIMIT_RW_ANALYSIS
 
+#include <algorithm>
+
 #include "ir_visitor.h"
 
 namespace simit {
@@ -13,6 +15,14 @@ public:
   }
 
   std::set<Var> getReads() {
+    return allReads;
+  }
+
+  std::set<Var> getAtomicReads() {
+    return atomicReads;
+  }
+
+  std::set<Var> getNonAtomicReads() {
     return reads;
   }
 
@@ -65,7 +75,7 @@ public:
   // Writes
   void visit(const AssignStmt *op) {
     if (op->cop != CompoundOperator::None) {
-      maybeRead(op->var);
+      maybeAtomicRead(op->var);
     }
     maybeWrite(op->var);
     IRVisitor::visit(op);
@@ -80,7 +90,8 @@ public:
       iassert(isa<VarExpr>(fieldRead->elementOrSet));
       maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
-    IRVisitor::visit(op);
+    op->value.accept(this);
+    op->index.accept(this);
   }
   void visit(const Load *op) {
     if (isa<VarExpr>(op->buffer)) {
@@ -89,9 +100,9 @@ public:
     else if (isa<FieldRead>(op->buffer)) {
       const FieldRead* fieldRead = to<FieldRead>(op->buffer);
       iassert(isa<VarExpr>(fieldRead->elementOrSet));
-      maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
+      maybeRead(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
-    IRVisitor::visit(op);
+    op->index.accept(this);
   }
   void visit(const FieldWrite *op) {
     iassert(isa<VarExpr>(op->elementOrSet));
@@ -103,6 +114,13 @@ private:
   void maybeRead(Var var) {
     if (vars.find(var) != vars.end()) {
       reads.insert(var);
+      allReads.insert(var);
+    }
+  }
+  void maybeAtomicRead(Var var) {
+    if (vars.find(var) != vars.end()) {
+      atomicReads.insert(var);
+      allReads.insert(var);
     }
   }
   void maybeWrite(Var var) {
@@ -113,6 +131,8 @@ private:
 
   std::set<Var> vars;
   std::set<Var> reads;
+  std::set<Var> atomicReads;
+  std::set<Var> allReads;
   std::set<Var> writes;
 };
 

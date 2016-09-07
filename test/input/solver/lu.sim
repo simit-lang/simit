@@ -9,16 +9,16 @@ end
 extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
-func dist_a(s : Edge, p : (Vertex*2)) -> (A : tensor[V,V](float))
-  A(p(0),p(0)) = 2.0;
-  A(p(1),p(1)) = 2.0;
-  A(p(0),p(1)) = 2.0;
-  A(p(1),p(0)) = 1.0;
+func asm(e : Edge, v : (Vertex*2)) -> (A : matrix[V,V](float))
+  A(v(0),v(0)) = 2.0;
+  A(v(1),v(1)) = 2.0;
+  A(v(0),v(1)) = 2.0;
+  A(v(1),v(0)) = 1.0;
 end
 
 export func main()
-  A = map dist_a to E reduce +;
+  A = map asm to E reduce +;
   solver = lu(A);
-  V.x = lusolve(solver, V.b);
+  V.x = lusolve<V,V>(solver, V.b);
   lufree(solver);
 end

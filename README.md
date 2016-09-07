@@ -2,27 +2,28 @@ Simit is a new programming language designed to make it easy to write
 high-performance code to compute on sparse systems.  For more information see
 [simit-lang.org](http://simit-lang.org).
 
-Building Simit
-==============
-To build Simit you must install CMake 2.8.3 or later and LLVM 3.4.2.  See
-http://www.cmake.org/cmake/resources/software.html for a copy of CMake. If your
-system does not have packages for LLVM you can download it at
-http://llvm.org/releases/download.html. You must then make sure llvm-config is
-available in your path.
+Build Simit
+===========
+To build Simit you must install
+[CMake 2.8.3 or greater](http//www.cmake.org/cmake/resources/software.html) and
+[LLVM 3.7 or greater](http://llvm.org/releases/download.html).
+You must then make sure llvm-config is available in your path.
 
 If you want to build LLVM yourself you can check it out using SVN:
 
-    svn co https://llvm.org/svn/llvm-project/llvm/branches/release_34/ llvm-3.4.2
+    svn co https://llvm.org/svn/llvm-project/llvm/branches/release_37 llvm3.7
 
-Then build it:
+then build it:
 
-    cd llvm-3.4.2
-    ./configure --disable-terminfo --enable-optimized --enable-assertions --enable-targets=x86
+    cd llvm3.7
+    mkdir build
+    cd build
+    cmake -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_TARGETS_TO_BUILD="X86;NVPTX" -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release ..
     make -j8
 
-Then set the LLVM_CONFIG environment variable to point to llvm-config:
+then point Simit to it:
 
-    export LLVM_CONFIG=<path to llvm>/Release+Asserts/bin/llvm-config
+    export LLVM_CONFIG=<path to llvm>/build/bin/llvm-config
 
 To perform an out-of-tree build of Simit do:
 
@@ -37,27 +38,27 @@ To run the test suite do (all tests should pass):
     cd <simit-directory>
     ./build/bin/simit-test
 
-To check a Simit program do:
+To check a Simit program:
 
     cd <simit-directory>
     ./build/bin/simit-check <simit-program>
 
 For example:
 
-    ./build/bin/simit-check examples/springs.sim
+    ./build/bin/simit-check simit-check apps/springs/isprings.sim
 
 To make the Simit bin directory part of your PATH:
 
     cd <simit-directory>
     export PATH="$PATH:`pwd`/build/bin"
 
-To build Simit's documentation do:
+To build Simit's documentation:
 
     cd <simit-directory>
     doxygen
 
-This will create a doc directory containing HTML documentation.
-Open doc/index.html in your browser.
+This will create a doc directory containing HTML documentation.  Open
+`doc/index.html` in your browser.
 
 License
 =======

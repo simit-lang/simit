@@ -75,6 +75,10 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
   M->type = GenericParam::Type::UNKNOWN;
   M->name = "M";
 
+  auto K = std::make_shared<GenericParam>();
+  K->type = GenericParam::Type::UNKNOWN;
+  K->name = "K";
+
   const auto nDim = std::make_shared<GenericIndexSet>();
   nDim->type = GenericIndexSet::Type::UNKNOWN;
   nDim->setName = N->name;
@@ -83,9 +87,17 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
   mDim->type = GenericIndexSet::Type::UNKNOWN;
   mDim->setName = M->name;
 
+  const auto kDim = std::make_shared<fir::GenericIndexSet>();
+  kDim->type = fir::GenericIndexSet::Type::UNKNOWN;
+  kDim->setName = K->name;
+
   const auto nVectorType = std::make_shared<NDTensorType>();
   nVectorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   nVectorType->indexSets = {nDim};
+
+  const auto mVectorType = std::make_shared<NDTensorType>();
+  mVectorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  mVectorType->indexSets = {mDim};
 
   const auto nnMatrixType = std::make_shared<NDTensorType>();
   nnMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
@@ -94,6 +106,10 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
   const auto nmMatrixType = std::make_shared<NDTensorType>();
   nmMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   nmMatrixType->indexSets = {nDim, mDim};
+
+  const auto kmMatrixType = std::make_shared<NDTensorType>();
+  kmMatrixType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  kmMatrixType->indexSets = {kDim, mDim};
 
   const auto opaqueType = std::make_shared<OpaqueType>();
 
@@ -183,13 +199,13 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
   addIntrinsic(&intrinsics,
                ir::intrinsics::lusolve().getName(),
                {opaqueType, nVectorType},
-               {nVectorType},
-               {N});
+               {mVectorType},
+               {N, M});
   addIntrinsic(&intrinsics,
                ir::intrinsics::lumatsolve().getName(),
                {opaqueType, nmMatrixType},
-               {nmMatrixType},
-               {N, M});
+               {kmMatrixType},
+               {N, M, K});
   addIntrinsic(&intrinsics,
                ir::intrinsics::chol().getName(),
                {nnMatrixType},
@@ -203,13 +219,13 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
   addIntrinsic(&intrinsics,
                ir::intrinsics::lltsolve().getName(),
                {opaqueType, nVectorType},
-               {nVectorType},
-               {N});
+               {mVectorType},
+               {N,M});
   addIntrinsic(&intrinsics,
                ir::intrinsics::lltmatsolve().getName(),
                {opaqueType, nmMatrixType},
-               {nmMatrixType},
-               {N, M});
+               {kmMatrixType},
+               {N, M, K});
 
   // Complex numbers
   addScalarIntrinsic(&intrinsics,

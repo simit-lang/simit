@@ -18,6 +18,10 @@ endforeach()
 
 set(SIMIT_HEADERS ${SIMIT_HEADERS})
 set(SIMIT_SOURCES ${SIMIT_SOURCES})
+set(SIMIT_SOURCES_NO_RTTI "")
+
+# Collect LLVM components from subprojects
+set(LLVM_COMPONENTS mcjit;bitwriter;linker;passes)  # bitreader asmparser irreader mirparser
 
 add_subdirectory(backend)
 add_subdirectory(frontend)
@@ -27,7 +31,10 @@ add_subdirectory(visualizer)
 add_definitions(${SIMIT_DEFINITIONS})
 include_directories(${SIMIT_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURCES})
-target_link_libraries(${PROJECT_NAME} ${SIMIT_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SIMIT_LIBRARIES})
+
+# Handle no RTTI sources
+set_source_files_properties(${SIMIT_SOURCES_NO_RTTI} PROPERTIES COMPILE_FLAGS "-fno-rtti")
 
 
 # LLVM
@@ -46,8 +53,8 @@ if(NOT ${LLVM_CONFIG_RESULT} STREQUAL "0")
   endif()
 endif()
 
-if (NOT ${LLVM_VERSION} MATCHES "^([3-9]|[0-9][0-9]+)\\.([3-9]|[0-9][0-9]+)(\\.[0-9]+)?(svn)?$")
-  message(FATAL_ERROR "Need LLVM version 3.3 or higher. Found ${LLVM_CONFIG} version \"${LLVM_VERSION}\".")
+if (NOT ${LLVM_VERSION} MATCHES "^([3-9]|[0-9][0-9]+)\\.([7-9]|[0-9][0-9]+)(\\.[0-9]+)?(svn)?$")
+  message(FATAL_ERROR "Need LLVM version 3.7 or higher. Found ${LLVM_CONFIG} version \"${LLVM_VERSION}\".")
 elseif (${LLVM_VERSION} MATCHES "^([3-9]|[0-9][0-9]+)\\.([5-9]|[0-9][0-9]+)(\\.[0-9]+)?(svn)?$")
   set(LLVM_CONFIG_GT_45 1)
 endif()
@@ -68,12 +75,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
 execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE)
 include_directories("${LLVM_INCLUDES}")
 
-set(LLVM_COMPONENTS core mcjit bitwriter x86 ipo)
-if (LLVM_VERSION GREATER 36)
- list(APPEND LLVM_COMPONENTS passes)
-else()
- list(APPEND LLVM_COMPONENTS ipo)
-endif()
+message("-- Compiling with components: ${LLVM_COMPONENTS}")
 
 execute_process(COMMAND "${LLVM_CONFIG}" --libdir OUTPUT_VARIABLE LLVM_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND "${LLVM_CONFIG}" --libnames ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBNAMES OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -83,11 +85,7 @@ foreach(LLVM_LIBNAME ${LLVM_LIBNAMES})
 endforeach()
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LLVM_LIBS})
 
-if (${LLVM_VERSION} GREATER 34)
-  execute_process(COMMAND "${LLVM_CONFIG}" --system-libs ${LLVM_COMPONENTS} OUTPUT_VARIABLE EXTRA_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
-else()
-  execute_process(COMMAND "${LLVM_CONFIG}" --ldflags OUTPUT_VARIABLE EXTRA_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif()
+execute_process(COMMAND "${LLVM_CONFIG}" --system-libs ${LLVM_COMPONENTS} OUTPUT_VARIABLE EXTRA_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
 string(REPLACE " -l" ";" EXTRA_LIBS "${EXTRA_LIBS}")
 string(REPLACE " " "" EXTRA_LIBS "${EXTRA_LIBS}")
 target_link_libraries(${PROJECT_NAME} PUBLIC ${EXTRA_LIBS})

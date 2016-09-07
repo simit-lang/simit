@@ -6,9 +6,14 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/IRBuilder.h"
 
 #include "llvm_defines.h"
+#include "llvm_context.h"
+
+
+namespace llvm {
+class PHINode;
+}
 
 namespace simit {
 namespace ir {
@@ -19,16 +24,47 @@ class Var;
 
 namespace backend {
 
-typedef llvm::IRBuilder<true, llvm::ConstantFolder,
-                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
+// Interface to functions on the builder that need to be compiled non-RTTI
+llvm::Value *llvmCreateComplex(LLVMIRBuilder *builder,
+                               llvm::Value *real, llvm::Value *imag);
+llvm::Value *llvmComplexGetReal(LLVMIRBuilder *builder, llvm::Value *c);
+llvm::Value *llvmComplexGetImag(LLVMIRBuilder *builder, llvm::Value *c);
+llvm::Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, llvm::Value *buffer,
+                                   llvm::Value *index,
+                                   const llvm::Twine &name = "");
+llvm::Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, llvm::Value *buffer,
+                                   std::vector<llvm::Value*> indices,
+                                   const llvm::Twine &name = "");
+llvm::Value *llvmCreateExtractValue(LLVMIRBuilder *builder, llvm::Value *,
+                                    llvm::ArrayRef<unsigned>,
+                                    const llvm::Twine &name = "");
 
-class SimitIRBuilder : public LLVMIRBuilder {
-public:
-  SimitIRBuilder(llvm::LLVMContext &C) : LLVMIRBuilder(C) {}
-  llvm::Value* CreateComplex(llvm::Value *real, llvm::Value *imag);
-  llvm::Value* ComplexGetReal(llvm::Value *c);
-  llvm::Value* ComplexGetImag(llvm::Value *c);
-};
+llvm::Value *llvmCreateFCmpOEQ(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateICmpEQ(LLVMIRBuilder *builder, llvm::Value*,
+                              llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateFCmpONE(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateICmpNE(LLVMIRBuilder *builder, llvm::Value*,
+                              llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateFCmpOGT(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateICmpSGT(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateFCmpOLT(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateICmpSLT(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateFCmpOGE(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateICmpSGE(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateFCmpOLE(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::Value *llvmCreateICmpSLE(LLVMIRBuilder *builder, llvm::Value*,
+                               llvm::Value *, const llvm::Twine &name = "");
+llvm::PHINode *llvmCreatePHI(LLVMIRBuilder *builder, llvm::Type *, unsigned,
+                             const llvm::Twine &name = "");
 
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
@@ -70,7 +106,7 @@ llvm::Function* createPrototype(const std::string& name,
 
 llvm::GlobalVariable* createGlobal(llvm::Module *module, const ir::Var& var,
                                    llvm::GlobalValue::LinkageTypes linkage,
-                                   unsigned addrspace);
+                                   unsigned addrspace, bool packed);
 
 }}
 #endif
