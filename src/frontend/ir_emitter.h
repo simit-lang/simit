@@ -31,6 +31,8 @@ private:
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
   virtual void visit(UnstructuredSetType::Ptr);
+  virtual void visit(HomogeneousEdgeSetType::Ptr);
+  virtual void visit(HeterogeneousEdgeSetType::Ptr);
   virtual void visit(LatticeLinkSetType::Ptr);
   virtual void visit(NamedTupleType::Ptr);
   virtual void visit(UnnamedTupleType::Ptr);
@@ -183,6 +185,7 @@ private:
   void addSymbol(const std::string&, ir::Var, internal::Symbol::Access, 
                  IdentDecl::Ptr = IdentDecl::Ptr());
 
+  void              emitUnstructuredSetType(UnstructuredSetType::Ptr);
   void              emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
   DenseTensorValues emitTensorValues(DenseTensorLiteral::Ptr);
 

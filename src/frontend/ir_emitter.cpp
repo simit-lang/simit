@@ -43,15 +43,15 @@ void IREmitter::visit(Endpoint::Ptr end) {
 }
 
 void IREmitter::visit(UnstructuredSetType::Ptr type) {
-  const ir::Type elementType = emitType(type->element);
+  emitUnstructuredSetType(type);
+}
 
-  std::vector<ir::Expr> endpoints;
-  for (auto end : type->endpoints) {
-    const ir::Expr endpoint = emitExpr(end);
-    endpoints.push_back(endpoint);
-  }
+void IREmitter::visit(HomogeneousEdgeSetType::Ptr type) {
+  emitUnstructuredSetType(type);
+}
 
-  retType = ir::UnstructuredSetType::make(elementType, endpoints);
+void IREmitter::visit(HeterogeneousEdgeSetType::Ptr type) {
+  emitUnstructuredSetType(type);
 }
 
 void IREmitter::visit(LatticeLinkSetType::Ptr type) {
@@ -66,9 +66,9 @@ void IREmitter::visit(NamedTupleType::Ptr type) {
 }
 
 void IREmitter::visit(UnnamedTupleType::Ptr type) {
-  const ir::Type elementType = emitType(type->element);
+  iassert(type->length->val > 0);
   
-  iassert(type->length > 0);
+  const ir::Type elementType = emitType(type->element);
   retType = ir::TupleType::make(elementType, type->length->val);
 }
 
@@ -775,6 +775,18 @@ void IREmitter::visit(ComplexVectorLiteral::Ptr lit) {
 
 void IREmitter::visit(NDTensorLiteral::Ptr lit) {
   emitDenseTensorLiteral(lit);
+}
+
+void IREmitter::emitUnstructuredSetType(UnstructuredSetType::Ptr type) {
+  const ir::Type elementType = emitType(type->element);
+
+  std::vector<ir::Expr> endpoints;
+  for (unsigned i = 0; i < type->getArity(); ++i) {
+    const ir::Expr endpoint = emitExpr(type->getEndpoint(i));
+    endpoints.push_back(endpoint);
+  }
+
+  retType = ir::UnstructuredSetType::make(elementType, endpoints);
 }
 
 void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {

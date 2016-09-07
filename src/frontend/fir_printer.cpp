@@ -44,22 +44,34 @@ void FIRPrinter::visit(UnstructuredSetType::Ptr type) {
   oss << "set{";
   type->element->accept(this);
   oss << "}";
+}
+
+void FIRPrinter::visit(HomogeneousEdgeSetType::Ptr type) {
+  visit(to<UnstructuredSetType>(type));
+
+  oss << "(";
+  type->endpoint->accept(this);
+  oss << " * ";
+  type->arity->accept(this);
+  oss << ")";
+}
+
+void FIRPrinter::visit(HeterogeneousEdgeSetType::Ptr type) {
+  visit(to<UnstructuredSetType>(type));
+
+  oss << "(";
   
-  if (!type->endpoints.empty()) {
-    oss << "(";
-    
-    bool printDelimiter = false;
-    for (auto endpoint : type->endpoints) {
-      if (printDelimiter) {
-        oss << ",";
-      }
-      
-      endpoint->accept(this);
-      printDelimiter = true;
+  bool printDelimiter = false;
+  for (auto endpoint : type->endpoints) {
+    if (printDelimiter) {
+      oss << ",";
     }
     
-    oss << ")";
+    endpoint->accept(this);
+    printDelimiter = true;
   }
+  
+  oss << ")";
 }
 
 void FIRPrinter::visit(LatticeLinkSetType::Ptr type) {
@@ -71,8 +83,10 @@ void FIRPrinter::visit(LatticeLinkSetType::Ptr type) {
 }
 
 void FIRPrinter::visit(TupleElement::Ptr elem) {
-  elem->name->accept(this);
-  oss << " : ";
+  if (elem->name) {
+    elem->name->accept(this);
+    oss << " : ";
+  }
   elem->element->accept(this);
 }
 
@@ -99,7 +113,7 @@ void FIRPrinter::visit(TupleLength::Ptr length) {
 void FIRPrinter::visit(UnnamedTupleType::Ptr type) {
   oss << "(";
   type->element->accept(this);
-  oss << "*";
+  oss << " * ";
   type->length->accept(this);
   oss << ")";
 }

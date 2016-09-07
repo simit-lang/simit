@@ -15,6 +15,8 @@ struct DynamicIndexSet;
 struct ElementType;
 struct Endpoint;
 struct UnstructuredSetType;
+struct HomogeneousEdgeSetType;
+struct HeterogeneousEdgeSetType;
 struct LatticeLinkSetType;
 struct TupleElement;
 struct NamedTupleType;
@@ -97,6 +99,8 @@ struct FIRVisitor {
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint>);
   virtual void visit(std::shared_ptr<UnstructuredSetType>);
+  virtual void visit(std::shared_ptr<HomogeneousEdgeSetType>);
+  virtual void visit(std::shared_ptr<HeterogeneousEdgeSetType>);
   virtual void visit(std::shared_ptr<LatticeLinkSetType>);
   virtual void visit(std::shared_ptr<TupleElement>);
   virtual void visit(std::shared_ptr<NamedTupleType>);

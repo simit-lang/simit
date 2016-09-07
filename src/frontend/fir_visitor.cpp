@@ -29,6 +29,16 @@ void FIRVisitor::visit(Endpoint::Ptr end) {
 
 void FIRVisitor::visit(UnstructuredSetType::Ptr type) {
   type->element->accept(this);
+}
+
+void FIRVisitor::visit(HomogeneousEdgeSetType::Ptr type) {
+  type->element->accept(this);
+  type->endpoint->accept(this);
+  type->arity->accept(this);
+}
+
+void FIRVisitor::visit(HeterogeneousEdgeSetType::Ptr type) {
+  type->element->accept(this);
   for (auto endpoint : type->endpoints) {
     endpoint->accept(this);
   }
@@ -40,7 +50,9 @@ void FIRVisitor::visit(LatticeLinkSetType::Ptr type) {
 }
 
 void FIRVisitor::visit(TupleElement::Ptr elem) {
-  elem->name->accept(this);
+  if (elem->name) {
+    elem->name->accept(this);
+  }
   elem->element->accept(this);
 }
 

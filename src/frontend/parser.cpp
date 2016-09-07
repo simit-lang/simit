@@ -1364,25 +1364,49 @@ fir::ElementType::Ptr Parser::parseElementType() {
   return elementType;
 }
 
-// unstructured_set_type: 'set' '{' element_type '}' ['(' endpoints ')']
+// unstructured_set_type: 'set' '{' element_type '}' 
+//                        ['(' (endpoints | (endpoint '*' tuple_length)) ')']
 fir::SetType::Ptr Parser::parseUnstructuredSetType() {
-  auto setType = std::make_shared<fir::UnstructuredSetType>();
-
-  const Token setToken = consume(Token::Type::SET);
-  setType->setBeginLoc(setToken);
-
+  const Token setToken = consume(Token::Type::SET); 
+  
   consume(Token::Type::LC);
-  setType->element = parseElementType();
-  
-  const Token rightCurlyToken = consume(Token::Type::RC);
-  setType->setEndLoc(rightCurlyToken);
-  
-  if (tryConsume(Token::Type::LP)) {
-    setType->endpoints = parseEndpoints();
 
+  const fir::ElementType::Ptr element = parseElementType();
+  const Token rightCurlyToken = consume(Token::Type::RC);
+
+  if (!tryConsume(Token::Type::LP)) {
+    auto setType = std::make_shared<fir::UnstructuredSetType>();
+
+    setType->setBeginLoc(setToken);
+    setType->element = element;
+    setType->setEndLoc(rightCurlyToken);
+
+    return setType;
+  }
+
+  if (peek(1).type == Token::Type::STAR) {
+    auto setType = std::make_shared<fir::HomogeneousEdgeSetType>();
+    setType->setBeginLoc(setToken);
+
+    setType->element = element;
+    setType->endpoint = parseEndpoint();
+    consume(Token::Type::STAR);
+    setType->arity = parseTupleLength();
+    
     const Token rightParenToken = consume(Token::Type::RP);
     setType->setEndLoc(rightParenToken);
+
+    return setType;
   }
+
+  auto setType = std::make_shared<fir::HeterogeneousEdgeSetType>();
+  setType->setBeginLoc(setToken);
+
+  setType->element = element;
+  setType->endpoints = parseEndpoints();
+
+  const Token rightParenToken = consume(Token::Type::RP);
+  setType->setEndLoc(rightParenToken);
 
   return setType;
 }
@@ -1415,17 +1439,24 @@ fir::SetType::Ptr Parser::parseLatticeLinkSetType() {
   return setType;
 }
 
-// endpoints: set_index_set {',' set_index_set}
+// endpoints: endpoint {',' endpoint}
 std::vector<fir::Endpoint::Ptr> Parser::parseEndpoints() {
   std::vector<fir::Endpoint::Ptr> endpoints;
   
   do {
-    auto endpoint = std::make_shared<fir::Endpoint>();
-    endpoint->set = parseSetIndexSet();
+    const fir::Endpoint::Ptr endpoint = parseEndpoint();
     endpoints.push_back(endpoint);
   } while (tryConsume(Token::Type::COMMA));
 
   return endpoints;
+}
+
+// endpoint: set_index_set
+fir::Endpoint::Ptr Parser::parseEndpoint() {
+  auto endpoint = std::make_shared<fir::Endpoint>();
+  endpoint->set = parseSetIndexSet();
+  
+  return endpoint;
 }
 
 // tuple_element: ident ':' element_type
@@ -1485,8 +1516,7 @@ fir::TupleType::Ptr Parser::parseUnnamedTupleType() {
   return tupleType;
 }
 
-// tensor_type: scalar_type
-//            | matrix_block_type
+// tensor_type: scalar_type | matrix_block_type
 //            | (vector_block_type | tensor_block_type) [''']
 fir::TensorType::Ptr Parser::parseTensorType() {
   fir::NDTensorType::Ptr tensorType;
@@ -1516,9 +1546,8 @@ fir::TensorType::Ptr Parser::parseTensorType() {
   return tensorType;
 }
 
-// vector_block_type:
-//     'vector' ['[' index_set ']'] 
-//     '(' (vector_block_type | tensor_component_type) ')'
+// vector_block_type: 'vector' ['[' index_set ']'] 
+//                    '(' (vector_block_type | tensor_component_type) ')'
 fir::NDTensorType::Ptr Parser::parseVectorBlockType() {
   auto tensorType = std::make_shared<fir::NDTensorType>();
   tensorType->transposed = false;
@@ -1545,9 +1574,8 @@ fir::NDTensorType::Ptr Parser::parseVectorBlockType() {
   return tensorType;
 }
 
-// matrix_block_type:
-//     'matrix' ['[' index_set ',' index_set ']'] 
-//     '(' (matrix_block_type | tensor_component_type) ')'
+// matrix_block_type: 'matrix' ['[' index_set ',' index_set ']'] 
+//                    '(' (matrix_block_type | tensor_component_type) ')'
 fir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
   auto tensorType = std::make_shared<fir::NDTensorType>();
   tensorType->transposed = false;
@@ -1578,9 +1606,8 @@ fir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
   return tensorType;
 }
 
-// tensor_block_type:
-//     'tensor' ['[' index_sets ']'] 
-//     '(' (tensor_block_type | tensor_component_type) ')'
+// tensor_block_type: 'tensor' ['[' index_sets ']'] 
+//                    '(' (tensor_block_type | tensor_component_type) ')'
 fir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   auto tensorType = std::make_shared<fir::NDTensorType>();
   tensorType->transposed = false;

@@ -18,6 +18,8 @@ struct FIRRewriter : public FIRVisitor {
   virtual void visit(ElementType::Ptr op) { node = op; }
   virtual void visit(Endpoint::Ptr);
   virtual void visit(UnstructuredSetType::Ptr);
+  virtual void visit(HomogeneousEdgeSetType::Ptr);
+  virtual void visit(HeterogeneousEdgeSetType::Ptr);
   virtual void visit(LatticeLinkSetType::Ptr);
   virtual void visit(TupleElement::Ptr);
   virtual void visit(NamedTupleType::Ptr);

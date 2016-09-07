@@ -27,6 +27,18 @@ void FIRRewriter::visit(Endpoint::Ptr end) {
 
 void FIRRewriter::visit(UnstructuredSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
+  node = type;
+}
+
+void FIRRewriter::visit(HomogeneousEdgeSetType::Ptr type) {
+  type->element = rewrite<ElementType>(type->element);
+  type->endpoint = rewrite<Endpoint>(type->endpoint);
+  type->arity = rewrite<TupleLength>(type->arity);
+  node = type;
+}
+
+void FIRRewriter::visit(HeterogeneousEdgeSetType::Ptr type) {
+  type->element = rewrite<ElementType>(type->element);
   for (auto &endpoint : type->endpoints) {
     endpoint = rewrite<Endpoint>(endpoint);
   }
@@ -40,7 +52,9 @@ void FIRRewriter::visit(LatticeLinkSetType::Ptr type) {
 }
 
 void FIRRewriter::visit(TupleElement::Ptr type) {
-  type->name = rewrite<Identifier>(type->name);
+  if (type->name) {
+    type->name = rewrite<Identifier>(type->name);
+  }
   type->element = rewrite<ElementType>(type->element);
   node = type;
 }

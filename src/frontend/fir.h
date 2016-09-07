@@ -223,13 +223,66 @@ protected:
 };
 
 struct UnstructuredSetType : public SetType {
-  std::vector<Endpoint::Ptr> endpoints;
-
   typedef std::shared_ptr<UnstructuredSetType> Ptr;
 
   virtual void accept(FIRVisitor *visitor) {
     visitor->visit(self<UnstructuredSetType>());
   }
+
+  virtual bool          isHomogeneous() const { return true; }
+  virtual size_t        getArity() const { return 0; }
+  virtual Endpoint::Ptr getEndpoint(size_t) const { return Endpoint::Ptr(); }
+
+protected:
+  virtual FIRNode::Ptr cloneNode();
+};
+
+struct TupleLength : public FIRNode {
+  int val;
+
+  typedef std::shared_ptr<TupleLength> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<TupleLength>());
+  }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+
+struct HomogeneousEdgeSetType : public UnstructuredSetType {
+  Endpoint::Ptr    endpoint;
+  TupleLength::Ptr arity;
+
+  typedef std::shared_ptr<HomogeneousEdgeSetType> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<HomogeneousEdgeSetType>());
+  }
+  
+  virtual size_t        getArity() const { return arity->val; }
+  virtual Endpoint::Ptr getEndpoint(size_t i) const { return endpoint; }
+
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode(); 
+};
+
+struct HeterogeneousEdgeSetType : public UnstructuredSetType {
+  std::vector<Endpoint::Ptr> endpoints;
+
+  typedef std::shared_ptr<HeterogeneousEdgeSetType> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<HeterogeneousEdgeSetType>());
+  }
+  
+  virtual bool          isHomogeneous() const;
+  virtual size_t        getArity() const { return endpoints.size(); }
+  virtual Endpoint::Ptr getEndpoint(size_t i) const { return endpoints.at(i); }
 
 protected:
   virtual void copy(FIRNode::Ptr);
@@ -300,21 +353,6 @@ struct NamedTupleType : public TupleType {
 
   virtual void accept(FIRVisitor *visitor) {
     visitor->visit(self<NamedTupleType>());
-  }
-
-protected:
-  virtual void copy(FIRNode::Ptr);
-
-  virtual FIRNode::Ptr cloneNode(); 
-};
-
-struct TupleLength : public FIRNode {
-  int val;
-
-  typedef std::shared_ptr<TupleLength> Ptr;
-
-  virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<TupleLength>());
   }
 
 protected:
@@ -770,7 +808,7 @@ struct MapExpr : public Expr {
     visitor->visit(self<MapExpr>());
   }
 
-  virtual ReductionOp getReductionOp() = 0;
+  virtual ReductionOp getReductionOp() const = 0;
 
 protected:
   virtual void copy(FIRNode::Ptr);
@@ -785,7 +823,7 @@ struct ReducedMapExpr : public MapExpr {
     visitor->visit(self<ReducedMapExpr>());
   }
 
-  virtual ReductionOp getReductionOp() { return op; }
+  virtual ReductionOp getReductionOp() const { return op; }
 
 protected:
   virtual void copy(FIRNode::Ptr);
@@ -803,7 +841,7 @@ struct UnreducedMapExpr : public MapExpr {
   virtual unsigned getLineEnd() { return target->getLineEnd(); }
   virtual unsigned getColEnd() { return target->getColEnd(); }
 
-  virtual ReductionOp getReductionOp() { return ReductionOp::NONE; }
+  virtual ReductionOp getReductionOp() const { return ReductionOp::NONE; }
 
 protected:
   virtual FIRNode::Ptr cloneNode(); 

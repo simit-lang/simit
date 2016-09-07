@@ -125,7 +125,7 @@ FIRNode::Ptr Endpoint::cloneNode() {
 }
 
 SetType::Ptr SetType::getUndefinedSetType() {
-  const auto undefinedSetType = std::make_shared<UnstructuredSetType>();
+  const auto undefinedSetType = std::make_shared<HeterogeneousEdgeSetType>();
   undefinedSetType->element = std::make_shared<ElementType>();
   return undefinedSetType;
 }
@@ -136,16 +136,59 @@ void SetType::copy(FIRNode::Ptr node) {
   element = setType->element->clone<ElementType>();
 }
 
-void UnstructuredSetType::copy(FIRNode::Ptr node) {
-  const auto setType = to<UnstructuredSetType>(node);
-  SetType::copy(setType);
+FIRNode::Ptr UnstructuredSetType::cloneNode() {
+  const auto node = std::make_shared<UnstructuredSetType>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void TupleLength::copy(FIRNode::Ptr node) {
+  const auto length = to<TupleLength>(node);
+  FIRNode::copy(length);
+  val = length->val;
+}
+
+FIRNode::Ptr TupleLength::cloneNode() {
+  const auto node = std::make_shared<TupleLength>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void HomogeneousEdgeSetType::copy(FIRNode::Ptr node) {
+  const auto setType = to<HomogeneousEdgeSetType>(node);
+  UnstructuredSetType::copy(setType);
+  endpoint = setType->endpoint->clone<Endpoint>();
+  arity = setType->arity->clone<TupleLength>();
+}
+
+FIRNode::Ptr HomogeneousEdgeSetType::cloneNode() {
+  const auto node = std::make_shared<HomogeneousEdgeSetType>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+bool HeterogeneousEdgeSetType::isHomogeneous() const {
+  const auto neighborSet = endpoints[0]->set->setName;
+  
+  for (unsigned i = 1; i < endpoints.size(); ++i) {
+    if (endpoints[i]->set->setName != neighborSet) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void HeterogeneousEdgeSetType::copy(FIRNode::Ptr node) {
+  const auto setType = to<HeterogeneousEdgeSetType>(node);
+  UnstructuredSetType::copy(setType);
   for (const auto &endpoint : setType->endpoints) {
     endpoints.push_back(endpoint->clone<Endpoint>());
   }
 }
 
-FIRNode::Ptr UnstructuredSetType::cloneNode() {
-  const auto node = std::make_shared<UnstructuredSetType>();
+FIRNode::Ptr HeterogeneousEdgeSetType::cloneNode() {
+  const auto node = std::make_shared<HeterogeneousEdgeSetType>();
   node->copy(shared_from_this());
   return node;
 }
@@ -178,7 +221,9 @@ FIRNode::Ptr Identifier::cloneNode() {
 void TupleElement::copy(FIRNode::Ptr node) {
   const auto elem = to<TupleElement>(node);
   FIRNode::copy(elem);
-  name = elem->name->clone<Identifier>();
+  if (elem->name) {
+    name = elem->name->clone<Identifier>();
+  }
   element = elem->element->clone<ElementType>();
 }
 
@@ -198,18 +243,6 @@ void NamedTupleType::copy(FIRNode::Ptr node) {
 
 FIRNode::Ptr NamedTupleType::cloneNode() {
   const auto node = std::make_shared<NamedTupleType>();
-  node->copy(shared_from_this());
-  return node;
-}
-
-void TupleLength::copy(FIRNode::Ptr node) {
-  const auto length = to<TupleLength>(node);
-  FIRNode::copy(length);
-  val = length->val;
-}
-
-FIRNode::Ptr TupleLength::cloneNode() {
-  const auto node = std::make_shared<TupleLength>();
   node->copy(shared_from_this());
   return node;
 }

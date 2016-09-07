@@ -83,6 +83,24 @@ void TypeChecker::visit(Endpoint::Ptr end) {
 
 void TypeChecker::visit(UnstructuredSetType::Ptr type) {
   retTypeChecked = typeCheck(type->element);
+}
+
+void TypeChecker::visit(HomogeneousEdgeSetType::Ptr type) {
+  const bool elementTypeChecked = typeCheck(type->element);
+  const bool endpointTypeChecked = typeCheck(type->endpoint);
+  const bool arityTypeChecked = typeCheck(type->arity);
+
+  retTypeChecked = elementTypeChecked && endpointTypeChecked && 
+                   arityTypeChecked;
+  
+  // Check that arity is positive.
+  if (type->arity->val < 1) {
+    reportError("edge set must have positive arity", type->arity);
+  }
+}
+
+void TypeChecker::visit(HeterogeneousEdgeSetType::Ptr type) {
+  retTypeChecked = typeCheck(type->element);
 
   for (auto end : type->endpoints) {
     const bool typeChecked = typeCheck(end);
@@ -105,13 +123,17 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
     errMsg << "expected lattice point set of unstructured kind, but set '"
            << latticeSetName << "' is not an unstructured set";
     reportError(errMsg.str(), type->latticePointSet);
+    return;
   }
+
+  const auto latticeSetArity = 
+      to<UnstructuredSetType>(latticeSetDef)->getArity();
+
   // Check lattice point set is cardinality zero
-  else if (!to<UnstructuredSetType>(latticeSetDef)->endpoints.empty()) {
+  if (latticeSetArity != 0) {
     std::stringstream errMsg;
     errMsg << "expected lattice point set of zero cardinality, but set '" 
-           << latticeSetName << "' has cardinality "
-           << to<UnstructuredSetType>(latticeSetDef)->endpoints.size();
+           << latticeSetName << "' has cardinality " << latticeSetArity;
     reportError(errMsg.str(), type->latticePointSet);
   }
 }
@@ -141,8 +163,7 @@ void TypeChecker::visit(UnnamedTupleType::Ptr type) {
 
   // Check that tuple length is positive.
   if (type->length->val < 1) {
-    const auto msg = "tuple must have length greater than or equal to one";
-    reportError(msg, type->length);
+    reportError("tuple must have positive length", type->length);
   }
 }
 
@@ -1351,7 +1372,7 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
   if (isa<UnstructuredSetType>(type)) {
     // TODO: No good way to check indices = #dims
 
-    if (!to<UnstructuredSetType>(type)->endpoints.empty()) {
+    if (to<UnstructuredSetType>(type)->getArity() != 0) {
       const auto msg = "lattice point set cannot have non-zero cardinality";
       reportError(msg, expr->set);
     }
@@ -1839,33 +1860,31 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   // Infer assembly function's required argument types.
   actualsType.push_back(ExprType(targetSetType->element, Access::READ_WRITE));
   
-  if (isa<UnstructuredSetType>(targetSetType) &&
-      !to<UnstructuredSetType>(targetSetType)->endpoints.empty()) {
-    UnstructuredSetType::Ptr utype = to<UnstructuredSetType>(targetSetType);
-    const auto endpoint = utype->endpoints[0];
-    const auto neighborSet = endpoint->set->setName;
-    
-    // Check for heterogeneous edge sets, which are currently unsupported.
-    // TODO: Should remove this once support for heterogeneous edge sets 
-    //       has been added.
-    for (unsigned i = 1; i < utype->endpoints.size(); ++i) {
-      if (utype->endpoints[i]->set->setName != neighborSet) {
-        std::stringstream errMsg;
-        errMsg << opString << " operation is currently unsupported for "
-               << "heterogeneous edge sets";
-        reportError(errMsg.str(), expr->target);
-        return;
-      }
-    }
-    
-    if (actualsType.size() != func->args.size()) {
-      const auto neighborsLength = std::make_shared<TupleLength>();
-      neighborsLength->val = utype->endpoints.size();
+  if (actualsType.size() < func->args.size() &&
+      isa<UnstructuredSetType>(targetSetType)) {
+    const auto utype = to<UnstructuredSetType>(targetSetType);
 
-      const auto neighborsType = std::make_shared<UnnamedTupleType>();
-      neighborsType->element = endpoint->element;
-      neighborsType->length = neighborsLength; 
-      actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+    if (utype->getArity() > 0) {
+      if (!utype->isHomogeneous() || 
+          isa<NamedTupleType>(func->args[actualsType.size()]->type)) {
+        const auto neighborsType = std::make_shared<NamedTupleType>();
+
+        for (unsigned i = 0; i < utype->getArity(); ++i) {
+          const auto elem = std::make_shared<TupleElement>();
+          elem->element = utype->getEndpoint(i)->element;
+          neighborsType->elems.push_back(elem);
+        }
+
+        actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+      } else {
+        const auto neighborsLength = std::make_shared<TupleLength>();
+        neighborsLength->val = utype->getArity();
+
+        const auto neighborsType = std::make_shared<UnnamedTupleType>();
+        neighborsType->element = utype->getEndpoint(0)->element;
+        neighborsType->length = neighborsLength; 
+        actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+      }
     }
   }
   
@@ -2391,6 +2410,26 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
       const auto argTupleType = to<NamedTupleType>(argType);
       unify(paramTupleType->element, argTupleType->elems[0]->element);
     }
+  } else if (isa<NamedTupleType>(paramType)) {
+    const auto paramTupleType = to<NamedTupleType>(paramType);
+
+    if (isa<NamedTupleType>(argType)) {
+      const auto argTupleType = to<NamedTupleType>(argType);
+      const auto tupleLength = std::min(paramTupleType->elems.size(),
+                                        argTupleType->elems.size());
+      
+      for (unsigned i = 0; i < tupleLength; ++i) {
+        const auto paramTupleElem = paramTupleType->elems[i]->element;
+        const auto argTupleElem = argTupleType->elems[i]->element;
+        unify(paramTupleElem, argTupleElem);
+      }
+    } else if (isa<UnnamedTupleType>(argType)) {
+      const auto argTupleType = to<UnnamedTupleType>(argType);
+      
+      for (const auto elem : paramTupleType->elems) {
+        unify(elem->element, argTupleType->element);
+      }
+    }
   }
 }
 
@@ -2600,13 +2639,13 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
       const auto ltype = to<UnstructuredSetType>(lgentype);
       const auto rtype = to<UnstructuredSetType>(rgentype);
       
-      if (ltype->endpoints.size() != rtype->endpoints.size()) {
+      if (ltype->getArity() != rtype->getArity()) {
         return false;
       }
 
-      for (unsigned i = 0; i < ltype->endpoints.size(); ++i) {
-        const auto lEndpointElem = ltype->endpoints[i]->element;
-        const auto rEndpointElem = rtype->endpoints[i]->element;
+      for (unsigned i = 0; i < ltype->getArity(); ++i) {
+        const auto lEndpointElem = ltype->getEndpoint(i)->element;
+        const auto rEndpointElem = rtype->getEndpoint(i)->element;
       
         if (!compareTypes(lEndpointElem, rEndpointElem)) {
           return false;
@@ -2644,10 +2683,31 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
     return false;
   }
   else if (isa<NamedTupleType>(l)) {
-    not_supported_yet;
+    if (!isa<NamedTupleType>(r)) {
+      return false;
+    }
+    
+    const auto ltype = to<NamedTupleType>(l);
+    const auto rtype = to<NamedTupleType>(r);
+
+    if (ltype->elems.size() != rtype->elems.size()) {
+      return false;
+    }
+
+    for (unsigned i = 0; i < ltype->elems.size(); ++i) {
+      const auto lElem = ltype->elems[i];
+      const auto rElem = rtype->elems[i];
+
+      if ((lElem->name && rElem->name && 
+          lElem->name->ident != rElem->name->ident) || 
+          !compareTypes(lElem->element, rElem->element)) {
+        return false;
+      }
+    }
+
+    return true;
   }
   else if (isa<UnnamedTupleType>(l)) {
-    // TODO: Handle homogeneous named tuple type.
     if (!isa<UnnamedTupleType>(r)) {
       return false;
     }
