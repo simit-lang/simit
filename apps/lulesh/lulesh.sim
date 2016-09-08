@@ -1,0 +1,34 @@
+element Node
+    coord : vector[3](float);
+    vel   : vector[3](float);
+    a     : vector[3](float);
+    f     : vector[3](float);
+    nodalMass  : float;
+    symm  : vector[3](int);
+end
+
+element Elem
+    dxyz    : vector[3](float);
+    delvel  : vector[3](float);
+    delx    : vector[3](float);
+    e       : float;
+    p       : float;
+    q       : float;
+    ql      : float;
+    qq      : float;
+    v       : float;
+    volo    : float;
+    vnew    : float;
+    delv    : float;
+    vdov    : float;
+    arealg  : float;
+    ss      : float;
+    elemMass: float;
+end
+
+extern nodes  : set{Node};
+extern elems  : set{Elem}(nodes,nodes,nodes,nodes,nodes,nodes,nodes,nodes);
+
+export func LagrangeLeapFrog_sim()
+    println "coucou";
+end
