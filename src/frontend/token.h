@@ -29,7 +29,7 @@ struct Token {
     VECTOR,
     ELEMENT,
     SET,
-    LATTICE,
+    GRID,
     OPAQUE,
     VAR,
     CONST,

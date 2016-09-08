@@ -29,7 +29,7 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
   pe::Set E = getPathExpressionSet(targetSet);
   pe::Var e = pe::Var("e", E);
 
-  // Stencil map through a lattice link set
+  // Stencil map through a grid edge set
   StencilLayout stencil;
   Var stencilVar;
   if (map->through.defined()) {

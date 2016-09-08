@@ -117,8 +117,8 @@ void UnstructuredEdgeSetLayout::writeSet(Set *actual, ir::Type type,
   }
 }
 
-llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
-  iassert(i < set.type().toLatticeLinkSet()->dimensions);
+llvm::Value* GridSetLayout::getSize(unsigned i) {
+  iassert(i < set.type().toGridSet()->dimensions);
   auto sizes = llvmCreateExtractValue(builder, value, {0},
                                       util::toString(set)+".sizes()");
   std::string name = string(sizes->getName()) + "[" + std::to_string(i) + "]";
@@ -126,11 +126,11 @@ llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
   return builder->CreateLoad(out);
 }
 
-llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
-  unsigned dims = set.type().toLatticeLinkSet()->dimensions;
+llvm::Value* GridSetLayout::getTotalSize() {
+  unsigned dims = set.type().toGridSet()->dimensions;
   // directional dimension
-  llvm::Value *total = llvmInt(set.type().toLatticeLinkSet()->dimensions);
-  // lattice sites dimensions
+  llvm::Value *total = llvmInt(set.type().toGridSet()->dimensions);
+  // grid sites dimensions
   for (unsigned i = 0; i < dims; ++i) {
     total = builder->CreateMul(total, getSize(i),
                                util::toString(set)+".totalSize()");
@@ -138,21 +138,21 @@ llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
   return total;
 }
 
-llvm::Value* LatticeEdgeSetLayout::getEpsArray() {
+llvm::Value* GridSetLayout::getEpsArray() {
   iassert(!kIndexlessStencils)
       << "Endpoints array undefined when in indexless mode";
   return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
 }
 
-int LatticeEdgeSetLayout::getFieldsOffset() {
+int GridSetLayout::getFieldsOffset() {
   // Must skip size, eps
   return 2;
 }
 
-llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
-  iassert(actual->getKind() == Set::LatticeLink);
+llvm::Value* GridSetLayout::makeSet(Set *actual, ir::Type type) {
+  iassert(actual->getKind() == Set::Grid);
 
-  const ir::LatticeLinkSetType *setType = type.toLatticeLinkSet();
+  const ir::GridSetType *setType = type.toGridSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
   vector<llvm::Constant*> setData;
 
@@ -160,7 +160,7 @@ llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
   unsigned ndims = setType->dimensions;
   const vector<int> &dimensions = actual->getDimensions();
   uassert(dimensions.size() == ndims)
-      << "Lattice link set with wrong number of dimensions: "
+      << "Grid edge set with wrong number of dimensions: "
       << dimensions.size() << " passed, but " << ndims
       << " required";
   setData.push_back(llvmPtr(LLVM_INT_PTR, dimensions.data()));
@@ -185,8 +185,8 @@ llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
   return llvm::ConstantStruct::get(llvmSetType, setData);
 }
 
-void LatticeEdgeSetLayout::writeSet(Set *actual, ir::Type type,void *externPtr){
-  iassert(actual->getKind() == Set::LatticeLink);
+void GridSetLayout::writeSet(Set *actual, ir::Type type, void *externPtr) {
+  iassert(actual->getKind() == Set::Grid);
 
   const ir::SetType *setType = type.toSet();
   int** externPtrCast = (int**)externPtr;
@@ -231,9 +231,9 @@ std::shared_ptr<SetLayout> getSetLayout(
           new UnstructuredEdgeSetLayout(set, value, builder));
     }
   }
-  else if (set.type().isLatticeLinkSet()) {
+  else if (set.type().isGridSet()) {
     return std::shared_ptr<SetLayout>(
-        new LatticeEdgeSetLayout(set, value, builder));
+        new GridSetLayout(set, value, builder));
   }
   else {
     unreachable;
@@ -252,8 +252,8 @@ llvm::Value* makeSet(Set *actual, ir::Type type) {
       return UnstructuredEdgeSetLayout::makeSet(actual, type);
     }
   }
-  else if (type.isLatticeLinkSet()) {
-    return LatticeEdgeSetLayout::makeSet(actual, type);
+  else if (type.isGridSet()) {
+    return GridSetLayout::makeSet(actual, type);
   }
   else {
     unreachable;
@@ -272,8 +272,8 @@ void writeSet(Set *actual, ir::Type type, void *externPtr) {
       return UnstructuredEdgeSetLayout::writeSet(actual, type, externPtr);
     }
   }
-  else if (type.isLatticeLinkSet()) {
-    return LatticeEdgeSetLayout::writeSet(actual, type, externPtr);
+  else if (type.isGridSet()) {
+    return GridSetLayout::writeSet(actual, type, externPtr);
   }
   else {
     unreachable;

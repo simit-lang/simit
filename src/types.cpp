@@ -18,9 +18,9 @@ bool Type::isUnstructuredSet() const {
       dynamic_cast<UnstructuredSetType*>(set) != nullptr;
 }
 
-bool Type::isLatticeLinkSet() const {
+bool Type::isGridSet() const {
   return _kind == Set &&
-      dynamic_cast<LatticeLinkSetType*>(set) != nullptr;
+      dynamic_cast<GridSetType*>(set) != nullptr;
 }
 
 const UnstructuredSetType* Type::toUnstructuredSet() const {
@@ -28,9 +28,9 @@ const UnstructuredSetType* Type::toUnstructuredSet() const {
   return dynamic_cast<UnstructuredSetType*>(set);
 }
 
-const LatticeLinkSetType* Type::toLatticeLinkSet() const {
-  iassert(isLatticeLinkSet());
-  return dynamic_cast<LatticeLinkSetType*>(set);
+const GridSetType* Type::toGridSet() const {
+  iassert(isGridSet());
+  return dynamic_cast<GridSetType*>(set);
 }
 
 // Default to double size
@@ -180,17 +180,17 @@ UnstructuredSetType::~UnstructuredSetType() {
   }
 }
 
-// struct LatticeLinkSetType
-Type LatticeLinkSetType::make(Type elementType, IndexSet latticePointSet,
-                              size_t dimensions) {
+// struct GridSetType
+Type GridSetType::make(Type elementType, IndexSet underlyingPointSet,
+                       size_t dimensions) {
   iassert(elementType.isElement());
-  iassert(latticePointSet.getKind() == IndexSet::Kind::Set);
-  iassert(latticePointSet.getSet().type().isUnstructuredSet());
-  iassert(latticePointSet.getSet().type()
+  iassert(underlyingPointSet.getKind() == IndexSet::Kind::Set);
+  iassert(underlyingPointSet.getSet().type().isUnstructuredSet());
+  iassert(underlyingPointSet.getSet().type()
           .toUnstructuredSet()->getCardinality() == 0);
-  LatticeLinkSetType *type = new LatticeLinkSetType;
+  GridSetType *type = new GridSetType;
   type->elementType = elementType;
-  type->latticePointSet = latticePointSet;
+  type->underlyingPointSet = underlyingPointSet;
   type->dimensions = dimensions;
   return type;
 }
@@ -213,9 +213,9 @@ bool operator==(const Type& l, const Type& r) {
         }
         return false;
       }
-      else if (l.isLatticeLinkSet()) {
-        if (r.isLatticeLinkSet()) {
-          return *l.toLatticeLinkSet() == *r.toLatticeLinkSet();
+      else if (l.isGridSet()) {
+        if (r.isGridSet()) {
+          return *l.toGridSet() == *r.toGridSet();
         }
         return false;
       }
@@ -287,9 +287,9 @@ bool operator==(const UnstructuredSetType& l, const UnstructuredSetType& r) {
   return l.elementType == r.elementType;
 }
 
-bool operator==(const LatticeLinkSetType& l, const LatticeLinkSetType& r) {
+bool operator==(const GridSetType& l, const GridSetType& r) {
   return l.elementType == r.elementType &&
-      l.latticePointSet == r.latticePointSet &&
+      l.underlyingPointSet == r.underlyingPointSet &&
       l.dimensions == r.dimensions;
 }
 
@@ -313,7 +313,7 @@ bool operator!=(const UnstructuredSetType& l, const UnstructuredSetType& r) {
   return !(l == r);
 }
 
-bool operator!=(const LatticeLinkSetType& l, const LatticeLinkSetType& r) {
+bool operator!=(const GridSetType& l, const GridSetType& r) {
   return !(l == r);
 }
 
@@ -335,8 +335,8 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
       if (type.isUnstructuredSet()) {
         return os << *type.toUnstructuredSet();
       }
-      else if (type.isLatticeLinkSet()) {
-        return os << *type.toLatticeLinkSet();
+      else if (type.isGridSet()) {
+        return os << *type.toGridSet();
       }
       else {
         unreachable;
@@ -410,10 +410,10 @@ std::ostream& operator<<(std::ostream& os, const UnstructuredSetType& type) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const LatticeLinkSetType& type) {
-  os << "lattice[" << type.dimensions << "]{"
+std::ostream& operator<<(std::ostream& os, const GridSetType& type) {
+  os << "grid[" << type.dimensions << "]{"
      << type.elementType.toElement()->name << "}("
-     << type.latticePointSet << ")";
+     << type.underlyingPointSet << ")";
 
   return os;
 }

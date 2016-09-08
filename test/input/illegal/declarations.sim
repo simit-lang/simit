@@ -5,21 +5,21 @@ end
 extern t : int;
 extern V : set{E}(t);
 
-%%% bad-lattice-link-set-type-1
+%%% bad-grid-link-set-type-1
 element E
 end
 
 extern Q : set{E};
 extern P : set{E}(Q);
-extern S : lattice[1]{E}(P);
+extern S : grid[1]{E}(P);
 
-%%% bad-lattice-link-set-type-2
+%%% bad-grid-link-set-type-2
 element E
 end
 
 extern P : set{E};
-extern S : lattice[1]{E}(P);
-extern T : lattice[1]{E}(S);
+extern S : grid[1]{E}(P);
+extern T : grid[1]{E}(S);
 
 %%% bad-tensor-type-1
 element E

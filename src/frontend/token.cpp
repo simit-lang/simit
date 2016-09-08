@@ -50,8 +50,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'element'";
     case Token::Type::SET:
       return "'set'";
-    case Token::Type::LATTICE:
-      return "'lattice'";
+    case Token::Type::GRID:
+      return "'grid'";
     case Token::Type::OPAQUE:
       return "'opaque'";
     case Token::Type::VAR:

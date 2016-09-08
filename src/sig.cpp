@@ -325,20 +325,20 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
       size_t numBlockLevels = indexVar.getNumBlockLevels();
 
       if (currBlockLevel < numBlockLevels) {
-        // If this vertex connects to any lattice links, we must impose lattice
+        // If this vertex connects to any grid edges, we must impose grid
         // structure on the loop.
-        Expr latticeSet;
+        Expr gridSet;
         for (auto &e : v->connectors) {
           const TensorStorage& ts = storage.getStorage(e->tensor);
           auto storageKind = ts.getKind();
           if (storageKind == TensorStorage::Kind::Stencil &&
               ts.hasTensorIndex()) {
             const TensorIndex& ti = ts.getTensorIndex();
-            latticeSet = ti.getStencilLayout().getLatticeSet();
+            gridSet = ti.getStencilLayout().getGridSet();
             break;
           }
         }
-        if (!latticeSet.defined()) {
+        if (!gridSet.defined()) {
           Var var(nameGenerator.getName(indexVar.getName()), Int);
           ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
 
@@ -356,15 +356,15 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
         }
         else {
-          iassert(latticeSet.type().isLatticeLinkSet());
-          int ndims = latticeSet.type().toLatticeLinkSet()->dimensions;
+          iassert(gridSet.type().isGridSet());
+          int ndims = gridSet.type().toGridSet()->dimensions;
           string varName = nameGenerator.getName(indexVar.getName());
           Var var(varName, Int);
           // We only reduce w.r.t. to the inner loop variable.
           ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
               ? indexVar.getOperator()
               : ReductionOperator::Undefined;
-          ForDomain domain(latticeSet, var, ndims, varName);
+          ForDomain domain(gridSet, var, ndims, varName);
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
         }
 

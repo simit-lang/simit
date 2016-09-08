@@ -34,9 +34,9 @@ void FIRVisitor::visit(UnstructuredSetType::Ptr type) {
   }
 }
 
-void FIRVisitor::visit(LatticeLinkSetType::Ptr type) {
+void FIRVisitor::visit(GridSetType::Ptr type) {
   type->element->accept(this);
-  type->latticePointSet->accept(this);
+  type->underlyingPointSet->accept(this);
 }
 
 void FIRVisitor::visit(TupleType::Ptr type) {

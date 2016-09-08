@@ -588,11 +588,11 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
   // the loop vars in reverse order)
   Stmt loopNest = kernel;
   
-  // HACK: Extract loop vars corresponding to lattice loops
-  map<Var, const LoopVar*> latticeLoopVars;
+  // HACK: Extract loop vars corresponding to grid loops
+  map<Var, const LoopVar*> gridLoopVars;
   for (auto loopVar=loopVars.begin(); loopVar!=loopVars.end(); ++loopVar) {
-    if (loopVar->getDomain().kind == ForDomain::Lattice) {
-      latticeLoopVars[loopVar->getDomain().var] = &(*loopVar);
+    if (loopVar->getDomain().kind == ForDomain::Grid) {
+      gridLoopVars[loopVar->getDomain().var] = &(*loopVar);
     }
   }
   
@@ -609,15 +609,15 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
       }
     }
-    else if (loopVar->getDomain().kind == ForDomain::Lattice) {
-      int ndims = loopVar->getDomain().latticeVars.size();
+    else if (loopVar->getDomain().kind == ForDomain::Grid) {
+      int ndims = loopVar->getDomain().gridVars.size();
       // Add overall variable advancement
       loopNest = Block::make(loopNest, AssignStmt::make(
           loopVar->getDomain().var, 1, CompoundOperator::Add));
       for (int i = 0; i < ndims; ++i) {
         Expr dimSize = IndexRead::make(loopVar->getDomain().set,
-                                       IndexRead::LatticeDim, i);
-        loopNest = ForRange::make(loopVar->getDomain().latticeVars[i],
+                                       IndexRead::GridDim, i);
+        loopNest = ForRange::make(loopVar->getDomain().gridVars[i],
                                   0, dimSize, loopNest);
       }
       // Zero out the overall variable
@@ -675,15 +675,15 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         }
 
         // Use canonical memory ordering to infer j from stencil offsets
-        Expr latticeSet = stencil.getLatticeSet();
-        iassert(latticeSet.type().isLatticeLinkSet());
-        unsigned dims = latticeSet.type().toLatticeLinkSet()->dimensions;
+        Expr gridSet = stencil.getGridSet();
+        iassert(gridSet.type().isGridSet());
+        unsigned dims = gridSet.type().toGridSet()->dimensions;
 
-        // Fetch the full LoopVar corresponding to the i lattice loop
-        iassert(latticeLoopVars.count(i));
-        const LoopVar *latticeLoopVar = latticeLoopVars[i];
-        iassert(latticeLoopVar->getDomain().latticeVars.size() == dims);
-        const vector<Var> &latticeVars = latticeLoopVar->getDomain().latticeVars;
+        // Fetch the full LoopVar corresponding to the i grid loop
+        iassert(gridLoopVars.count(i));
+        const LoopVar *gridLoopVar = gridLoopVars[i];
+        iassert(gridLoopVar->getDomain().gridVars.size() == dims);
+        const vector<Var> &gridVars = gridLoopVar->getDomain().gridVars;
 
         // Use fixed stencil size to do an unrolled DIA-style loop for ij, j
         int stencilSize = stencil.getLayout().size();
@@ -695,9 +695,9 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
           vector<int> offsets = flipped[ijInd];
           Expr totalInd = Literal::make(0);
           for (int d = dims-1; d >= 0; --d) {
-            Expr dimSize = IndexRead::make(latticeSet, IndexRead::LatticeDim, d);
+            Expr dimSize = IndexRead::make(gridSet, IndexRead::GridDim, d);
             // Periodic boundary conditions
-            Expr ind = ((latticeVars[d]+offsets[d])%dimSize+dimSize)%dimSize;
+            Expr ind = ((gridVars[d]+offsets[d])%dimSize+dimSize)%dimSize;
             totalInd = totalInd * dimSize + ind;
           }
           ijLoop.push_back(AssignStmt::make(j, totalInd));

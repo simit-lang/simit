@@ -81,8 +81,8 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
                 (isa<SetRead>(op->indices[0]) && util::isAllZeros(
                     getOffsets(to<SetRead>(op->indices[0])->indices))));
         // Get col index
-        iassert(throughSet.type().isLatticeLinkSet());
-        int dims = throughSet.type().toLatticeLinkSet()->dimensions;
+        iassert(throughSet.type().isGridSet());
+        int dims = throughSet.type().toGridSet()->dimensions;
         Expr index;
         if (isa<VarExpr>(op->indices[1])) {
           vector<int> offsets(dims);

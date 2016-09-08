@@ -1293,7 +1293,7 @@ std::vector<fir::Expr::Ptr> Parser::parseExprParams() {
   return exprParams;
 }
 
-// type: element_type | unstructured_set_type | lattice_link_set_type
+// type: element_type | unstructured_set_type | grid_set_type
 //     | tuple_type | tensor_type
 fir::Type::Ptr Parser::parseType() {
   fir::Type::Ptr type;
@@ -1304,8 +1304,8 @@ fir::Type::Ptr Parser::parseType() {
     case Token::Type::SET:
       type = parseUnstructuredSetType();
       break;
-    case Token::Type::LATTICE:
-      type = parseLatticeLinkSetType();
+    case Token::Type::GRID:
+      type = parseGridSetType();
       break;
     case Token::Type::LP:
       type = parseTupleType();
@@ -1367,13 +1367,13 @@ fir::SetType::Ptr Parser::parseUnstructuredSetType() {
   return setType;
 }
 
-// lattice_link_set_type: 'lattice' '[' INT_LITERAL ']' 
-//                        '{' element_type '}' '(' IDENT ')'
-fir::SetType::Ptr Parser::parseLatticeLinkSetType() {
-  auto setType = std::make_shared<fir::LatticeLinkSetType>();
+// grid_set_type: 'grid' '[' INT_LITERAL ']'
+//                '{' element_type '}' '(' IDENT ')'
+fir::SetType::Ptr Parser::parseGridSetType() {
+  auto setType = std::make_shared<fir::GridSetType>();
 
-  const Token latticeToken = consume(Token::Type::LATTICE);
-  setType->setBeginLoc(latticeToken);
+  const Token gridToken = consume(Token::Type::GRID);
+  setType->setBeginLoc(gridToken);
 
   consume(Token::Type::LB);
   const Token dimsToken = consume(Token::Type::INT_LITERAL);
@@ -1385,9 +1385,9 @@ fir::SetType::Ptr Parser::parseLatticeLinkSetType() {
   consume(Token::Type::RC);
 
   consume(Token::Type::LP);
-  auto latticePointSet = std::make_shared<fir::Endpoint>();
-  latticePointSet->set = parseSetIndexSet();
-  setType->latticePointSet = latticePointSet;
+  auto underlyingPointSet = std::make_shared<fir::Endpoint>();
+  underlyingPointSet->set = parseSetIndexSet();
+  setType->underlyingPointSet = underlyingPointSet;
   
   const Token endToken = consume(Token::Type::RP);
   setType->setEndLoc(endToken);
