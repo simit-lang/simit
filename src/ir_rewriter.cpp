@@ -417,6 +417,15 @@ void IRRewriter::visit(const TupleRead *op) {
   }
 }
 
+void IRRewriter::visit(const NamedTupleRead *op) {
+  Expr tuple = rewrite(op->tuple);
+  if (tuple == op->tuple) {
+    expr = op;
+  } else {
+    expr = NamedTupleRead::make(tuple, op->elementName);
+  }
+}
+
 void IRRewriter::visit(const SetRead *op) {
   Expr set = rewrite(op->set);
   std::vector<Expr> indices(op->indices.size());

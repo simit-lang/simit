@@ -61,8 +61,19 @@ void IREmitter::visit(LatticeLinkSetType::Ptr type) {
       elementType, latticePointSet, type->dimensions);
 }
 
+void IREmitter::visit(TupleElement::Ptr elem) {
+  const ir::Type type = emitType(elem->element);
+  retField = ir::Field(elem->name->ident, type);
+}
+
 void IREmitter::visit(NamedTupleType::Ptr type) {
-  not_supported_yet;
+  std::vector<ir::Field> elements;
+  for (auto elem : type->elems) {
+    const ir::Field tupleElement = emitTupleElement(elem);
+    elements.push_back(tupleElement);
+  }
+
+  retType = ir::NamedTupleType::make(elements);
 }
 
 void IREmitter::visit(UnnamedTupleType::Ptr type) {
@@ -712,7 +723,10 @@ void IREmitter::visit(SetReadExpr::Ptr expr) {
 }
 
 void IREmitter::visit(NamedTupleReadExpr::Ptr expr) {
-  not_supported_yet;
+  const ir::Expr tuple = emitExpr(expr->tuple);
+  
+  iassert(tuple.type().isNamedTuple());
+  retExpr = ir::NamedTupleRead::make(tuple, expr->elem->ident);
 }
 
 void IREmitter::visit(UnnamedTupleReadExpr::Ptr expr) {
@@ -928,6 +942,94 @@ void IREmitter::DenseTensorValues::merge(
   ++dimSizes[dimSizes.size() - 1];
 }
 
+ir::Expr IREmitter::emitExpr(FIRNode::Ptr ptr) {
+  const ir::Expr tmpExpr = retExpr;
+  retExpr = ir::Expr();
+  
+  ptr->accept(this);
+  const ir::Expr ret = retExpr;
+
+  retExpr = tmpExpr;
+  return ret;
+}
+
+ir::Stmt IREmitter::emitStmt(Stmt::Ptr ptr) {
+  const auto tmpStmt = retStmt;
+  retStmt = ir::Stmt();
+
+  ptr->accept(this);
+  const ir::Stmt ret = retStmt;
+
+  retStmt = tmpStmt;
+  return ret;
+}
+
+ir::Type IREmitter::emitType(Type::Ptr ptr) {
+  const ir::Type tmpType = retType;
+  retType = ir::Type();
+
+  ptr->accept(this);
+  const ir::Type ret = retType;
+
+  retType = tmpType;
+  return ret;
+}
+
+ir::IndexSet IREmitter::emitIndexSet(IndexSet::Ptr ptr) {
+  const ir::IndexSet tmpIndexSet = retIndexSet;
+  retIndexSet = ir::IndexSet();
+
+  ptr->accept(this);
+  const ir::IndexSet ret = retIndexSet;
+
+  retIndexSet = tmpIndexSet;
+  return ret;
+}
+
+ir::Field IREmitter::emitField(FieldDecl::Ptr ptr) {
+  const ir::Field tmpField = retField;
+  retField = ir::Field("", ir::Type());
+
+  ptr->accept(this);
+  const ir::Field ret = retField;
+
+  retField = tmpField;
+  return ret;
+}
+
+ir::Field IREmitter::emitTupleElement(TupleElement::Ptr ptr) {
+  const ir::Field tmpField = retField;
+  retField = ir::Field("", ir::Type());
+
+  ptr->accept(this);
+  const ir::Field ret = retField;
+
+  retField = tmpField;
+  return ret;
+}
+
+ir::Var IREmitter::emitVar(IdentDecl::Ptr ptr) {
+  const ir::Var tmpVar = retVar;
+  retVar = ir::Var();
+
+  ptr->accept(this);
+  const ir::Var ret = retVar;
+
+  retVar = tmpVar;
+  return ret;
+}
+
+IREmitter::Domain IREmitter::emitDomain(ForDomain::Ptr ptr) {
+  const Domain tmpDomain = retDomain;
+  retDomain = Domain();
+
+  ptr->accept(this);
+  const Domain ret = retDomain;
+
+  retDomain = tmpDomain;
+  return ret;
+}
+ 
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   iassert(decl->initVal || !isConst);
   

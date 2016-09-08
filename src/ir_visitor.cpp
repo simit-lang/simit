@@ -192,6 +192,10 @@ void IRVisitor::visit(const TupleRead *op) {
   op->index.accept(this);
 }
 
+void IRVisitor::visit(const NamedTupleRead *op) {
+  op->tuple.accept(this);
+}
+
 void IRVisitor::visit(const SetRead *op) {
   op->set.accept(this);
   for (auto &index : op->indices) {

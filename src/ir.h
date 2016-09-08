@@ -476,6 +476,13 @@ struct TupleRead : public ExprNode {
   void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
 };
 
+struct NamedTupleRead : public ExprNode {
+  Expr tuple;
+  std::string elementName;
+  static Expr make(Expr tuple, std::string elementName);
+  void accept(IRVisitorStrict *v) const {v->visit((const NamedTupleRead*)this);}
+};
+
 /// Expression that reads a set element, used by lattice graphs for stencil
 /// assembly using lattice offsets for element indexing.
 struct SetRead : public ExprNode {

@@ -28,17 +28,19 @@ struct SetType;
 struct UnstructuredSetType;
 struct LatticeLinkSetType;
 struct TupleType;
+struct NamedTupleType;
 struct ArrayType;
 
 class Type {
 public:
-  enum Kind {Undefined, Tensor, Element, Set, Tuple, Array, Opaque};
+  enum Kind {Undefined, Tensor, Element, Set, Tuple, NamedTuple, Array, Opaque};
   Type() : _kind(Undefined), ptr(nullptr) {}
   Type(Kind kind) : _kind(kind) {}
   Type(TensorType* tensor);
   Type(ElementType* element);
   Type(SetType* set);
   Type(TupleType* tuple);
+  Type(NamedTupleType* tuple);
   Type(ArrayType* array);
 
   bool defined() const { return kind() != Undefined; }
@@ -51,32 +53,50 @@ public:
   bool isUnstructuredSet() const;
   bool isLatticeLinkSet()  const;
   bool isTuple()           const { return kind()==Tuple; }
+  bool isNamedTuple()      const { return kind()==NamedTuple; }
   bool isArray()           const { return kind()==Array; }
   bool isOpaque()          const { return kind()==Opaque; }
 
-  const TensorType*  toTensor()  const {
+  const TensorType* toTensor() const {
     if (!isTensor()) {
       assert(false);
     }
     iassert(isTensor());
     return tensor;
   }
-  const ElementType* toElement() const {iassert(isElement()); return element;}
-  const SetType*     toSet()     const {iassert(isSet());     return set;}
+  const ElementType* toElement() const {
+    iassert(isElement());
+    return element;
+  }
+  const SetType* toSet() const {
+    iassert(isSet());
+    return set;
+  }
   const UnstructuredSetType* toUnstructuredSet() const;
-  const LatticeLinkSetType* toLatticeLinkSet() const;
-  const TupleType*   toTuple()   const {iassert(isTuple());   return tuple;}
-  const ArrayType*   toArray()   const {iassert(isArray());   return array;}
+  const LatticeLinkSetType*  toLatticeLinkSet()  const;
+  const TupleType* toTuple() const {
+    iassert(isTuple());
+    return tuple;
+  }
+  const NamedTupleType* toNamedTuple() const {
+    iassert(isNamedTuple());
+    return namedTuple;
+  }
+  const ArrayType* toArray() const {
+    iassert(isArray());
+    return array;
+  }
 
 
 private:
   Kind _kind;
   union {
-    TensorType  *tensor;
-    ElementType *element;
-    SetType     *set;
-    TupleType   *tuple;
-    ArrayType   *array;
+    TensorType     *tensor;
+    ElementType    *element;
+    SetType        *set;
+    TupleType      *tuple;
+    NamedTupleType *namedTuple;
+    ArrayType      *array;
   };
   std::shared_ptr<TypeNode> ptr;
 };
@@ -302,6 +322,40 @@ struct TupleType : TypeNode {
   }
 };
 
+struct NamedTupleType : TypeNode {
+  /// Maps element names to their types and locations in the tuple
+  std::vector<Field> elements;
+
+  /// Lookup data structure, use the element method to access elements by names.
+  std::map<std::string, unsigned> elementNames;
+
+  bool hasElement(std::string elementName) const {
+    return elementNames.find(elementName) != elementNames.end();
+  }
+
+  const unsigned elementIndex(const std::string& elementName) const {
+    iassert(hasElement(elementName)) << "Undefined element '" 
+                                     << elementName << "'";
+    return elementNames.at(elementName); 
+  }
+
+  const Field& element(const std::string& elementName) const {
+    iassert(hasElement(elementName)) << "Undefined element '" 
+                                     << elementName << "'";
+    return elements[elementNames.at(elementName)];
+  }
+
+  static Type make(std::vector<Field> elements) {
+    NamedTupleType *type = new NamedTupleType;
+    type->elements = elements;
+    for (size_t i=0; i < elements.size(); ++i) {
+      iassert(elements[i].type.isElement());
+      type->elementNames[elements[i].name] = i;
+    }
+    return type;
+  }
+};
+
 struct ArrayType : TypeNode {
   ScalarType elementType;
 
@@ -325,6 +379,8 @@ inline Type::Type(SetType* set)
     : _kind(Set), set(set), ptr(set) {}
 inline Type::Type(TupleType* tuple)
     : _kind(Tuple), tuple(tuple), ptr(tuple) {}
+inline Type::Type(NamedTupleType* namedTuple)
+    : _kind(NamedTuple), namedTuple(namedTuple), ptr(namedTuple) {}
 inline Type::Type(ArrayType* array)
     : _kind(Array), array(array), ptr(array) {}
 
@@ -379,6 +435,7 @@ bool operator==(const ElementType&, const ElementType&);
 bool operator==(const UnstructuredSetType&, const UnstructuredSetType&);
 bool operator==(const LatticeLinkSetType&, const LatticeLinkSetType&);
 bool operator==(const TupleType&, const TupleType&);
+bool operator==(const NamedTupleType&, const NamedTupleType&);
 bool operator==(const ArrayType&, const ArrayType&);
 
 bool operator!=(const ScalarType&, const ScalarType&);
@@ -387,6 +444,7 @@ bool operator!=(const ElementType&, const ElementType&);
 bool operator!=(const UnstructuredSetType&, const UnstructuredSetType&);
 bool operator!=(const LatticeLinkSetType&, const LatticeLinkSetType&);
 bool operator!=(const TupleType&, const TupleType&);
+bool operator!=(const NamedTupleType&, const NamedTupleType&);
 bool operator!=(const ArrayType&, const ArrayType&);
 
 std::ostream& operator<<(std::ostream&, const Type&);
@@ -396,6 +454,7 @@ std::ostream& operator<<(std::ostream&, const ElementType&);
 std::ostream& operator<<(std::ostream&, const UnstructuredSetType&);
 std::ostream& operator<<(std::ostream&, const LatticeLinkSetType&);
 std::ostream& operator<<(std::ostream&, const TupleType&);
+std::ostream& operator<<(std::ostream&, const NamedTupleType&);
 std::ostream& operator<<(std::ostream&, const ArrayType&);
 
 // Common types

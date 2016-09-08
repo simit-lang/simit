@@ -222,6 +222,8 @@ bool operator==(const Type& l, const Type& r) {
       unreachable;
     case Type::Tuple:
       return *l.toTuple() == *r.toTuple();
+    case Type::NamedTuple:
+      return *l.toNamedTuple() == *r.toNamedTuple();
     case Type::Array:
       return *l.toArray() == *r.toArray();
     case Type::Opaque:
@@ -297,6 +299,22 @@ bool operator==(const TupleType& l, const TupleType& r) {
   return l.elementType == r.elementType && l.size == r.size;
 }
 
+bool operator==(const NamedTupleType& l, const NamedTupleType& r) {
+  if (l.elements.size() != r.elements.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < l.elements.size(); ++i) {
+    const Field &lElement = l.elements[i];
+    const Field &rElement = r.elements[i];
+    if (lElement.name != rElement.name || lElement.type != rElement.type) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool operator!=(const ScalarType& l, const ScalarType& r) {
   return !(l == r);
 }
@@ -318,6 +336,10 @@ bool operator!=(const LatticeLinkSetType& l, const LatticeLinkSetType& r) {
 }
 
 bool operator!=(const TupleType& l, const TupleType& r) {
+  return !(l == r);
+}
+
+bool operator!=(const NamedTupleType& l, const NamedTupleType& r) {
   return !(l == r);
 }
 
@@ -344,6 +366,8 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
       }
     case Type::Tuple:
       return os << *type.toTuple();
+    case Type::NamedTuple:
+      return os << *type.toNamedTuple();
     case Type::Array:
       return os << *type.toArray();
     case Type::Opaque:
@@ -421,6 +445,22 @@ std::ostream& operator<<(std::ostream& os, const LatticeLinkSetType& type) {
 std::ostream& operator<<(std::ostream& os, const TupleType& type) {
   return os << "(" << type.elementType.toElement()->name << "*" << type.size
             << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const NamedTupleType& type) {
+  os << "(";
+
+  bool printDelimiter = false;
+  for (auto &element : type.elements) {
+    if (printDelimiter) {
+      os << ", ";
+    }
+
+    os << element.name << " : " << element.type;
+    printDelimiter = true;
+  }
+
+  return os << ")";
 }
 
 std::ostream& operator<<(std::ostream& os, const ArrayType& type) {

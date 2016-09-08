@@ -288,6 +288,7 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
     case Type::Set:
     case Type::Element:
     case Type::Tuple:
+    case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
       iassert(false) << "only tensor and scalar literals currently supported";
@@ -878,13 +879,23 @@ Stmt Pass::make() {
   return node;
 }
 
-// struct TupleRead
+// struct UnnamedTupleRead
 Expr TupleRead::make(Expr tuple, Expr index) {
   iassert(tuple.type().isTuple());
   TupleRead *node = new TupleRead;
   node->type = tuple.type().toTuple()->elementType;
   node->tuple = tuple;
   node->index = index;
+  return node;
+}
+
+// struct NamedTupleRead
+Expr NamedTupleRead::make(Expr tuple, std::string elementName) {
+  iassert(tuple.type().isNamedTuple());
+  NamedTupleRead *node = new NamedTupleRead;
+  node->type = tuple.type().toNamedTuple()->element(elementName).type;
+  node->tuple = tuple;
+  node->elementName = elementName;
   return node;
 }
 

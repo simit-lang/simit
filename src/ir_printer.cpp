@@ -153,6 +153,7 @@ void IRPrinter::visit(const Literal *op) {
     case Type::Element:
     case Type::Set:
     case Type::Tuple:
+    case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
       not_supported_yet;
@@ -272,6 +273,12 @@ void IRPrinter::visit(const TupleRead *op) {
   os << "(";
   print(op->index);
   os << ")";
+}
+
+void IRPrinter::visit(const NamedTupleRead *op) {
+  clearSkipParen();
+  print(op->tuple);
+  os << "." << op->elementName;
 }
 
 void IRPrinter::visit(const SetRead *op) {
