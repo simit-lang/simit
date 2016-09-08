@@ -158,6 +158,13 @@ Additional BSD Notice
 
 #include "lulesh.h"
 
+// DLU : using simit namespace
+#include "graph.h"
+#include "program.h"
+#include "mesh.h"
+#include <cmath>
+using namespace simit;
+
 
 /*********************************/
 /* Data structure implementation */
@@ -2343,6 +2350,9 @@ int main(int argc, char *argv[])
       printf("See help (-h) for more options\n\n");
    }
 
+   // DLU - Initialize Simit
+   simit::init("cpu", sizeof(double));
+
    // Set up the mesh and decompose. Assumes regular cubes for now
    Int_t col, row, plane, side;
    InitMeshDecomp(numRanks, myRank, &col, &row, &plane, &side);
@@ -2350,6 +2360,81 @@ int main(int argc, char *argv[])
    // Build the main data structure and initialize it
    locDom = new Domain(numRanks, col, row, plane, opts.nx,
                        side, opts.numReg, opts.balance, opts.cost) ;
+
+   // DLU - Create a graph and initialize it with Domain data
+   Set nodes;
+   Set elems(nodes, nodes, nodes, nodes, nodes, nodes, nodes, nodes);
+   // The fields of the nodes set
+   FieldRef<double,3> coord 	= nodes.addField<double,3>("coord");	// Nodal coordinates
+   FieldRef<double,3> vel     	= nodes.addField<double,3>("vel");		// Nodal velocities
+   FieldRef<double,3> a     	= nodes.addField<double,3>("a");		// Nodal accelerations
+   FieldRef<double,3> f     	= nodes.addField<double,3>("f");		// Nodal forces
+   FieldRef<double> nodalMass 	= nodes.addField<double>("nodalMass");	// Nodal mass
+   FieldRef<int,3> symm     	= nodes.addField<int,3>("symm");		// Nodes on symmetry planes
+
+   std::vector<ElementRef> nodeRefs;
+   // initialize nodes values with Domain
+   Index_t nidx = 0 ;
+   for (Index_t plane=0; plane<opts.nx+1; ++plane) {
+     for (Index_t row=0; row<opts.nx+1; ++row) {
+       for (Index_t col=0; col<opts.nx+1; ++col) {
+    	     ElementRef node = nodes.add();
+    	     nodeRefs.push_back(node);
+    	     coord.set(node, {locDom->x(nidx),locDom->y(nidx),locDom->z(nidx)});
+    	     vel.set(node, {locDom->xd(nidx),locDom->yd(nidx),locDom->zd(nidx)});
+    	     a.set(node, {locDom->xdd(nidx),locDom->ydd(nidx),locDom->zdd(nidx)});
+    	     f.set(node, {locDom->fx(nidx),locDom->fy(nidx),locDom->fz(nidx)});
+    	     nodalMass.set(node, locDom->nodalMass(nidx));
+    	     symm.set(node, {locDom->symmX(nidx),locDom->symmY(nidx),locDom->symmZ(nidx)});
+    	     ++nidx ;
+       }
+     }
+   }
+   // The fields of the elems set
+
+//   // Region information
+//   Int_t    m_numReg ;
+//   Int_t    m_cost; //imbalance cost
+//   Index_t *m_regElemSize ;   // Size of region sets
+//   Index_t *m_regNumList ;    // Region number per domain element
+//   Index_t **m_regElemlist ;  // region indexset
+//
+//   std::vector<Index_t>  m_nodelist ;     /* elemToNode connectivity */
+//
+//   std::vector<Index_t>  m_lxim ;  /* element connectivity across each face */
+//   std::vector<Index_t>  m_lxip ;
+//   std::vector<Index_t>  m_letam ;
+//   std::vector<Index_t>  m_letap ;
+//   std::vector<Index_t>  m_lzetam ;
+//   std::vector<Index_t>  m_lzetap ;
+//
+//   std::vector<Int_t>    m_elemBC ;  /* symmetry/free-surface flags for each elem face */
+
+   FieldRef<double,3> dxyz     	= elems.addField<double,3>("dxyz");		/* principal strains -- temporary */
+   FieldRef<double,3> delvel  	= elems.addField<double,3>("delvel");	/* velocity gradient -- temporary */
+   FieldRef<double,3> delx  	= elems.addField<double,3>("delx");		/* coordinate gradient -- temporary */
+   FieldRef<double> e     		= elems.addField<double>("e");   		/* energy */
+   FieldRef<double> p     		= elems.addField<double>("p");   		/* pressure */
+   FieldRef<double> q     		= elems.addField<double>("q");   		/* q */
+   FieldRef<double> ql    		= elems.addField<double>("ql");  		/* linear term for q */
+   FieldRef<double> qq    		= elems.addField<double>("qq");   		/* quadratic term for q */
+   FieldRef<double> v     		= elems.addField<double>("v");   		/* relative volume */
+   FieldRef<double> volo     	= elems.addField<double>("volo");   	/* reference volume */
+   FieldRef<double> vnew   		= elems.addField<double>("vnew");   	/* new relative volume -- temporary */
+   FieldRef<double> delv     	= elems.addField<double>("delv");   	/* m_vnew - m_v */
+   FieldRef<double> vdov     	= elems.addField<double>("vdov");    	/* volume derivative over volume */
+   FieldRef<double> arealg     	= elems.addField<double>("arealg");   	/* characteristic length of an element */
+   FieldRef<double> ss     		= elems.addField<double>("ss");        	/* "sound speed" */
+   FieldRef<double> elemMass    = elems.addField<double>("elemMass");   /* mass */
+
+   std::string codefile = "../lulesh.sim";
+   // Compile program and bind arguments
+   Program program;
+   program.loadFile(codefile);
+
+   Function LagrangeLeapFrog_sim = program.compile("LagrangeLeapFrog_sim");
+   LagrangeLeapFrog_sim.bind("nodes",  &nodes);
+   LagrangeLeapFrog_sim.bind("elems", &elems);
 
    // BEGIN timestep to solution */
    timeval start;
@@ -2361,6 +2446,7 @@ int main(int argc, char *argv[])
 
       TimeIncrement(*locDom) ;
       LagrangeLeapFrog(*locDom) ;
+      LagrangeLeapFrog_sim.run();
 
       if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
          printf("cycle = %d, time = %e, dt=%e\n",
