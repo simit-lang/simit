@@ -485,7 +485,15 @@ void IRRewriter::visit(const IndexExpr *op) {
 
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
-  Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
+
+  std::vector<Expr> neighbors(op->neighbors.size());
+  bool neighborsSame = true;
+  for (size_t i=0; i < op->neighbors.size(); ++i) {
+    neighbors[i] = rewrite(op->neighbors[i]);
+    if (neighbors[i] != op->neighbors[i]) {
+      neighborsSame = false;
+    }
+  }
 
   Expr through;
   if (op->through.defined()) {
@@ -501,8 +509,8 @@ void IRRewriter::visit(const Map *op) {
     }
   }
 
-  if (target == op->target && neighbors == op->neighbors &&
-      through == op->through && actualsSame) {
+  if (target == op->target && through == op->through && 
+      neighborsSame && actualsSame) {
     stmt = op;
   }
   else {

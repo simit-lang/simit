@@ -1035,10 +1035,12 @@ Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
 // struct Map
 Stmt Map::make(std::vector<Var> vars,
                Func function, std::vector<Expr> partial_actuals,
-               Expr target, Expr neighbors, Expr through,
+               Expr target, std::vector<Expr> neighbors, Expr through,
                ReductionOperator reduction) {
   iassert(target.type().isSet());
-  iassert(!neighbors.defined() || neighbors.type().isSet());
+  for (auto neighbor : neighbors) {
+    iassert(neighbor.type().isSet());
+  }
   //iassert(vars.size() == function.getResults().size());
   Map *node = new Map;
   node->vars = vars;

@@ -33,7 +33,7 @@ protected:
 
   // Arguments to map expr
   Expr targetSet;
-  Expr neighborSet;
+  std::vector<Expr> neighborSets;
   Expr throughSet;
 
   // Args to assembly func
@@ -65,8 +65,11 @@ protected:
   /// Replace element field writes with set field writes
   void visit(const FieldWrite *op);
 
-  /// Replace neighbor tuple reads with reads from target endpoints
+  /// Replace unnamed neighbor tuple reads with reads from target endpoints
   void visit(const TupleRead *op);
+
+  /// Replace named neighbor tuple reads with reads from target endpoints
+  void visit(const NamedTupleRead *op);
 
   /// Replace relative lattice indexing with computed indices
   void visit(const SetRead *op);

@@ -539,14 +539,15 @@ struct Map : public StmtNode {
   std::vector<Var> vars;
   Func function;
   Expr target;
-  Expr neighbors;
+  std::vector<Expr> neighbors;
   Expr through;
   std::vector<Expr> partial_actuals;
   ReductionOperator reduction;
 
-  static Stmt make(std::vector<Var> vars,
-                   Func function, std::vector<Expr> partial_actuals,
-                   Expr target, Expr neighbors=Expr(), Expr through=Expr(),
+  static Stmt make(std::vector<Var> vars, Func function, 
+                   std::vector<Expr> partial_actuals, Expr target, 
+                   std::vector<Expr> neighbors = std::vector<Expr>(), 
+                   Expr through=Expr(),
                    ReductionOperator reduction=ReductionOperator());
   void accept(IRVisitorStrict *v) const {v->visit((const Map*)this);}
 };

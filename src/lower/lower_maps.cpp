@@ -108,6 +108,11 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
         for (auto& index : op->indices) {
           if (isa<TupleRead>(index)) {
             indices.push_back(to<TupleRead>(index)->index);
+          } else if (isa<NamedTupleRead>(index)) {
+            const auto tupleRead = to<NamedTupleRead>(index);
+            const auto tupleType = tupleRead->tuple.type().toNamedTuple();
+            const auto index = tupleType->elementIndex(tupleRead->elementName);
+            indices.push_back((int)index);
           }
         }
         Expr indexExpr = TensorRead::make(locs[index], indices);

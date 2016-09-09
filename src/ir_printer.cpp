@@ -344,9 +344,8 @@ void IRPrinter::visit(const Map *op) {
 
   os << " to ";
   print(op->target);
-  if (op->neighbors.defined()) {
-    os << " with ";
-    print(op->neighbors);
+  if (!op->neighbors.empty()) {
+    os << " with " << util::join(op->neighbors);
   }
   if (op->reduction.getKind() != ReductionOperator::Undefined) {
     os << " reduce " << op->reduction;

@@ -333,16 +333,14 @@ struct NamedTupleType : TypeNode {
     return elementNames.find(elementName) != elementNames.end();
   }
 
-  const unsigned elementIndex(const std::string& elementName) const {
+  unsigned elementIndex(const std::string& elementName) const {
     iassert(hasElement(elementName)) << "Undefined element '" 
                                      << elementName << "'";
     return elementNames.at(elementName); 
   }
 
   const Field& element(const std::string& elementName) const {
-    iassert(hasElement(elementName)) << "Undefined element '" 
-                                     << elementName << "'";
-    return elements[elementNames.at(elementName)];
+    return elements[elementIndex(elementName)];
   }
 
   static Type make(std::vector<Field> elements) {

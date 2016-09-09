@@ -406,8 +406,8 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   
   std::vector<ir::Expr> endpoints;
   if (target.type().isUnstructuredSet()) {
-    for (const ir::Expr *endpoint :
-             target.type().toUnstructuredSet()->endpointSets) {
+    const auto targetSet = target.type().toUnstructuredSet();
+    for (const ir::Expr *endpoint : targetSet->endpointSets) {
       endpoints.push_back(*endpoint);
     }
   }
@@ -419,10 +419,8 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
   retExpr = ir::VarExpr::make(tmp);
 
-  // TODO: Should eventually support heterogeneous edge sets.
-  const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   const ir::Stmt mapStmt = ir::Map::make({tmp}, func, partialActuals, target,
-                                         endpoint, through, reduction);
+                                         endpoints, through, reduction);
   calls.push_back(mapStmt);
 }
 
