@@ -421,8 +421,6 @@ int MeshVol::saveHexObj(std::string filename) {
   return saveHexObj(filename.c_str());
 }
 
-int saveTetObj(std::string filename);
-
 void MeshVol::makeHexSurf()
 {
   //is a face exterior

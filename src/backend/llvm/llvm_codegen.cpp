@@ -59,8 +59,6 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
 }
 
 
-llvm::Constant* initializer(llvm::Type* type);
-
 
 llvm::Function *createPrototypeLLVM(const std::string& name,
                                     const vector<string>& argNames,
