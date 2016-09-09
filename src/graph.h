@@ -1026,7 +1026,7 @@ template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
   static_assert(sizeof...(dims) <= 2,
                 "TensorRef operator<< only currently supported for order <= 2");
-  return os;
+  return os << (T)t;
 }
 
 template <typename T, int r, int c>
