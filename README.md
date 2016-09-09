@@ -33,7 +33,7 @@ To perform an out-of-tree build of Simit do:
     cmake ..
     make -j8
 
-To run the test suite do (all tests should pass):
+To run the test suite do (all tests should pass, but ignore disabled tests):
 
     cd <simit-directory>
     ./build/bin/simit-test
