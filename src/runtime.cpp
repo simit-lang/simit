@@ -307,7 +307,7 @@ int lumatsolve(void** solverPtr,
                 int Xnn, int Xmm, Float** Xvals){
 #ifdef EIGEN
   auto solver=static_cast<SparseLU<SparseMatrix<Float,ColMajor>>*>(*solverPtr);
-  auto B = csr2eigen<Float>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+  auto B = csr2eigen<Float,ColMajor>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
   SparseMatrix<Float> X(Xn, Xm);
   X = solver->solve(B);
   X = X.transpose();
@@ -419,8 +419,8 @@ int lltmatsolve(void** solverPtr,
                  int Xn,  int Xm,  int** Xrowptr, int** Xcolidx,
                  int Xnn, int Xmm, Float** Xvals){
 #ifdef EIGEN
-  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float>>*>(*solverPtr);
-  auto B = csr2eigen<Float>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
+  auto solver=static_cast<SimplicialCholesky<SparseMatrix<Float,ColMajor>>*>(*solverPtr);
+  auto B = csr2eigen<Float,ColMajor>(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals);
   SparseMatrix<Float> X(Xn, Xm);
   X = solver->solve(B);
   X = X.transpose();
