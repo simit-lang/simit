@@ -152,7 +152,6 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
                                           op->fieldName);
       Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
-      std::cout << expr << std::endl;
     } else {
       not_supported_yet;
     }

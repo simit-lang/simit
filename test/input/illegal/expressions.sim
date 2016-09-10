@@ -228,6 +228,19 @@ export func main()
   map f to A;
 end
 
+%%% bad-map-9
+element E
+end
+
+extern B : set{E}(A);
+
+func f(a : E, b : (E*1))
+end
+
+export func main()
+  map f to B;
+end
+
 %%% bad-and
 export func main()
   1 and 2;

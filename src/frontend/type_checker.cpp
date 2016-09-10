@@ -57,7 +57,7 @@ void TypeChecker::visit(SetIndexSet::Ptr set) {
   const Type::Ptr type = env.getSymbolType(set->setName);
 
   // Check that index set pointed to by identifier is indeed of set type.
-  if (!set->setDef && !isa<SetType>(type)) {
+  if (!env.hasSetDefinition(set) && !isa<SetType>(type)) {
     std::stringstream errMsg;
     errMsg << "expected a set but '" << set->setName 
            << "' is of type " << toString(type);
@@ -76,8 +76,7 @@ void TypeChecker::visit(Endpoint::Ptr end) {
   retTypeChecked = typeCheck(end->set);
  
   if (retTypeChecked) {
-    const auto endSetType = env.getSetDefinition(end->set);
-    end->element = endSetType->element;
+    end->element = env.getSetDefinition(end->set)->element;
   }
 }
 
@@ -114,7 +113,11 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
 
   retTypeChecked = elementTypeChecked && latticeSetTypeChecked;
  
-  const auto latticeSetDef = type->latticePointSet->set->setDef;
+  if (!retTypeChecked) {
+    return;
+  }
+
+  const auto latticeSetDef = env.getSetDefinition(type->latticePointSet->set);
   const auto latticeSetName = type->latticePointSet->set->setName;
 
   // Check lattice point set is an unstructured set
@@ -126,8 +129,8 @@ void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
     return;
   }
 
-  const auto latticeSetArity = 
-      to<UnstructuredSetType>(latticeSetDef)->getArity();
+  const auto latticeSetType = to<UnstructuredSetType>(latticeSetDef);
+  const auto latticeSetArity = latticeSetType->getArity();
 
   // Check lattice point set is cardinality zero
   if (latticeSetArity != 0) {
@@ -388,8 +391,7 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
     loopVarType = makeTensorType(ScalarType::Type::INT);
   } else if (isa<IndexSetDomain>(stmt->domain) && typeChecked) {
     const auto setDomain = to<IndexSetDomain>(stmt->domain);
-    const auto setType = env.getSetDefinition(setDomain->set);
-    loopVarType = setType->element;
+    loopVarType = env.getSetDefinition(setDomain->set)->element;
   }
 
   env.addSymbol(stmt->loopVar->ident, loopVarType, Access::READ);
@@ -1281,8 +1283,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       const auto elemSource = elemType->source; 
       const auto elemName = elemType->ident;
 
-      const auto domainType = env.getSetDefinition(setIndexSet);
-      const auto domainElem = domainType->element;
+      const auto domainElem = env.getSetDefinition(setIndexSet)->element;
       const auto domainElemName = domainElem->ident;
 
       if (!domainElemName.empty() && domainElemName != elemName) {
@@ -1774,13 +1775,12 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   // Check that assembly function has been declared.
   if (!env.hasFunction(funcName)) {
     reportUndeclared("function", funcName, expr->func);
-    return;
   } else {
     func = env.getFunction(funcName);
   }
 
   // Check that target has been declared and is a (non-generic) set.
-  if (!typeCheck(expr->target)) {
+  if (!typeCheck(expr->target) || !env.getSymbolType(expr->target->setName)) {
     retTypeChecked = false;
   } else if (isa<GenericIndexSet>(expr->target)) {
     std::stringstream errMsg;
@@ -1792,7 +1792,9 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   
   // If through is declared, check that it is a lattice link set.
   if (expr->through) {
-    if (!typeCheck(expr->through)) {
+    const std::string throughSetName = expr->through->setName;
+
+    if (!typeCheck(expr->through) || !env.getSymbolType(throughSetName)) {
       retTypeChecked = false;
     } else if (isa<GenericIndexSet>(expr->through)) {
       std::stringstream errMsg;
@@ -1806,15 +1808,17 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
         errMsg << opString << " operation can only be applied through lattice "
                << "link sets";
         reportError(errMsg.str(), expr->through);
-      }
-      else if (to<LatticeLinkSetType>(throughSetType)
-               ->latticePointSet->set->setName !=
-               expr->target->setName) {
-        std::stringstream errMsg;
-        errMsg << opString << " operation can only be mapped through lattice "
-               << "link set with target " << expr->target->setName
-               << " as an endpoint";
-        reportError(errMsg.str(), expr->through);
+      } else {
+        const auto throughLatticeSet = to<LatticeLinkSetType>(throughSetType);
+        const auto latticePointSet = throughLatticeSet->latticePointSet->set;
+        
+        if (latticePointSet->setName != expr->target->setName) {
+          std::stringstream errMsg;
+          errMsg << opString << " operation can only be mapped through "
+                 << "lattice link set with target " << expr->target->setName
+                 << " as an endpoint";
+          reportError(errMsg.str(), expr->through);
+        }
       }
     }
   }
@@ -2676,8 +2680,8 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
         return false;
       }
 
-      return compareTypes(ltype->latticePointSet->set->setDef,
-                          rtype->latticePointSet->set->setDef);
+      return compareTypes(getSetDefinition(ltype->latticePointSet->set),
+                          getSetDefinition(rtype->latticePointSet->set));
     }
 
     return false;
