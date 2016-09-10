@@ -290,14 +290,14 @@ protected:
   virtual FIRNode::Ptr cloneNode();
 };
 
-struct LatticeLinkSetType : public SetType {
-  Endpoint::Ptr latticePointSet;
+struct GridSetType : public SetType {
+  Endpoint::Ptr underlyingPointSet;
   size_t        dimensions;
   
-  typedef std::shared_ptr<LatticeLinkSetType> Ptr;
+  typedef std::shared_ptr<GridSetType> Ptr;
   
   virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<LatticeLinkSetType>());
+    visitor->visit(self<GridSetType>());
   }
 
 protected:

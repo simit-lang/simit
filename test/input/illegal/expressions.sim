@@ -241,6 +241,19 @@ export func main()
   map f to B;
 end
 
+%%% bad-map-10
+element E
+end
+
+extern B : grid[2]{E}(A);
+
+func f(a : E, b : grid[2]{E}(A))
+end
+
+export func main()
+  map f to A through B;
+end
+
 %%% bad-and
 export func main()
   1 and 2;

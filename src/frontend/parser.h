@@ -87,7 +87,7 @@ private:
   fir::Type::Ptr                      parseType();
   fir::ElementType::Ptr               parseElementType();
   fir::SetType::Ptr                   parseUnstructuredSetType();
-  fir::SetType::Ptr                   parseLatticeLinkSetType();
+  fir::SetType::Ptr                   parseGridSetType();
   std::vector<fir::Endpoint::Ptr>     parseEndpoints();
   fir::Endpoint::Ptr                  parseEndpoint();
   fir::TupleElement::Ptr              parseTupleElement();

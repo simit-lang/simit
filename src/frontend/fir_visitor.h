@@ -17,7 +17,7 @@ struct Endpoint;
 struct UnstructuredSetType;
 struct HomogeneousEdgeSetType;
 struct HeterogeneousEdgeSetType;
-struct LatticeLinkSetType;
+struct GridSetType;
 struct TupleElement;
 struct NamedTupleType;
 struct TupleLength;
@@ -101,7 +101,7 @@ struct FIRVisitor {
   virtual void visit(std::shared_ptr<UnstructuredSetType>);
   virtual void visit(std::shared_ptr<HomogeneousEdgeSetType>);
   virtual void visit(std::shared_ptr<HeterogeneousEdgeSetType>);
-  virtual void visit(std::shared_ptr<LatticeLinkSetType>);
+  virtual void visit(std::shared_ptr<GridSetType>);
   virtual void visit(std::shared_ptr<TupleElement>);
   virtual void visit(std::shared_ptr<NamedTupleType>);
   virtual void visit(std::shared_ptr<TupleLength> op) {}

@@ -23,7 +23,7 @@ protected:
   virtual void visit(UnstructuredSetType::Ptr);
   virtual void visit(HomogeneousEdgeSetType::Ptr);
   virtual void visit(HeterogeneousEdgeSetType::Ptr);
-  virtual void visit(LatticeLinkSetType::Ptr);
+  virtual void visit(GridSetType::Ptr);
   virtual void visit(TupleElement::Ptr);
   virtual void visit(NamedTupleType::Ptr);
   virtual void visit(TupleLength::Ptr);

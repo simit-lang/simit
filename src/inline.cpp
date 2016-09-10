@@ -8,7 +8,7 @@
 #include "flatten.h"
 #include "intrinsics.h"
 #include "ir_codegen.h"
-#include "lattice_ops.h"
+#include "grid_ops.h"
 #include "stencils.h"
 
 using namespace std;
@@ -24,13 +24,13 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
                                         Var endpoints,
                                         std::map<TensorIndex,Var> locs,
                                         std::map<vector<int>, Expr> clocs,
-                                        vector<Var> latticeIndexVars) {
+                                        vector<Var> gridIndexVars) {
   this->endpoints = endpoints;
   this->locs = locs;
   this->clocs = clocs;
   this->reduction = map->reduction;
   this->targetLoopVar = targetLoopVar;
-  this->latticeIndexVars = latticeIndexVars;
+  this->gridIndexVars = gridIndexVars;
   this->storage = storage;
 
   Func kernel = map->function;
@@ -66,12 +66,12 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
   }
   if (this->throughSet.defined()) {
     this->throughEdges = *argIt++;
-    // TODO: We assume the lattice link set refers to the point set
+    // TODO: We assume the grid edge set refers to the point set
     // by the extern variable.
-    Expr pointsSet = this->throughEdges.getType().toLatticeLinkSet()
-        ->latticePointSet.getSet();
+    Expr pointsSet = this->throughEdges.getType().toGridSet()
+        ->underlyingPointSet.getSet();
     tassert(isa<VarExpr>(pointsSet))
-        << "Lattice link set " << this->throughEdges
+        << "Grid edge set " << this->throughEdges
         << " must refer to underlying point set via the extern variable";
     this->throughPoints = to<VarExpr>(pointsSet)->var;
   }
@@ -156,20 +156,20 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
       not_supported_yet;
     }
   }
-  // Read a field from a lattice offset element
+  // Read a field from a grid offset element
   else if (isa<SetRead>(op->elementOrSet) &&
            isa<VarExpr>(to<SetRead>(op->elementOrSet)->set)) {
     const SetRead *sr = to<SetRead>(op->elementOrSet);
-    // Lattice offset links
+    // Grid offset edges
     if (to<VarExpr>(sr->set)->var == throughEdges) {
       Expr setFieldRead = FieldRead::make(throughSet, op->fieldName);
       Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
     }
-    // Lattice offset points
+    // Grid offset points
     else if (to<VarExpr>(sr->set)->var == throughPoints) {
       Expr setFieldRead = FieldRead::make(
-          throughSet.type().toLatticeLinkSet()->latticePointSet.getSet(),
+          throughSet.type().toGridSet()->underlyingPointSet.getSet(),
           op->fieldName);
       Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
@@ -224,11 +224,11 @@ void MapFunctionRewriter::visit(const NamedTupleRead *op) {
 void MapFunctionRewriter::visit(const SetRead *op) {
   iassert(isa<VarExpr>(op->set)) << "Set read set must be a variable";
   const Var& setVar = to<VarExpr>(op->set)->var;
-  unsigned dims = throughEdges.getType().toLatticeLinkSet()->dimensions;
+  unsigned dims = throughEdges.getType().toGridSet()->dimensions;
   if (setVar == throughEdges) {
     iassert(op->indices.size() == dims*2);
-    iassert(latticeIndexVars.size() == dims);
-    // Index into link set assuming canonical ordering
+    iassert(gridIndexVars.size() == dims);
+    // Index into grid edge set assuming canonical ordering
     vector<int> offsets = getOffsets(op->indices);
     vector<int> srcOff, sinkOff;
     int dir = -1;
@@ -238,14 +238,14 @@ void MapFunctionRewriter::visit(const SetRead *op) {
       sinkOff.push_back(offsets[dims+i]);
       if (srcOff.back() != sinkOff.back()) {
         iassert(dir == -1)
-            << "Cannot have multiple offsets in relative lattice indexing";
+            << "Cannot have multiple offsets in relative grid indexing";
         iassert(abs(srcOff.back() - sinkOff.back()) == 1)
-            << "Cannot offset by more than 1 in lattice link indexing";
+            << "Cannot offset by more than 1 in grid edge indexing";
         dir = i;
         srcBase = (srcOff.back() < sinkOff.back());
       }
     }
-    iassert(dir != -1) << "Must have an offset in lattice link indexing";
+    iassert(dir != -1) << "Must have an offset in grid edge indexing";
     
     // Convert index offsets to a single offset expr
     vector<Expr> indices, base;
@@ -254,30 +254,30 @@ void MapFunctionRewriter::visit(const SetRead *op) {
       indices.push_back(ind);
     }
     base.push_back(Expr(0)); // Add directional base 0 value
-    for (const Var& v : latticeIndexVars) {
+    for (const Var& v : gridIndexVars) {
       base.push_back(v);
     }
     iassert(indices.size() == dims+1);
     iassert(base.size() == dims+1);
     
-    vector<Expr> finalIndices = getLatticeLinkOffsetIndices(
+    vector<Expr> finalIndices = getGridEdgeOffsetIndices(
         base, indices, throughSet);
-    expr = getLatticeLinkCoord(finalIndices, throughSet);
+    expr = getGridEdgeCoord(finalIndices, throughSet);
   }
   else if (setVar == throughPoints) {
     vector<Expr> indices, base;
     for (int ind : getOffsets(op->indices)) {
       indices.emplace_back(ind);
     }
-    for (const Var& v : latticeIndexVars) {
+    for (const Var& v : gridIndexVars) {
       base.emplace_back(v);
     }
     iassert(indices.size() == dims);
     iassert(base.size() == dims);
     
-    vector<Expr> finalIndices = getLatticeOffsetIndices(
+    vector<Expr> finalIndices = getGridPointOffsetIndices(
         base, indices, throughSet);
-    expr = getLatticeCoord(finalIndices, throughSet);
+    expr = getGridPointCoord(finalIndices, throughSet);
   }
   else {
     not_supported_yet;
@@ -297,9 +297,9 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
 }
 
 StencilContent* buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
-                                 Var latticeSet,
+                                 Var gridSet,
                                  std::map<vector<int>, Expr> &clocs) {
-  StencilContent *content = buildStencil(kernel, stencilVar, latticeSet);
+  StencilContent *content = buildStencil(kernel, stencilVar, gridSet);
   // Build clocs relative to loop var
   for (auto &kv : content->layout) {
     clocs[kv.first] = loopVar*Expr((int)content->layout.size()) + kv.second;
@@ -582,13 +582,13 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
   
   Var loopVar(targetVar.getName(), Int);
   int ndims = map->through.defined() ?
-      map->through.type().toLatticeLinkSet()->dimensions : 0;
-  vector<Var> latticeIndexVars;
+      map->through.type().toGridSet()->dimensions : 0;
+  vector<Var> gridIndexVars;
   for (int i = 0; i < ndims; ++i) {
-    latticeIndexVars.emplace_back(targetVar.getName()+"_d"+to_string(i), Int);
+    gridIndexVars.emplace_back(targetVar.getName()+"_d"+to_string(i), Int);
   }
 
-  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, latticeIndexVars,
+  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, gridIndexVars,
                                           rewriter, storage);
 
   Stmt inlinedMap;
@@ -601,19 +601,19 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
 
   Stmt loop;
   if (!map->through.defined()) {
-    iassert(latticeIndexVars.size() == 0);
+    iassert(gridIndexVars.size() == 0);
     ForDomain domain(map->target);
     loop = For::make(loopVar, domain, inlinedMapFunc);
   }
   else {
-    iassert(map->through.type().isLatticeLinkSet());
+    iassert(map->through.type().isGridSet());
     initializers.push_back(AssignStmt::make(loopVar, 0));
-    int dims = map->through.type().toLatticeLinkSet()->dimensions;
+    int dims = map->through.type().toGridSet()->dimensions;
     loop = Block::make(inlinedMapFunc, AssignStmt::make(
         loopVar, 1, CompoundOperator::Add));
     for (int i = 0; i < dims; ++i) {
-      loop = ForRange::make(latticeIndexVars[i], 0, IndexRead::make(
-          map->through, IndexRead::LatticeDim, i), loop);
+      loop = ForRange::make(gridIndexVars[i], 0, IndexRead::make(
+          map->through, IndexRead::GridDim, i), loop);
     }
   }
   

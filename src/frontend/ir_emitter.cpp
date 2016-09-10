@@ -54,11 +54,11 @@ void IREmitter::visit(HeterogeneousEdgeSetType::Ptr type) {
   emitUnstructuredSetType(type);
 }
 
-void IREmitter::visit(LatticeLinkSetType::Ptr type) {
+void IREmitter::visit(GridSetType::Ptr type) {
   const ir::Type elementType = emitType(type->element);
-  const ir::Expr latticePointSet = emitExpr(type->latticePointSet);
-  retType = ir::LatticeLinkSetType::make(
-      elementType, latticePointSet, type->dimensions);
+  const ir::Expr underlyingPointSet = emitExpr(type->underlyingPointSet);
+  retType = ir::GridSetType::make(
+      elementType, underlyingPointSet, type->dimensions);
 }
 
 void IREmitter::visit(TupleElement::Ptr elem) {

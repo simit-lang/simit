@@ -196,8 +196,8 @@ void IRPrinter::visit(const IndexRead *op) {
     case IndexRead::Endpoints:
       os << "endpoints";
       break;
-    case IndexRead::LatticeDim:
-      os << "latticedim[" << op->index << "]";
+    case IndexRead::GridDim:
+      os << "griddim[" << op->index << "]";
       break;
     default:
       not_supported_yet;

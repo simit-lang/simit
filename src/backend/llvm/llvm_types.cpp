@@ -65,8 +65,8 @@ llvm::StructType *llvmType(const ir::SetType *setType,
   // Delegate to the appropriate subclass type builder
   const ir::UnstructuredSetType *uSetType =
       dynamic_cast<const ir::UnstructuredSetType*>(setType);
-  const ir::LatticeLinkSetType *lSetType =
-      dynamic_cast<const ir::LatticeLinkSetType*>(setType);
+  const ir::GridSetType *lSetType =
+      dynamic_cast<const ir::GridSetType*>(setType);
   if (uSetType != nullptr) {
     return llvmType(*uSetType, addrspace, packed);
   }
@@ -100,7 +100,7 @@ llvm::StructType *llvmType(const ir::UnstructuredSetType& setType,
 }
 
 // TODO: replace anonymous struct with one struct per element and set type
-llvm::StructType *llvmType(const ir::LatticeLinkSetType& setType,
+llvm::StructType *llvmType(const ir::GridSetType& setType,
                            unsigned addrspace, bool packed) {
   const ElementType *elemType = setType.elementType.toElement();
   vector<llvm::Type*> llvmFieldTypes;

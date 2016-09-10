@@ -29,19 +29,19 @@ map<int, vector<int>> StencilLayout::getLayoutReversed() const {
   return reversed;
 }
 
-bool StencilLayout::hasLatticeSet() const {
-  return ptr->latticeSet.defined();
+bool StencilLayout::hasGridSet() const {
+  return ptr->gridSet.defined();
 }
 
-Var StencilLayout::getLatticeSet() const {
-  iassert(ptr->latticeSet.defined());
-  return ptr->latticeSet;
+Var StencilLayout::getGridSet() const {
+  iassert(ptr->gridSet.defined());
+  return ptr->gridSet;
 }
 
 std::ostream& operator<<(std::ostream& os, const StencilLayout& stencil) {
   os << "stencil";
-  if (stencil.hasLatticeSet()) {
-    os << "(" << stencil.getLatticeSet() << ")";
+  if (stencil.hasGridSet()) {
+    os << "(" << stencil.getGridSet() << ")";
   }
   os << endl;
 
@@ -69,7 +69,7 @@ vector<int> getOffsets(vector<Expr> offsets) {
   return out;
 }
 
-StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet) {
+StencilContent* buildStencil(Func kernel, Var stencilVar, Var gridSet) {
   std::map<vector<int>, int> layout; // layout of stencil for the storage
   int stencilSize = 0;
   Var tensorVar;
@@ -87,12 +87,13 @@ StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet) {
                 iassert(row.type().isElement() &&
                         col.type().isElement());
                 iassert(kernel.getArguments().size() >= 2)
-                    << "Kernel must have element and lattice set as arguments";
+                    << "Kernel must have element and grid edge set "
+                    << "as arguments";
                 // The first argument to the kernel is an alias for points[0,0,...]
                 Var origin = kernel.getArguments()[0];
-                Var links = kernel.getArguments()[kernel.getArguments().size()-1];
-                iassert(links.getType().isLatticeLinkSet());
-                int dims = links.getType().toLatticeLinkSet()->dimensions;
+                Var edges = kernel.getArguments()[kernel.getArguments().size()-1];
+                iassert(edges.getType().isGridSet());
+                int dims = edges.getType().toGridSet()->dimensions;
                 // We assume row index normalization has been performed already
                 iassert((isa<VarExpr>(row) && to<VarExpr>(row)->var == origin) ||
                         (isa<SetRead>(row) && util::isAllZeros(
@@ -121,7 +122,7 @@ StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet) {
         );
   StencilContent *content = new StencilContent;
   content->layout = layout;
-  content->latticeSet = latticeSet;
+  content->gridSet = gridSet;
   return content;
 }
 

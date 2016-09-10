@@ -22,14 +22,14 @@ public:
                      Var endpoints=Var(),
                      std::map<TensorIndex,Var> locs=std::map<TensorIndex,Var>(),
                      std::map<vector<int>, Expr> clocs={},
-                     vector<Var> latticeIndexVars={});
+                     vector<Var> gridIndexVars={});
 
 protected:
   std::map<Var,Var> resultToMapVar;
   Storage *storage;
 
   Expr targetLoopVar;
-  vector<Var> latticeIndexVars;
+  vector<Var> gridIndexVars;
 
   // Arguments to map expr
   Expr targetSet;
@@ -71,7 +71,7 @@ protected:
   /// Replace named neighbor tuple reads with reads from target endpoints
   void visit(const NamedTupleRead *op);
 
-  /// Replace relative lattice indexing with computed indices
+  /// Replace relative grid indexing with computed indices
   void visit(const SetRead *op);
 
   /// Replace function formal results with map actual results
