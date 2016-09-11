@@ -1,0 +1,101 @@
+%
+%  Strong form (poisson problem)
+%
+% - \nabla^2 u = f(x,y) in \Omega (domain)
+%            u = 0      on \Gamma (boundary)
+%
+%  solved using linear functions on a triangulated mesh
+%
+
+element Node
+    x    : vector[2](float); % position
+    edge : bool;             % true if part of the boundary
+    u    : float;            % solution
+end
+
+element Line
+end
+
+element Triangle
+end
+
+extern verts : set{Node};
+extern line  : set{Line}(verts, verts);
+extern tri   : set{Triangle}(verts, verts, verts);
+
+% source term / body forces (right-hand-side function of equation)
+func f(x : float, y : float) -> z : float
+    z = 5.0;
+end
+
+func assemble(t : Triangle, v : (Node*3)) -> (A : matrix[verts,verts](float),
+                                              b : vector[verts](float))
+    % each basis function is linear, i.e. v(x,y) = a*x + b*y + c
+    % moreover, it is a nodal basis,
+    %   v1(x1,y1) = 1;  v2(x1,y1) = 0;   v3(x1,y1) = 0;
+    %   v1(x2,y2) = 0;  v2(x2,y2) = 1;   v3(x2,y2) = 0;
+    %   v1(x3,y3) = 0;  v2(x3,y3) = 0;   v3(x3,y3) = 1;
+    %
+    % using this, we compute the coefficients a,b and c (for each function)
+    % by solving the system
+    %    [x1 y1 1]   | a1 |    | 1 |
+    %    [x2 y2 1] * | b1 |  = | 0 |
+    %    [x3 y3 1]   | c1 |    | 0 |
+    % 
+    % or, to compute *all* abc-coefficients at the same time
+    %    [x1 y1 1]   | a1  a2  a1|    | 1 0 0 |
+    %    [x2 y2 1] * | b1  b2  b3|  = | 0 1 0 |
+    %    [x3 y3 1]   | c1  c2  c3|    | 0 0 1 |
+    %
+    %        X     *      abc       =    I
+    %
+    var X : matrix[3,3](float) = 0.0;
+    for i in 0:3
+        for j in 0:2
+            X(i,j) = v(i).x(j);
+        end
+        X(i,2) = 1.0;
+    end
+    var area   : float              = det(X);
+    var abc    : matrix[3,3](float) = inv(X);
+    var mid    : vector[2](float)   = (v(0).x + v(1).x + v(2).x)/3.0; % triangle center
+
+    for i in 0:3
+        for j in 0:3
+            % skip edge functions
+            if not( v(i).edge or v(j).edge )
+                % poisson-equation a(u,v) = int( u_x*v_x + u_y*v_y )
+                %   in this case, v1_x = a1    v2_x = a2   v3_x = a3
+                %                 v1_y = b1    v2_y = b2   v3_y = b3
+                %   grad(v1) * grad(v3) = a1*a3 + b1*b3
+                A(v(i), v(j)) = (abc(0,i)*abc(0,j)+abc(1,i)*abc(1,j))*area;
+            end
+        end
+        
+        % integrate up body forces (right-hand side) for internal nodes
+        if not v(i).edge
+            b(v(i)) = 1.0/3.0 * f(mid(0), mid(1)) * area; % one-point gauss intergation
+        else % for the boundary we set something on the diagonal, and zero on the rhs
+             % might get contributions from several triangles, but that's ok
+             % since we have zero on the right-hand side
+            A(v(i), v(i)) = 1.0;
+        end
+    end
+end
+
+func identify_boundary(e : Line, inout v : (Node*2))
+    v(0).edge = true;
+    v(1).edge = true;
+end
+
+export func main()
+    % tag all boundary nodes (could be done by the mesh generation in c++)
+    apply identify_boundary to line;
+
+    % assemble system matrix and right-hand side
+    A, b = map assemble to tri reduce +;
+
+    % solve linear system of equations, store result in the Node set
+    verts.u = A \ b;
+end
+
