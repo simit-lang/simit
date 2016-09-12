@@ -79,7 +79,7 @@ llvm::Module *createNVVMModule(std::string name) {
 
 std::string generatePtx(llvm::Module *module, int devMajor, int devMinor) {
   std::string mcpu;
-  if (devMajor == 3 && devMinor >= 5 ||
+  if ((devMajor == 3 && devMinor >= 5) ||
       devMajor > 3) {
     mcpu = "sm_35";
   }
@@ -159,7 +159,7 @@ std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
   // Identify device by Compute API level
   const char *libdevice;
   int libdevice_length;
-  if (devMajor == 3 && devMinor >= 5 ||
+  if ((devMajor == 3 && devMinor >= 5) ||
       devMajor > 3) {
     libdevice = reinterpret_cast<const char*>(simit_gpu_libdevice_compute_35);
     libdevice_length = simit_gpu_libdevice_compute_35_length;

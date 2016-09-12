@@ -98,6 +98,7 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
       break;
     case ForDomain::NeighborsOf:
       os << d.set << ".neighborsOf[" << d.var << "]";
+      break;
     case ForDomain::Neighbors:
       os << d.set << ".neighbors[" << d.var << "]";
       break;
