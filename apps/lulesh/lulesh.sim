@@ -1,5 +1,6 @@
 element Node
     coord : vector[3](float);
+    coord_local : vector[3](float); % to simplify the reuse of CalcElemShapeFunctionDerivatives
     vel   : vector[3](float);
     a     : vector[3](float);
     f     : vector[3](float);
@@ -8,27 +9,1001 @@ element Node
 end
 
 element Elem
-    dxyz    : vector[3](float);
-    delvel  : vector[3](float);
-    delx    : vector[3](float);
-    e       : float;
-    p       : float;
-    q       : float;
-    ql      : float;
-    qq      : float;
-    v       : float;
-    volo    : float;
-    vnew    : float;
+    elemBC  : matrix[3,6](int); % elem face symm/free-surface flag  %%TODOi Use bool instead of int
+    dxyz    : vector[3](float); % strains
+    delvel  : vector[3](float); % velocity gradients
+    delx    : vector[3](float); % position gradients
+    e       : float;            % energy
+    p       : float;            % pressure
+    q       : float;            % artificial viscosity
+    ql      : float;            % linear term for q
+    qq      : float;            % quadratic term for q
+    v       : float;            % Relative volume
     delv    : float;
-    vdov    : float;
-    arealg  : float;
-    ss      : float;
-    elemMass: float;
+    volo    : float;            % Reference volume
+    vnew    : float;            % 
+    vdov    : float;            % volume derivative over volume
+    arealg  : float;            % Element characteristic length
+    ss      : float;            % sound speed
+    elemMass: float;            % Element mass
+end
+
+element Connect
+
 end
 
 extern nodes  : set{Node};
+%extern faces  : set{Face}(nodes,nodes,nodes,nodes);
+%extern cells  : set{Cell}(faces,faces,faces,faces,faces,faces);
+%extern conns  : set{Conn}(cells,nodes);
 extern elems  : set{Elem}(nodes,nodes,nodes,nodes,nodes,nodes,nodes,nodes);
+extern connects : set{Connect}(elems,elems,elems,elems,elems,elems,elems);
+
+extern time:vector[2](float);
+extern cycle:vector[2](int);
+extern deltatime:vector[2](float);
+extern stoptime:vector[2](float);
+extern dtfixed:vector[2](float);
+extern dtcourant:vector[2](float);
+extern dthydro:vector[2](float);
+extern deltatimemultlb:vector[2](float);
+extern deltatimemultub:vector[2](float);
+extern dtmax:vector[2](float);
+extern hgcoef:vector[2](float);
+extern u_cut:vector[2](float);
+extern qstop:vector[2](float);
+extern monoq_limiter_mult:vector[2](float);
+extern monoq_max_slope:vector[2](float);
+extern qlc_monoq:vector[2](float);
+extern qqc_monoq:vector[2](float);
+extern eosvmin:vector[2](float);
+extern eosvmax:vector[2](float);
+extern v_cut:vector[2](float);
+extern qqc:vector[2](float);
+extern dvovmax:vector[2](float);
+extern rho0:vector[2](float);
+extern ss4o3:vector[2](float);
+extern e_cut:vector[2](float);
+extern p_cut:vector[2](float);
+extern q_cut:vector[2](float);
+extern emin:vector[2](float);
+extern pmin:vector[2](float);
+
+
+% Masks for Boundary conditions
+const XIETAZETA_MP=[[1,0,0,0,0,0],
+                    [0,1,0,0,0,0],
+                    [0,0,1,0,0,0],
+                    [0,0,0,1,0,0],
+                    [0,0,0,0,1,0],
+                    [0,0,0,0,0,1]];
+const ptiny = 1.0e-36 ;
+
+%% TODOm : add abs and max to intrinsics 
+func abs(a:float)->r:float
+    if a<0.0
+        r=-a;
+    else
+        r=a;
+    end
+end
+func max(a:float,b:float)->r:float
+    if a>b
+        r=a;
+    else
+        r=b;
+    end
+end
+
+func CalcElemShapeFunctionDerivatives(local:bool,e:Elem, n:(Node*8))->
+                                     (B :vector[elems](vector[8](vector[3](float))), volume:vector[elems](float))
+    var coords:vector[8](vector[3](float));
+    if local
+        for i in 0:8
+            coords(i)=n(i).coord_local;
+        end
+    else
+        for i in 0:8
+            coords(i)=n(i).coord;
+        end
+    end
+    fjxi = 0.125 * ( (coords(6)-coords(0)) + (coords(5)-coords(3)) - (coords(7)-coords(1)) - (coords(4)-coords(2)) );
+	fjet = 0.125 * ( (coords(6)-coords(0)) - (coords(5)-coords(3)) + (coords(7)-coords(1)) - (coords(4)-coords(2)) );
+	fjze = 0.125 * ( (coords(6)-coords(0)) + (coords(5)-coords(3)) + (coords(7)-coords(1)) + (coords(4)-coords(2)) );
+
+	% compute cofactors 
+	cjxi = cross(fjet,fjze);
+    cjet = -cross(fjxi,fjze);
+    cjze = cross(fjxi,fjet);
+  
+    % calculate partials :
+    %    this need only be done for l = 0,1,2,3   since , by symmetry ,
+    %    (6,7,4,5) = - (0,1,2,3) .
+    B(e)(0) = -  cjxi  -  cjet  -  cjze;
+    B(e)(1) =    cjxi  -  cjet  -  cjze;
+    B(e)(2) =    cjxi  +  cjet  -  cjze;
+    B(e)(3) = -  cjxi  +  cjet  -  cjze;
+    B(e)(4) = -B(e)(2);
+    B(e)(5) = -B(e)(3);
+    B(e)(6) = -B(e)(0);
+    B(e)(7) = -B(e)(1);
+    
+    % calculate jacobian determinant (volume) 
+    volume(e) = 8.0 * dot(fjet,cjet);
+%%    println "  coords :";
+%%    for i in 0:8
+%%        print coords(i)(0)," ", coords(i)(1)," ",coords(i)(2), "\n";
+%%        print n(i).coord(0)," ", n(i).coord(1)," ",n(i).coord(2), "\n";
+%%    end
+%%    println "FJXI ", fjxi(0), fjxi(1), fjxi(2);
+end
+
+func SumElemFaceNormal(normal0:vector[3](float), normal1:vector[3](float),
+                       normal2:vector[3](float), normal3:vector[3](float),
+                       n0:vector[3](float), n1:vector[3](float), n2:vector[3](float), n3:vector[3](float))
+                       ->(r0:vector[3](float),r1:vector[3](float),r2:vector[3](float),r3:vector[3](float))
+                        
+    bisectX0 = 0.5 * (n3(0) + n2(0) - n1(0) - n0(0));
+    bisectY0 = 0.5 * (n3(1) + n2(1) - n1(1) - n0(1));
+    bisectZ0 = 0.5 * (n3(2) + n2(2) - n1(2) - n0(2));
+    bisectX1 = 0.5 * (n2(0) + n1(0) - n3(0) - n0(0));
+    bisectY1 = 0.5 * (n2(1) + n1(1) - n3(1) - n0(1));
+    bisectZ1 = 0.5 * (n2(2) + n1(2) - n3(2) - n0(2));
+    var area:vector[3](float);
+    area(0) = 0.25 * (bisectY0 * bisectZ1 - bisectZ0 * bisectY1);
+    area(1) = 0.25 * (bisectZ0 * bisectX1 - bisectX0 * bisectZ1);
+    area(2) = 0.25 * (bisectX0 * bisectY1 - bisectY0 * bisectX1);
+
+%println " normal0 ", normal0;%, normal1, normal2, normal3;
+%println " area ", area;
+
+    r0 =  area; 
+    r1 =  area;
+    r2 =  area;
+    r3 =  area;
+%    println " r0 ", r0;
+end
+
+func CalcElemNodeNormals(e:Elem, n:(Node*8))-> B :vector[elems](vector[8](vector[3](float)))
+    % evaluate face one: nodes 0, 1, 2, 3
+    B(e)(0),B(e)(1),B(e)(2),B(e)(3) = SumElemFaceNormal(B(e)(0),B(e)(1),B(e)(2),B(e)(3),n(0).coord,n(1).coord,n(2).coord,n(3).coord);
+
+ %   print " premier ", B(e)(0),"\n";
+ %   print " point ", n(0).coord, "\n";
+ %   print " point ", n(1).coord, "\n";
+ %   print " point ", n(2).coord, "\n";
+ %   print " point ", n(3).coord, "\n";
+
+    % evaluate face two: nodes 0, 4, 5, 1
+    B(e)(0),B(e)(4),B(e)(5),B(e)(1) = SumElemFaceNormal(B(e)(0),B(e)(4),B(e)(5),B(e)(1),n(0).coord,n(4).coord,n(5).coord,n(1).coord);
+ %   println " deux ", B(e)(0);
+ %   print " point ", n(0).coord, "\n";
+ %   print " point ", n(4).coord, "\n";
+ %   print " point ", n(5).coord, "\n";
+ %   print " point ", n(1).coord, "\n";
+    % evaluate face three: nodes 1, 5, 6, 2
+    B(e)(1),B(e)(5),B(e)(6),B(e)(2) = SumElemFaceNormal(B(e)(1),B(e)(5),B(e)(6),B(e)(2),n(1).coord,n(5).coord,n(6).coord,n(2).coord);
+    % evaluate face four: nodes 2, 6, 7, 3 
+    B(e)(2),B(e)(6),B(e)(7),B(e)(3) = SumElemFaceNormal(B(e)(2),B(e)(6),B(e)(7),B(e)(3),n(2).coord,n(6).coord,n(7).coord,n(3).coord);
+    % evaluate face five: nodes 3, 7, 4, 0
+    B(e)(3),B(e)(7),B(e)(4),B(e)(0) = SumElemFaceNormal(B(e)(3),B(e)(7),B(e)(4),B(e)(0),n(3).coord,n(7).coord,n(4).coord,n(0).coord);
+    % evaluate face six: nodes 4, 7, 6, 5 
+    B(e)(4),B(e)(7),B(e)(6),B(e)(5) = SumElemFaceNormal(B(e)(4),B(e)(7),B(e)(6),B(e)(5),n(4).coord,n(7).coord,n(6).coord,n(5).coord);
+%    println B(e);
+end
+
+func SumElemStressesToNodeForces(B:vector[elems](vector[8](vector[3](float))),stress:vector[elems](vector[3](float)),
+                                 e:Elem, inout n:(Node*8))%-> f :vector[nodes](vector[3](float))
+    for i in 0:8
+        %for j in 0:3
+            %f(n(i))(j) = -(stress(e)(j)*B(e)(i)(j));
+            n(i).f = n(i).f-(stress(e).*B(e)(i));
+        %end
+    end
+  %  println " B ", B(e);
+  %  println " stress ", stress(e);
+  %  println " n.f ", n(0).f;
+end
+
+func IntegrateStressForElems(stress:vector[elems](vector[3](float)), inout determ:vector[elems](float))
+    % Volume calculation involves extra work for numerical consistency
+	var B:vector[elems](vector[8](vector[3](float))); % shape function derivatives
+    B, determ = map CalcElemShapeFunctionDerivatives(false) to elems reduce + ;
+    var i=0;
+  %  for e in elems
+  %      if i<5
+  %          for k in 0:8
+  %              print "premier B " , B(e)(k)(0), " ", B(e)(k)(1), " ", B(e)(k)(2),"\n";
+  %          end
+  %      end
+  %      i=i+1;
+  %  end
+    B = 0.0;
+    B = map CalcElemNodeNormals to elems reduce + ;
+  %  for e in elems
+  %      if i<5
+  %          for k in 0:8
+  %              print "B " , B(e)(k)(0), " ", B(e)(k)(1), " ", B(e)(k)(2),"\n";
+  %          end
+  %      end
+  %      i=i+1;
+  %  end;
+    % copy nodal force contributions to global force arrray.
+    map SumElemStressesToNodeForces(B,stress) to elems reduce + ;
+end
+
+func InitStressTermsForElems(e:Elem)-> sig :vector[elems](vector[3](float))
+    % pull in the stresses appropriate to the hydro integration
+    sig(e)(0) = -e.p -e.q;
+    sig(e)(1) = -e.p -e.q;
+    sig(e)(2) = -e.p -e.q;
+end
+
+func TestPositiveVolume(volume:vector[elems](float), e:Elem)-> result:int
+    if volume(e)>0.0
+        result=1;
+    else
+        result=0;
+    end
+end
+
+func VoluDer(p0:vector[3](float),p1:vector[3](float),p2:vector[3](float),
+             p3:vector[3](float),p4:vector[3](float),p5:vector[3](float))-> dv: vector[3](float)
+    const twelfth = 1.0 / 12.0 ;
+
+    dv(0) = (p1(1) + p2(1)) * (p0(2) + p1(2)) - (p0(1) + p1(1)) * (p1(2) + p2(2)) +
+            (p0(1) + p4(1)) * (p3(2) + p4(2)) - (p3(1) + p4(1)) * (p0(2) + p4(2)) -
+            (p2(1) + p5(1)) * (p3(2) + p5(2)) + (p3(1) + p5(1)) * (p2(2) + p5(2));
+    dv(1) = - (p1(0) + p2(0)) * (p0(2) + p1(2)) + (p0(0) + p1(0)) * (p1(2) + p2(2)) -
+            (p0(0) + p4(0)) * (p3(2) + p4(2)) + (p3(0) + p4(0)) * (p0(2) + p4(2)) +
+            (p2(0) + p5(0)) * (p3(2) + p5(2)) - (p3(0) + p5(0)) * (p2(2) + p5(2));
+    dv(2) = - (p1(1) + p2(1)) * (p0(0) + p1(0)) + (p0(1) + p1(1)) * (p1(0) + p2(0)) -
+            (p0(1) + p4(1)) * (p3(0) + p4(0)) + (p3(1) + p4(1)) * (p0(0) + p4(0)) +
+            (p2(1) + p5(1)) * (p3(0) + p5(0)) - (p3(1) + p5(1)) * (p2(0) + p5(0));
+
+   dv(0) = dv(0)*twelfth;
+   dv(1) = dv(1)*twelfth;
+   dv(2) = dv(2)*twelfth;
+end
+
+func CalcElemVolumeDerivative(e:Elem, n:(Node*8))-> (dv : vector[elems](vector[8](vector[3](float))),
+                                                     determ:vector[elems](float))
+
+    dv(e)(0)=VoluDer(n(1).coord,n(2).coord,n(3).coord,n(4).coord,n(5).coord,n(7).coord);
+    dv(e)(3)=VoluDer(n(0).coord,n(1).coord,n(2).coord,n(7).coord,n(4).coord,n(6).coord);
+    dv(e)(2)=VoluDer(n(3).coord,n(0).coord,n(1).coord,n(6).coord,n(7).coord,n(5).coord);
+    dv(e)(1)=VoluDer(n(2).coord,n(3).coord,n(0).coord,n(5).coord,n(6).coord,n(4).coord);
+    dv(e)(4)=VoluDer(n(7).coord,n(6).coord,n(5).coord,n(0).coord,n(3).coord,n(1).coord);
+    dv(e)(5)=VoluDer(n(4).coord,n(7).coord,n(6).coord,n(1).coord,n(0).coord,n(2).coord);
+    dv(e)(6)=VoluDer(n(5).coord,n(4).coord,n(7).coord,n(2).coord,n(1).coord,n(3).coord);
+    dv(e)(7)=VoluDer(n(6).coord,n(5).coord,n(4).coord,n(3).coord,n(2).coord,n(0).coord);
+
+    determ(e) = e.volo * e.v;
+    % check for negative element volume
+    if e.v <= 0.0
+        print "VolumeError1";
+    end    
+end
+
+func CalcElemFBHourglassForce(nodeVel:vector[3](vector[8](float)),hourgam:matrix[4,8](float),
+                              coefficient:float,inout hgf:vector[8](vector[3](float)))
+    var hx:vector[3](vector[4](float));
+    for i in 0:4
+        for j in 0:3
+            hx(j)(i) = dot(hourgam(i,:),nodeVel(j));
+        end
+    end
+    for i in 0:8
+        for j in 0:3
+            hgf(i)(j) = coefficient * dot(hourgam(:,i),hx(j));
+        end
+    end
+end
+
+func CalcFBHourglassForceForElems(gamma:matrix[4,8](float),determ:vector[elems](float),
+                                  dv:vector[elems](vector[8](vector[3](float))), hgcoef:float,
+                                  e:Elem, inout n:(Node*8))
+    % Calculates the Flanagan-Belytschko anti-hourglass force.
+
+    %   compute the hourglass modes
+    var hgf:vector[8](vector[3](float));
+    var coefficient:float;
+    var hourgam:matrix[4,8](float);
+    var d1:vector[8](vector[3](float));
+    var volinv= 1.0 / determ(e);
+    var hourmod:vector[3](float);
+    for i in 0:4
+        hourmod=[0.0,0.0,0.0]';
+        for j in 0:8
+            hourmod = hourmod + n(j).coord*gamma(i,j) ;
+        end
+        for j in 0:8
+            hourgam(i,j) = gamma(i,j) - volinv*(dot(dv(e)(j),hourmod));
+%            print hourgam(i,j), " ";
+        end
+    end
+%        println "\n";
+    %   compute forces
+    volume13=sqrt(determ(e));
+    %%  TODOm change sqrt by cbrt and add it to intrinsics
+    coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13;
+    var nodeVel:vector[3](vector[8](float));
+    for i in 0:8
+        for j in 0:3
+            nodeVel(j)(i) = n(i).vel(j);
+        end
+    end
+    CalcElemFBHourglassForce(nodeVel,hourgam,coefficient,hgf);
+    for i in 0:8
+       n(i).f = n(i).f + hgf(i);
+  %     println n(i).f;
+   end
+end
+
+func CalcHourglassControlForElems(inout determ:vector[elems](float), hgcoef:float)
+    dv,determ = map CalcElemVolumeDerivative to elems;
+%    var i=0;
+%    for e in elems
+%        if i<5
+%            print " dv ", dv(e)(0), " ", dv(e)(1), " ", dv(e)(2), "\n";
+%        end
+%        i=i+1;
+%    end
+    var gamma:matrix[4,8](float);
+    gamma = [ [ 1.0, 1.0,-1.0,-1.0,-1.0,-1.0, 1.0, 1.0 ],
+              [ 1.0,-1.0,-1.0, 1.0,-1.0, 1.0, 1.0,-1.0 ],
+              [ 1.0,-1.0, 1.0,-1.0, 1.0,-1.0, 1.0,-1.0 ],
+              [-1.0, 1.0,-1.0, 1.0, 1.0,-1.0, 1.0,-1.0 ] ];
+    if hgcoef > 0.0
+        map CalcFBHourglassForceForElems(gamma,determ,dv,hgcoef) to elems;
+    end
+end
+
+func CalcVolumeForceForElems(hgcoef:float)
+	% Sum contributions to total stress tensor
+	stress = map InitStressTermsForElems to elems reduce +;
+	
+	% call elemlib stress integration loop to produce nodal forces from
+	% material stresses.
+    var determ:vector[elems](float);
+    IntegrateStressForElems(stress, determ);
+  %  for e in elems
+  %      print "determ ",  determ(e), "\n";
+  %  end
+    
+    % check for negative element volume
+    VolumeNegative = map TestPositiveVolume(determ) to elems reduce + ;
+    if VolumeNegative>0 print "VolumeError2"; end
+
+    CalcHourglassControlForElems(determ, hgcoef) ;
+end
+   
+func CalcForceForNodes(hgcoef:float)
+  	% Calcforce calls partial, force, hourq 
+  	CalcVolumeForceForElems(hgcoef);
+end
+
+
+func CalcAccelerationForNodes(inout n:Node)
+    n.a = n.f / n.nodalMass;
+end
+
+func ApplyAccelerationBoundaryConditionsForNodes(inout n:Node)
+    %% TODOi : Improvement possible with edgeset on Boundary nodes
+    for i in 0:3
+        if (n.symm(i)!=0)  n.a(i) = 0.0; end
+    end
+end
+
+func CalcVelocityForNodes(dt:float,u_cut:float,inout n:Node)
+    vel=n.vel+n.a*dt;
+    for i in 0:3
+        if abs(vel(i))<u_cut
+            n.vel(i)=0.0;
+        else
+            n.vel(i)=vel(i);
+        end
+    end
+end
+
+func CalcPositionForNodes(dt:float,inout n:Node)
+    n.coord = n.coord + n.vel*dt;
+end
+
+func LagrangeNodal(dt:float,hgcoef:float,u_cut:float)
+  	% time of boundary condition evaluation is beginning of step for force and
+   	% acceleration boundary conditions. 
+   	CalcForceForNodes(hgcoef);
+
+    map CalcAccelerationForNodes to nodes;
+%    for n in nodes
+%        println " Acceleration ", n.a(0), " ",n.a(1), " ", n.a(2);
+%    end 
+   
+    map ApplyAccelerationBoundaryConditionsForNodes to nodes;
+%    for n in nodes
+%        println " Acceleration ", n.a(0), " ",n.a(1), " ", n.a(2);
+%    end
+
+    map CalcVelocityForNodes(dt,u_cut) to nodes;
+%    for n in nodes
+%        println " Velocities ", n.vel(0), " ",n.vel(1), " ", n.vel(2);
+%    end 
+
+    map CalcPositionForNodes(dt) to nodes;
+%    for n in nodes
+%        println " Position ", n.coord(0), " ", n.coord(1), " ", n.coord(2);
+%    end 
+end
+
+func CalcElemVolume(nodeCoord:vector[8](vector[3](float)))->volume:float
+    const twelfth = 1.0 / 12.0 ;
+    d61 = nodeCoord(6)-nodeCoord(1);
+    d70 = nodeCoord(7)-nodeCoord(0);
+    d63 = nodeCoord(6)-nodeCoord(3);
+    d20 = nodeCoord(2)-nodeCoord(0);
+    d50 = nodeCoord(5)-nodeCoord(0);
+    d64 = nodeCoord(6)-nodeCoord(4);
+    d31 = nodeCoord(3)-nodeCoord(1);
+    d72 = nodeCoord(7)-nodeCoord(2);
+    d43 = nodeCoord(4)-nodeCoord(3);
+    d57 = nodeCoord(5)-nodeCoord(7);
+    d14 = nodeCoord(1)-nodeCoord(4);
+    d25 = nodeCoord(2)-nodeCoord(5);
+
+    volume = twelfth*(dot(d31+d72,cross(d63,d20))+dot(d43+d57,cross(d64,d70))+dot(d14+d25,cross(d61,d50)));
+end
+
+func AreaFace(X0:vector[3](float),X1:vector[3](float),X2:vector[3](float),X3:vector[3](float))->area:float
+    f=(X2-X0)-(X3-X1);
+    g=(X2-X0)+(X3-X1);
+    area= dot(f,f)*dot(g,g)-dot(f,g)*dot(g,f);
+end
+
+func CalcElemCharacteristicLength(nodeCoord:vector[8](vector[3](float)),volume:float)->charLength:float
+    charLength=AreaFace(nodeCoord(0),nodeCoord(1),nodeCoord(2),nodeCoord(3));
+    charLength=max(charLength,AreaFace(nodeCoord(4),nodeCoord(5),nodeCoord(6),nodeCoord(7)));
+    charLength=max(charLength,AreaFace(nodeCoord(0),nodeCoord(1),nodeCoord(5),nodeCoord(4)));
+    charLength=max(charLength,AreaFace(nodeCoord(1),nodeCoord(2),nodeCoord(6),nodeCoord(5)));
+    charLength=max(charLength,AreaFace(nodeCoord(2),nodeCoord(3),nodeCoord(7),nodeCoord(6)));
+    charLength=max(charLength,AreaFace(nodeCoord(3),nodeCoord(0),nodeCoord(4),nodeCoord(7)));
+    charLength = 4.0 * volume / sqrt(charLength);
+end
+
+func CalcKinematicsForElems(dt:float, inout e:Elem, inout n:(Node*8))->vnew:vector[elems](float)
+    % volume calculations
+    var nodeCoord:vector[8](vector[3](float));
+    
+    for i in 0:8
+        for j in 0:3
+            nodeCoord(i)(j) = n(i).coord(j);
+            n(i).coord_local(j) = n(i).coord(j)-0.5*dt*n(i).vel(j);
+        end
+    end
+
+%    print nodeCoord;
+    volume = CalcElemVolume(nodeCoord);
+    vnew(e) = volume / e.volo ;
+    e.delv = vnew(e) - e.v ;
+    % set characteristic length
+    e.arealg = CalcElemCharacteristicLength(nodeCoord, volume);
+end
+
+func CalcLagrangeElements(vnew:vector[elems](float), inout e:Elem, inout n:(Node*8))
+    e.vdov = e.dxyz(0) + e.dxyz(1) + e.dxyz(2);
+    e.dxyz = e.dxyz - e.vdov / 3.0;
+    if vnew(e) <= 0.0
+        print "VolumeError3";
+    end
+end
+
+func CalcElemVelocityGradient(B:vector[elems](vector[8](vector[3](float))),detJ:vector[elems](float),
+                              inout e:Elem, n:(Node*8))
+    e.dxyz = 1.0 / detJ(e) * (B(e)(0).*(n(0).vel-n(6).vel)
+                             +B(e)(1).*(n(1).vel-n(7).vel)
+                             +B(e)(2).*(n(2).vel-n(4).vel)
+                             +B(e)(3).*(n(3).vel-n(5).vel));
+end
+
+func CalcMonotonicQGradientsForElems(vnew:vector[elems](float), inout e:Elem, n:(Node*8))
+    vol = e.volo * vnew(e) ;
+    mnorm = 1.0 / (vol + ptiny);
+    dj = -0.25*((n(0).coord+n(1).coord+n(5).coord+n(4).coord)-(n(3).coord+n(2).coord+n(6).coord+n(7).coord));
+    di = 0.25*((n(1).coord+n(2).coord+n(6).coord+n(5).coord)-(n(0).coord+n(3).coord+n(7).coord+n(4).coord));
+    dk = 0.25*((n(4).coord+n(5).coord+n(6).coord+n(7).coord)-(n(0).coord+n(1).coord+n(2).coord+n(3).coord));
+    % find delvk and delxk ( i cross j ) 
+    var a:vector[3](float);
+    var dv:vector[3](float);
+    a = cross(di,dj);
+    e.delx(2) = vol / sqrt(a(0)*a(0)+a(1)*a(1)+a(2)*a(2) + ptiny) ;
+    a = a*mnorm;
+    dv = 0.25*((n(4).vel+n(5).vel+n(6).vel+n(7).vel) - (n(0).vel+n(1).vel+n(2).vel+n(3).vel));
+    e.delvel(2) = a(0)*dv(0)+a(1)*dv(1)+a(2)*dv(2);
+    % find delxi and delvi ( j cross k ) 
+    a = cross(dj,dk);
+    e.delx(0) = vol / sqrt(a(0)*a(0)+a(1)*a(1)+a(2)*a(2) + ptiny) ;
+    a = a*mnorm;
+    dv = 0.25*((n(1).vel+n(2).vel+n(6).vel+n(5).vel) - (n(0).vel+n(3).vel+n(7).vel+n(4).vel));
+    e.delvel(0) = a(0)*dv(0)+a(1)*dv(1)+a(2)*dv(2);
+    % find delxj and delvj ( k cross i )
+    a = cross(dk,di);
+    e.delx(1) = vol / sqrt(a(0)*a(0)+a(1)*a(1)+a(2)*a(2) + ptiny) ;
+    a = a*mnorm;
+    dv = -0.25*((n(0).vel+n(1).vel+n(5).vel+n(4).vel) - (n(3).vel+n(2).vel+n(6).vel+n(7).vel));
+    e.delvel(1) = a(0)*dv(0)+a(1)*dv(1)+a(2)*dv(2);
+end
+
+func CalcMonotonicQForElems(vnew:vector[elems](float),
+                            monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float,
+                            c:Connect, inout e:(Elem*7))
+    var mnorm:float;
+    var delvm:vector[3](float);
+    var delvp:vector[3](float);
+    var phi:vector[3](float);
+    var mask:vector[3](int);
+    % compute phi
+    for i in 0:3
+	    mnorm = 1.0 / (e(0).delvel(i)+ ptiny ) ;
+        var maskIndice=i*2;
+	    mask=e(0).elemBC*XIETAZETA_MP(:,maskIndice);
+        var bcMask=mask(0)+mask(1)+mask(2);
+	    if  bcMask > 1
+	        print("Error in Boundary Conditions");
+	    elif mask(0)==1 or bcMask== 0
+            if i==0
+                delvm(0) = e(1).delvel(i);
+            elif i==1
+                delvm(1) = e(3).delvel(i);
+            else
+                delvm(2) = e(5).delvel(i);
+            end
+	        %delvm = e(0).delvel(domain.lxim(i))(0)
+	        %delvm = e(0).delvel(domain.letam(i))(0)
+	        %delvm = e(0).delvel(domain.lzetam(i))(0)
+        elif mask(1)==1
+	        delvm(i)=e(0).delvel(i);
+	    elif mask(2)==1
+	        delvm(i)=0.0;
+	    end
+        maskIndice=maskIndice+1;
+	    mask=e(0).elemBC*XIETAZETA_MP(:,maskIndice);
+        bcMask=mask(0)+mask(1)+mask(2);
+        if bcMask > 1
+	        print("Error in Boundary Conditions");
+	    elif mask(0)==1 or bcMask== 0
+            %if i==0 println " dtc "; end
+            if i==0
+                delvp(0) = e(2).delvel(i);
+            elif i==1
+                delvp(1) = e(4).delvel(i);
+            else
+                delvp(2) = e(6).delvel(i);
+            end
+	        %delvp = e(0).delvel(domain.lxip(i))(0)
+	        %delvp = e(0).delvel(domain.letap(i))(0)
+	        %delvp = e(0).delvel(domain.lzetap(i))(0)
+	    elif mask(1)==1
+            %if i==0 println " dta "; end
+	        delvp(i)=e(0).delvel(i);
+	    elif mask(2)==1
+            %if i==0 println " dtb "; end
+	        delvp(i)=0.0;
+	    end    
+
+        %if i==0 print " delvp ", delvp(i), "\n"; % " delvp ", delvp(i), "\n";
+        %end
+        
+	    delvm(i) = delvm(i) * mnorm ;
+	    delvp(i) = delvp(i) * mnorm ;
+	
+	    phi(i) = 0.5 * ( delvm(i) + delvp(i) ) ;
+
+	
+	    delvm(i) = delvm(i) * monoq_limiter_mult ;
+	    delvp(i) = delvp(i) * monoq_limiter_mult ;
+	
+	    if ( delvm(i) < phi(i) ) phi(i) = delvm(i); end
+	    if ( delvp(i) < phi(i) ) phi(i) = delvp(i); end
+	    if ( phi(i) < 0.0) phi(i) = 0.0 ; end
+	    if ( phi(i) > monoq_max_slope) phi(i) = monoq_max_slope; end
+    end
+    %    print " phi ", phi(0), " " , phi(1), " ", phi(2), "\n";
+        
+    % Remove length scale
+    var qlin:float;
+    var qquad:float;
+    Id=[1.0,1.0,1.0]';
+    if e(0).vdov > 0.0 
+        qlin  = 0.0 ;
+        qquad = 0.0 ;
+    else 
+        var delvx  = e(0).delvel .* e(0).delx ;
+
+        if ( delvx(0) > 0.0 ) delvx(0) = 0.0 ; end
+        if ( delvx(1) > 0.0 ) delvx(1) = 0.0 ; end
+        if ( delvx(2) > 0.0 ) delvx(2) = 0.0 ; end
+%        print " delvx ", delvx(0), " " , delvx(1), " ", delvx(2), "\n";
+
+        rho = e(0).elemMass / (e(0).volo * vnew(e(0))) ;
+  %      print " rho ", rho, "\n";
+        qlin = -qlc_monoq * rho * (dot(delvx,Id-phi));
+  %      print " qlc_monoq ", qlc_monoq, "\n";
+        qquad = qqc_monoq * rho * (dot(delvx.*delvx,Id-(phi.*phi)));
+    end
+    e(0).qq = qquad ;
+    e(0).ql = qlin  ;
+end
+
+func TestArticialViscosity(qstop:float,e:Elem)-> result:bool
+    result=(e.q>qstop);
+end
+
+func CalcQForElems(vnew:vector[elems](float), monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float,qstop:float)
+    % MONOTONIC Q option
+    % TODOm : Take care of ghost zone
+%%      Int_t allElem = numElem +  /* local elem */
+%%            2*domain.sizeX()*domain.sizeY() + /* plane ghosts */
+%%            2*domain.sizeX()*domain.sizeZ() + /* row ghosts */
+%%            2*domain.sizeY()*domain.sizeZ() ; /* col ghosts */
+%%
+%%      domain.AllocateGradients(numElem, allElem);
+%%
+    % Calculate velocity gradients
+    map CalcMonotonicQGradientsForElems(vnew) to elems;
+%    for e in elems
+%        println " delv ", e.delvel(0), " ", e.delvel(1), " ", e.delvel(2);
+%    end
+    map CalcMonotonicQForElems(vnew,monoq_limiter_mult,monoq_max_slope,qlc_monoq,qqc_monoq) to connects;
+
+    % Don't allow excessive artificial viscosity 
+    Viscosity = map TestArticialViscosity(qstop) to elems;
+    if Viscosity  print "QStopError";  end
+end
+
+func ApplyMaterialPropertiesForElems(eosvmin:float, eosvmax: float,
+                                     inout vnew:vector[elems](float), inout e:Elem, n:(Node*8))
+    % Bound the updated relative volumes with eosvmin/max
+    if eosvmin != 0.0 and vnew(e) < eosvmin
+        vnew(e) = eosvmin ;
+    end
+    if eosvmax != 0.0 and vnew(e) > eosvmax
+        vnew(e) = eosvmax ;
+    end
+
+    %% This check may not make perfect sense in LULESH, but
+    %% it's representative of something in the full code -
+    %% just leave it in, please
+    var vc = e.v;
+    if eosvmin != 0.0 and vc < eosvmin
+        vc = eosvmin ;
+    end
+    if eosvmax != 0.0 and vc > eosvmax
+        vc = eosvmax ;
+    end
+    if vc <= 0.0  print "VolumeError4";  end
+end
+
+func CalcSoundSpeedForElems(vnew:vector[elems](float), rho0:float, enewc:float,
+                            pnewc:float, pbvc:float, bvc:float, ss4o3:float,inout e:Elem)
+    var ssTmp = (pbvc * enewc + vnew(e) * vnew(e) * bvc * pnewc) / rho0;
+    if ssTmp <= 0.1111111e-36
+        ssTmp = 0.3333333e-18;
+    else
+        ssTmp = sqrt(ssTmp);
+    end
+    e.ss=ssTmp ;
+end
+
+func CalcPressureForElems(inout p_new:float, inout bvc:float, inout pbvc:float, e_old:float,
+                          compression:float, pmin:float, p_cut:float, eosvmax:float,
+                          vnew:vector[elems](float), e:Elem)
+    c1s = 2.0/3.0 ;
+    bvc = c1s *( compression + 1.0);
+    pbvc = c1s;
+
+    p_new = bvc * e_old ;
+    if abs(p_new) <  p_cut
+        p_new = 0.0 ;
+    end
+    if vnew(e) >= eosvmax
+        p_new = 0.0 ;
+    end
+    if p_new < pmin
+        p_new = pmin ;
+    end
+end
+
+func CalcEnergyForElems(inout p_new:float, inout e_new:float, inout q_new:float, inout bvc:float, inout pbvc:float,
+                        p_old:float, e_old:float, q_old:float, compression:float, compHalfStep:float,
+                        work:float, delvc:float, pmin:float, p_cut:float, e_cut:float, q_cut:float, emin:float,
+                        qq_old:float, ql_old:float, rho0:float, eosvmax:float,
+                        vnew:vector[elems](float), e:Elem)
+    var pHalfStep:float;
+    %print "e_new ", e_new, " q_new ", q_new, " bvc ", bvc, " pbvc ", pbvc, " compression ",compression, " compHalfStep ", compHalfStep, " delvc ", delvc, "\n\n";
+
+    e_new = e_old - 0.5 * delvc * p_old + q_old + 0.5 * work;
+    if e_new < emin
+        e_new = emin ;
+    end
+
+    CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, pmin, p_cut, eosvmax, vnew, e);
+
+    vhalf = 1.0 / 1.0 + compHalfStep ;
+    if delvc > 0.0
+        q_new = 0.0 ;
+    else
+        var ssc = (pbvc * e_new + vhalf * vhalf * bvc * pHalfStep ) / rho0 ;
+        if ssc <= 0.1111111e-36
+            ssc = 0.3333333e-18;
+        else
+            ssc = sqrt(ssc) ;
+        end
+        q_new = (ssc*ql_old + qq_old) ;
+    end
+    e_new = e_new + 0.5 * delvc
+          * (3.0*(p_old + q_old)
+          - 4.0*(pHalfStep + q_new)) ;
+    e_new = e_new + 0.5 * work;
+%    if e_new != 0.0
+ %       println "e_new1 " , e_new;
+%    end
+    
+    if abs(e_new) < e_cut
+        e_new = 0.0 ;
+    end
+    if e_new < emin
+        e_new = emin ;
+    end
+    
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, pmin, p_cut, eosvmax, vnew, e);
+
+    sixth = 1.0 / 6.0 ;
+    var q_tilde:float ;
+    if delvc > 0.0
+        q_tilde = 0.0 ;
+    else
+        var ssc = ( pbvc * e_new + vnew(e) * vnew(e) * bvc * p_new ) / rho0 ;
+        if ssc <= 0.1111111e-36
+            ssc = 9.3333333e-18 ;
+        else
+            ssc = sqrt(ssc) ;
+        end
+        q_tilde = (ssc*ql_old + qq_old) ;
+    end
+    e_new = e_new - ( 7.0*(p_old + q_old)
+                    - 8.0*(pHalfStep + q_new)
+                    + (p_new + q_tilde)) * delvc*sixth ;
+%    if e_new != 0.0
+%        println "e_new2 " , e_new;
+%    end
+    if abs(e_new) < e_cut
+        e_new = 0.0 ;
+    end
+    if e_new < emin
+        e_new = emin ;
+    end
+
+    CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, pmin, p_cut, eosvmax, vnew, e);
+
+    if delvc <= 0.0
+        var ssc = ( pbvc * e_new + vnew(e) * vnew(e) * bvc * p_new ) / rho0 ;
+        if ssc <= 0.1111111e-36
+            ssc = 0.3333333e-18 ;
+        else
+            ssc = sqrt(ssc) ;
+        end
+        q_new = (ssc*ql_old + qq_old) ;
+        if abs(q_new) < q_cut
+            q_new = 0.0 ;
+        end
+    end
+
+%    if e_new != 0.0
+%        println "e_new3 " , e_new;
+%    end
+
+end
+
+func EvalEOSForElems(eosvmin:float, eosvmax:float, rho0:float, ss4o3:float,
+                     e_cut:float, p_cut:float, q_cut:float, emin:float, pmin:float,
+                     vnew:vector[elems](float),inout e:Elem, n:(Node*8))
+    var p_new=0.0;
+    var e_new=0.0;
+    var q_new=0.0;
+    var bvc=0.0;
+    var pbvc=0.0;
+    var work=0.0;
+
+for i in 0:2
+    e_old = e.e ;
+    delvc = e.delv ;
+    var p_old = e.p ;
+    q_old = e.q ;
+    qq_old = e.qq ;
+    ql_old = e.ql ;
+
+    var compression = 1.0 / vnew(e) - 1.0;
+    vchalf = vnew(e) - e.delv * 0.5;
+    var compHalfStep = 1.0 / vchalf - 1.0;
+    % Check for v > eosvmax or v < eosvmin 
+    if eosvmin != 0.0
+        if vnew(e) <= eosvmin
+            compHalfStep = compression;
+        end
+    end
+    if eosvmax != 0.0 
+        if vnew(e) >= eosvmax
+            p_old = 0.0 ;
+            compression = 0.0 ;
+            compHalfStep = 0.0 ;
+        end
+    end
+
+ %   println " TURN ", i;
+    
+    CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
+                         p_old, e_old,  q_old, compression, compHalfStep,
+                         work,  delvc, pmin,
+                         p_cut, e_cut, q_cut, emin,
+                         qq_old, ql_old, rho0, eosvmax, vnew, e);
+end
+    e.p = p_new ;
+    e.e = e_new ;
+    e.q = q_new ;
+
+    CalcSoundSpeedForElems(vnew, rho0, e_new, p_new, pbvc, bvc, ss4o3, e);
+end
+
+func UpdateVolumesForElems(vnew:vector[elems](float), v_cut:float, inout e:Elem, n:(Node*8))
+    vne=vnew(e)-1.0;
+    if abs(vne) < v_cut
+        e.v=1.0;
+    else
+        e.v=vnew(e);
+    end
+end
+
+func LagrangeElements(dt:float,qstop:float, monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float,eosvmin:float,eosvmax:float,v_cut:float,rho0:float,ss4o3:float,e_cut:float, p_cut:float, q_cut:float, emin:float, pmin:float)
+    var vnew:vector[elems](float);
+    vnew=0.0;
+    vnew = map CalcKinematicsForElems(dt) to elems; % vnew relative vol -- temp
+    B, detJ = map CalcElemShapeFunctionDerivatives(true) to elems reduce + ;
+    % put velocity gradient quantities into their global arrays.
+    map CalcElemVelocityGradient(B,detJ) to elems;
+    map CalcLagrangeElements(vnew) to elems;
+ %   for e in elems
+ %       println " vnew ", vnew(e);
+ %   end
+    
+    % Calculate Q.  (Monotonic q option requires communication)
+    CalcQForElems(vnew,monoq_limiter_mult,monoq_max_slope,qlc_monoq,qqc_monoq,qstop);
+
+ %   for e in elems
+ %       println " qq ", e.qq, " ql ", e.ql;
+ %   end
+ 
+    map ApplyMaterialPropertiesForElems(eosvmin,eosvmax,vnew) to elems;
+    map EvalEOSForElems(eosvmin,eosvmax,rho0,ss4o3,e_cut,p_cut,q_cut,pmin,emin,vnew) to elems;
+    map UpdateVolumesForElems(vnew, v_cut) to elems ;
+    %map CalcLagrangeElements(vnew) to elems;
+    var i=0;
+    for e in elems
+        if i < 5
+            println " BILAN : volume ", e.v, " energy ", e.e,
+            " arealg ", e.arealg,
+            " pressure ",e.p ," q ", e.q,
+            " qq ",e.qq, " ql ", e.ql,
+            " volo ", e.volo, " vdov ", e.vdov,
+            " delv ", e.delv, " ss ", e.ss, " elemMass ", e.elemMass;
+        i=i+1;
+        end
+    end
+end
+
+func CalcCourantConstraintForElems(qqc:float, dtcourant:float, inout e:Elem, n:(Node*8))->dt:vector[elems](float)
+    qqc2 = 64.0 * qqc * qqc ;
+    var dtf = e.ss*e.ss;
+    if e.vdov < 0.0
+        dtf = dtf + qqc2 * e.arealg * e.arealg * e.vdov * e.vdov ;
+    end
+    dtf = sqrt(dtf) ;
+    dtf = e.arealg / dtf ;
+
+    dt(e)=dtcourant;
+    if e.vdov != 0.0 and dtf < dtcourant
+        dt(e) = dtf ;
+    end
+end
+
+func CalcHydroConstraintForElems(dvovmax:float, dthydro:float, inout e:Elem, n:(Node*8))->dt:vector[elems](float)
+    dt(e) = dthydro ;
+    if e.vdov != 0.0
+        dtdvov = dvovmax / (abs(e.vdov)+ 1.0e-20) ;
+        if (dthydro > dtdvov)  dt(e) = dtdvov ;  end
+    end
+end
+
+func CalcTimeConstraintsForElems(inout dtcourant:float,inout dthydro:float,qqc:float,dvovmax:float)
+    % Initialize conditions to a very large value
+    dtcourant = 1.0e+20;
+    dthydro = 1.0e+20;
+    % evaluate time constraint
+    dtc = map CalcCourantConstraintForElems(qqc, dtcourant) to elems ;
+    for e in elems
+        if dtc(e)<dtcourant
+            dtcourant=dtc(e);
+        end
+    end
+    %dtcourant=Min(dt);
+    % TODOm add a MIN function to intrinsics dtcourant = Min(dt);
+    % check hydro constraint 
+    dth = map CalcHydroConstraintForElems(dvovmax,dthydro) to elems ;
+    for e in elems
+        if dth(e)<dthydro
+            dthydro=dth(e);
+        end
+    end
+    %dthydro=Mini(dte);
+end
+
+func NicePrint(inout c:int, e:Elem, n:(Node*8))
+    println "ELEM ", c,"\n";
+    for i in 0:8
+        println n(i).coord, "\n";
+    end
+    c = c+1;
+end
 
 export func LagrangeLeapFrog_sim()
-    println "coucou";
+    % calculate nodal forces, accelerations, velocities, positions, with
+    % applied boundary conditions and slide surface considerations
+%%    for i in nodes
+%%       println i.coord, "\n";
+%%    end
+
+%%    var c=0;
+%%    map NicePrint(c) to elems;
+    
+    LagrangeNodal(deltatime(0),hgcoef(0),u_cut(0));
+
+    % calculate element quantities (i.e. velocity gradient & q), and update
+    % material states 
+    LagrangeElements(deltatime(0),qstop(0),monoq_limiter_mult(0),monoq_max_slope(0),qlc_monoq(0),qqc_monoq(0),eosvmin(0),eosvmax(0),v_cut(0),rho0(0),ss4o3(0),e_cut(0),p_cut(0),q_cut(0),emin(0),pmin(0));
+
+    CalcTimeConstraintsForElems(dtcourant(0),dthydro(0),qqc(0),dvovmax(0));
+end
+
+export func TimeIncrement_sim()
+    var targetdt = stoptime(0) - time(0) ;
+    if dtfixed(0) <= 0.0 and cycle(0) != 0
+        olddt = deltatime(0) ;
+        var gnewdt = 1.0e+20 ;
+        if dtcourant(0) < gnewdt
+            gnewdt = dtcourant(0) / 2.0 ;
+        end
+        if dthydro(0) < gnewdt 
+            gnewdt = dthydro(0) * 2.0 / 3.0 ;
+        end
+
+        var newdt = gnewdt;
+        ratio = newdt / olddt ;
+        if ratio >= 1.0 
+            if ratio < deltatimemultlb(0)
+                newdt = olddt ;
+            elif ratio > deltatimemultub(0)
+                newdt = olddt*deltatimemultub(0) ;
+            end
+        end
+        if (newdt > dtmax(0))  newdt = dtmax(0) ;  end
+        deltatime(0) = newdt ;
+    end
+
+    % TRY TO PREVENT VERY SMALL SCALING ON THE NEXT CYCLE
+    maxScale = 4.0 * deltatime(0) / 3.0;
+    if targetdt > deltatime(0) and targetdt < maxScale%(4.0 * deltatime(0) / 3.0) 
+        targetdt = 2.0 * deltatime(0) / 3.0 ;
+    end
+    if (targetdt < deltatime(0))  deltatime(0) = targetdt ;  end
+    time(0) = time(0) + deltatime(0) ;
+    cycle(0) = cycle(0) +1 ;
 end
