@@ -116,7 +116,7 @@ struct IndexSet : public FIRNode {
 };
 
 struct RangeIndexSet : public IndexSet {
-  int range;
+  int range = 0;
   
   typedef std::shared_ptr<RangeIndexSet> Ptr;
   
@@ -251,7 +251,7 @@ protected:
 };
 
 struct TupleLength : public FIRNode {
-  int val;
+  int val = 0;
 
   typedef std::shared_ptr<TupleLength> Ptr;
 
@@ -305,7 +305,7 @@ protected:
 struct NDTensorType : public TensorType {
   std::vector<IndexSet::Ptr> indexSets;
   TensorType::Ptr            blockType;
-  bool                       transposed;
+  bool                       transposed = false;
   
   typedef std::shared_ptr<NDTensorType> Ptr;
 
@@ -623,7 +623,7 @@ protected:
 
 struct PrintStmt : public Stmt {
   std::vector<Expr::Ptr> args;
-  bool                   printNewline;
+  bool                   printNewline = false;
   
   typedef std::shared_ptr<PrintStmt> Ptr;
   
@@ -947,7 +947,7 @@ protected:
 };
 
 struct NegExpr : public UnaryExpr {
-  bool negate;
+  bool negate = false;
   
   typedef std::shared_ptr<NegExpr> Ptr;
 
@@ -1133,7 +1133,7 @@ struct TensorLiteral : public Expr {
 };
 
 struct IntLiteral : public TensorLiteral {
-  int val;
+  int val = 0;
 
   typedef std::shared_ptr<IntLiteral> Ptr;
 
@@ -1148,7 +1148,7 @@ protected:
 };
 
 struct FloatLiteral : public TensorLiteral {
-  double val;
+  double val = 0.0;
   
   typedef std::shared_ptr<FloatLiteral> Ptr;
 
@@ -1163,7 +1163,7 @@ protected:
 };
 
 struct BoolLiteral : public TensorLiteral {
-  bool val;
+  bool val = false;
   
   typedef std::shared_ptr<BoolLiteral> Ptr;
 
@@ -1208,7 +1208,7 @@ protected:
 };
 
 struct DenseTensorLiteral : public TensorLiteral {
-  bool transposed;
+  bool transposed = false;
 
   typedef std::shared_ptr<DenseTensorLiteral> Ptr;
   
