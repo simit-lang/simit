@@ -28,7 +28,7 @@ public:
   IndexSet(const Expr &set);
 
   /// Create a variable-size index set.
-  IndexSet() : kind(Dynamic) {}
+  IndexSet() : kind(Dynamic), rangeSize(0) {}
   
   /// Create an index set of a single expression
   IndexSet(const Expr &set, Kind kind);

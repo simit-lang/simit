@@ -34,6 +34,7 @@ bool compareTensors(const TensorType& ltype, const void *ldata,
     case ComponentType::DoubleComplex:
       return util::compare<double_complex>(ldata, rdata, ltype.getSize());
   }
+  return false;
 }
 
 }
