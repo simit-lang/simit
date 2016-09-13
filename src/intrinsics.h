@@ -40,6 +40,9 @@ const Func& dot();
 const Func& det();
 const Func& inv();
 
+// Vector/Vector math
+const Func& cross();
+
 // Solvers
 const Func& solve();
 const Func& lu();

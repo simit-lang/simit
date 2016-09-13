@@ -448,3 +448,19 @@ extern "C" int dlltmatsolve(void** solverPtr,
                       Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, Bvals,
                       Xn, Xm, Xrowptr, Xcolidx, Xnn, Xmm, Xvals);
 }
+
+/// cross product between 2 vectors3D
+template <typename Float>
+int cross(int an, Float* a, int bn, Float* b, int cn, Float* c){
+  assert(an==3 && bn==3);
+  c[0] = a[1]*b[2]-a[2]*b[1];
+  c[1] = a[2]*b[0]-a[0]*b[2];
+  c[2] = a[0]*b[1]-a[1]*b[0];
+}
+extern "C" int scross(int an, float* a, int bn, float* b, int cn, float* c) {
+  return cross(an, a, bn, b, cn, c);
+}
+extern "C" int dcross(int an, double* a, int bn, double* b, int cn, double* c) {
+  return cross(an, a, bn, b, cn, c);
+}
+

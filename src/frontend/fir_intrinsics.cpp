@@ -67,6 +67,10 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
   threeByThreeTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   threeByThreeTensorType->indexSets = {threeDim, threeDim};
 
+  const auto threeVectorType = std::make_shared<NDTensorType>();
+  threeVectorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  threeVectorType->indexSets = {threeDim};
+
   auto N = std::make_shared<fir::GenericParam>();
   N->type = fir::GenericParam::Type::UNKNOWN;
   N->name = "N";
@@ -176,6 +180,12 @@ std::vector<fir::FuncDecl::Ptr> createIntrinsics() {
                ir::intrinsics::inv().getName(),
                {threeByThreeTensorType},
                {threeByThreeTensorType});
+
+  // Local vector/vector
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::cross().getName(),
+               {threeVectorType, threeVectorType},
+               {threeVectorType});
 
   // System vectors/matrices
   addIntrinsic(&intrinsics,
