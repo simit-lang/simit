@@ -98,7 +98,6 @@ struct FIRVisitor {
   virtual void visit(std::shared_ptr<DynamicIndexSet> op) {}
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint>);
-  virtual void visit(std::shared_ptr<UnstructuredSetType>);
   virtual void visit(std::shared_ptr<HomogeneousEdgeSetType>);
   virtual void visit(std::shared_ptr<HeterogeneousEdgeSetType>);
   virtual void visit(std::shared_ptr<GridSetType>);

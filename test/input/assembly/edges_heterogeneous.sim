@@ -1,0 +1,24 @@
+element Particle
+  c : int;
+end
+
+element Vertex
+  b : int;
+end
+
+element Edge
+  a : int;
+end
+
+extern P : set{Particle};
+extern V : set{Vertex};
+extern E : set{Edge}(P, V);
+
+func asm(e : Edge, n : (p : Particle, v : Vertex)) -> (A : matrix[P,V](int))
+  A(n.p,n.v) = e.a + n.v.b + n.p.c;
+end
+
+export func main()
+  A = map asm to E reduce +;
+  P.c = A * V.b;
+end

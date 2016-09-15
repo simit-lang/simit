@@ -25,11 +25,6 @@ void FIRRewriter::visit(Endpoint::Ptr end) {
   node = end;
 }
 
-void FIRRewriter::visit(UnstructuredSetType::Ptr type) {
-  type->element = rewrite<ElementType>(type->element);
-  node = type;
-}
-
 void FIRRewriter::visit(HomogeneousEdgeSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   type->endpoint = rewrite<Endpoint>(type->endpoint);

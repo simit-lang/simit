@@ -30,7 +30,6 @@ private:
   virtual void visit(DynamicIndexSet::Ptr);
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
-  virtual void visit(UnstructuredSetType::Ptr);
   virtual void visit(HomogeneousEdgeSetType::Ptr);
   virtual void visit(HeterogeneousEdgeSetType::Ptr);
   virtual void visit(GridSetType::Ptr);

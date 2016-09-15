@@ -136,12 +136,6 @@ void SetType::copy(FIRNode::Ptr node) {
   element = setType->element->clone<ElementType>();
 }
 
-FIRNode::Ptr UnstructuredSetType::cloneNode() {
-  const auto node = std::make_shared<UnstructuredSetType>();
-  node->copy(shared_from_this());
-  return node;
-}
-
 void TupleLength::copy(FIRNode::Ptr node) {
   const auto length = to<TupleLength>(node);
   FIRNode::copy(length);

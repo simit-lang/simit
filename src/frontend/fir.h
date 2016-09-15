@@ -225,16 +225,9 @@ protected:
 struct UnstructuredSetType : public SetType {
   typedef std::shared_ptr<UnstructuredSetType> Ptr;
 
-  virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<UnstructuredSetType>());
-  }
-
   virtual bool          isHomogeneous() const { return true; }
   virtual size_t        getArity() const { return 0; }
   virtual Endpoint::Ptr getEndpoint(size_t) const { return Endpoint::Ptr(); }
-
-protected:
-  virtual FIRNode::Ptr cloneNode();
 };
 
 struct TupleLength : public FIRNode {

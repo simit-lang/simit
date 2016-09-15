@@ -42,10 +42,6 @@ void IREmitter::visit(Endpoint::Ptr end) {
   retExpr = setExprs[end->set->setDef];
 }
 
-void IREmitter::visit(UnstructuredSetType::Ptr type) {
-  emitUnstructuredSetType(type);
-}
-
 void IREmitter::visit(HomogeneousEdgeSetType::Ptr type) {
   emitUnstructuredSetType(type);
 }

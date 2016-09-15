@@ -27,10 +27,6 @@ void FIRVisitor::visit(Endpoint::Ptr end) {
   }
 }
 
-void FIRVisitor::visit(UnstructuredSetType::Ptr type) {
-  type->element->accept(this);
-}
-
 void FIRVisitor::visit(HomogeneousEdgeSetType::Ptr type) {
   type->element->accept(this);
   type->endpoint->accept(this);

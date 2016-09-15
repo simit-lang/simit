@@ -80,10 +80,6 @@ void TypeChecker::visit(Endpoint::Ptr end) {
   }
 }
 
-void TypeChecker::visit(UnstructuredSetType::Ptr type) {
-  retTypeChecked = typeCheck(type->element);
-}
-
 void TypeChecker::visit(HomogeneousEdgeSetType::Ptr type) {
   const bool elementTypeChecked = typeCheck(type->element);
   const bool endpointTypeChecked = typeCheck(type->endpoint);

@@ -40,16 +40,10 @@ void FIRPrinter::visit(Endpoint::Ptr end) {
   end->set->accept(this);
 }
 
-void FIRPrinter::visit(UnstructuredSetType::Ptr type) {
+void FIRPrinter::visit(HomogeneousEdgeSetType::Ptr type) {
   oss << "set{";
   type->element->accept(this);
-  oss << "}";
-}
-
-void FIRPrinter::visit(HomogeneousEdgeSetType::Ptr type) {
-  visit(to<UnstructuredSetType>(type));
-
-  oss << "(";
+  oss << "}(";
   type->endpoint->accept(this);
   oss << " * ";
   type->arity->accept(this);
@@ -57,21 +51,25 @@ void FIRPrinter::visit(HomogeneousEdgeSetType::Ptr type) {
 }
 
 void FIRPrinter::visit(HeterogeneousEdgeSetType::Ptr type) {
-  visit(to<UnstructuredSetType>(type));
+  oss << "set{";
+  type->element->accept(this);
+  oss << "}";
 
-  oss << "(";
-  
-  bool printDelimiter = false;
-  for (auto endpoint : type->endpoints) {
-    if (printDelimiter) {
-      oss << ",";
+  if (!type->endpoints.empty()) {
+    oss << "(";
+
+    bool printDelimiter = false;
+    for (auto endpoint : type->endpoints) {
+      if (printDelimiter) {
+        oss << ",";
+      }
+      
+      endpoint->accept(this);
+      printDelimiter = true;
     }
-    
-    endpoint->accept(this);
-    printDelimiter = true;
-  }
   
-  oss << ")";
+    oss << ")";
+  }
 }
 
 void FIRPrinter::visit(GridSetType::Ptr type) {

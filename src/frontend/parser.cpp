@@ -1374,22 +1374,13 @@ fir::SetType::Ptr Parser::parseUnstructuredSetType() {
   const fir::ElementType::Ptr element = parseElementType();
   const Token rightCurlyToken = consume(Token::Type::RC);
 
-  if (!tryConsume(Token::Type::LP)) {
-    auto setType = std::make_shared<fir::UnstructuredSetType>();
-
-    setType->setBeginLoc(setToken);
-    setType->element = element;
-    setType->setEndLoc(rightCurlyToken);
-
-    return setType;
-  }
-
-  if (peek(1).type == Token::Type::STAR) {
+  if (peek(2).type == Token::Type::STAR && tryConsume(Token::Type::LP)) {
     auto setType = std::make_shared<fir::HomogeneousEdgeSetType>();
     setType->setBeginLoc(setToken);
 
     setType->element = element;
     setType->endpoint = parseEndpoint();
+
     consume(Token::Type::STAR);
     setType->arity = parseTupleLength();
     
@@ -1400,19 +1391,22 @@ fir::SetType::Ptr Parser::parseUnstructuredSetType() {
   }
 
   auto setType = std::make_shared<fir::HeterogeneousEdgeSetType>();
+  
   setType->setBeginLoc(setToken);
-
   setType->element = element;
-  setType->endpoints = parseEndpoints();
+  setType->setEndLoc(rightCurlyToken);
 
-  const Token rightParenToken = consume(Token::Type::RP);
-  setType->setEndLoc(rightParenToken);
+  if (tryConsume(Token::Type::LP)) {
+    setType->endpoints = parseEndpoints();
+
+    const Token rightParenToken = consume(Token::Type::RP);
+    setType->setEndLoc(rightParenToken);
+  }
 
   return setType;
 }
 
-// grid_set_type: 'grid' '[' INT_LITERAL ']'
-//                '{' element_type '}' '(' IDENT ')'
+// grid_set_type: 'grid' '[' INT_LITERAL ']' '{' element_type '}' '(' IDENT ')'
 fir::SetType::Ptr Parser::parseGridSetType() {
   auto setType = std::make_shared<fir::GridSetType>();
 
