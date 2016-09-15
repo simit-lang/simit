@@ -76,7 +76,7 @@ void IREmitter::visit(UnnamedTupleType::Ptr type) {
   iassert(type->length->val > 0);
   
   const ir::Type elementType = emitType(type->element);
-  retType = ir::TupleType::make(elementType, type->length->val);
+  retType = ir::UnnamedTupleType::make(elementType, type->length->val);
 }
 
 void IREmitter::visit(ScalarType::Ptr type) {
@@ -727,8 +727,8 @@ void IREmitter::visit(UnnamedTupleReadExpr::Ptr expr) {
   const ir::Expr tuple = emitExpr(expr->tuple);
   const ir::Expr index = emitExpr(expr->index);
 
-  iassert(tuple.type().isTuple());
-  retExpr = ir::TupleRead::make(tuple, index);
+  iassert(tuple.type().isUnnamedTuple());
+  retExpr = ir::UnnamedTupleRead::make(tuple, index);
 }
 
 void IREmitter::visit(FieldReadExpr::Ptr expr) {

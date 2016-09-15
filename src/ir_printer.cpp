@@ -152,7 +152,7 @@ void IRPrinter::visit(const Literal *op) {
     
     case Type::Element:
     case Type::Set:
-    case Type::Tuple:
+    case Type::UnnamedTuple:
     case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
@@ -267,7 +267,7 @@ void IRPrinter::visit(const CallStmt *op) {
     util::join(op->actuals) << ")" << ";";
 }
 
-void IRPrinter::visit(const TupleRead *op) {
+void IRPrinter::visit(const UnnamedTupleRead *op) {
   clearSkipParen();
   print(op->tuple);
   os << "(";

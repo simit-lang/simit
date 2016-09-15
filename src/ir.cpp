@@ -287,7 +287,7 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
     }
     case Type::Set:
     case Type::Element:
-    case Type::Tuple:
+    case Type::UnnamedTuple:
     case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
@@ -880,10 +880,10 @@ Stmt Pass::make() {
 }
 
 // struct UnnamedTupleRead
-Expr TupleRead::make(Expr tuple, Expr index) {
-  iassert(tuple.type().isTuple());
-  TupleRead *node = new TupleRead;
-  node->type = tuple.type().toTuple()->elementType;
+Expr UnnamedTupleRead::make(Expr tuple, Expr index) {
+  iassert(tuple.type().isUnnamedTuple());
+  UnnamedTupleRead *node = new UnnamedTupleRead;
+  node->type = tuple.type().toUnnamedTuple()->elementType;
   node->tuple = tuple;
   node->index = index;
   return node;

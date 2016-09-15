@@ -56,7 +56,7 @@ struct Print;
 struct Comment;
 struct Pass;
 
-struct TupleRead;
+struct UnnamedTupleRead;
 struct NamedTupleRead;
 struct SetRead;
 struct TensorRead;
@@ -116,7 +116,7 @@ public:
   virtual void visit(const Pass* op) = 0;
 
   /// High-level IRNodes that are lowered and never reach the backend
-  virtual void visit(const TupleRead* op) = 0;
+  virtual void visit(const UnnamedTupleRead* op) = 0;
   virtual void visit(const NamedTupleRead* op) = 0;
   virtual void visit(const SetRead* op) = 0;
   virtual void visit(const TensorRead* op) = 0;
@@ -188,7 +188,7 @@ public:
   virtual void visit(const Pass *op);
 
   /// High-level IRNodes that are lowered and never reach the backend
-  virtual void visit(const TupleRead *op);
+  virtual void visit(const UnnamedTupleRead *op);
   virtual void visit(const NamedTupleRead *op);
   virtual void visit(const SetRead *op);
   virtual void visit(const TensorRead *op);
@@ -317,7 +317,7 @@ private:
   RULE(Comment)
   RULE(Pass)
 
-  RULE(TupleRead)
+  RULE(UnnamedTupleRead)
   RULE(NamedTupleRead)
   RULE(SetRead)
   RULE(TensorRead)

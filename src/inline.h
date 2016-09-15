@@ -66,7 +66,7 @@ protected:
   void visit(const FieldWrite *op);
 
   /// Replace unnamed neighbor tuple reads with reads from target endpoints
-  void visit(const TupleRead *op);
+  void visit(const UnnamedTupleRead *op);
 
   /// Replace named neighbor tuple reads with reads from target endpoints
   void visit(const NamedTupleRead *op);

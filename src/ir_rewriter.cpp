@@ -406,14 +406,14 @@ void IRRewriter::visit(const TensorWrite *op) {
   }
 }
 
-void IRRewriter::visit(const TupleRead *op) {
+void IRRewriter::visit(const UnnamedTupleRead *op) {
   Expr tuple = rewrite(op->tuple);
   Expr index = rewrite(op->index);
   if (tuple == op->tuple && index == op->index) {
     expr = op;
   }
   else {
-    expr = TupleRead::make(tuple, index);
+    expr = UnnamedTupleRead::make(tuple, index);
   }
 }
 

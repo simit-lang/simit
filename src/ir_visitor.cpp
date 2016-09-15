@@ -187,7 +187,7 @@ void IRVisitor::visit(const Comment *op) {
 void IRVisitor::visit(const Pass *op) {
 }
 
-void IRVisitor::visit(const TupleRead *op) {
+void IRVisitor::visit(const UnnamedTupleRead *op) {
   op->tuple.accept(this);
   op->index.accept(this);
 }

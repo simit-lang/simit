@@ -470,10 +470,10 @@ struct Pass : public StmtNode {
   void accept(IRVisitorStrict *v) const {v->visit((const Pass*)this);}
 };
 
-struct TupleRead : public ExprNode {
+struct UnnamedTupleRead : public ExprNode {
   Expr tuple, index;
   static Expr make(Expr tuple, Expr index);
-  void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
+  void accept(IRVisitorStrict *v) const {v->visit((const UnnamedTupleRead*)this);}
 };
 
 struct NamedTupleRead : public ExprNode {

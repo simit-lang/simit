@@ -27,19 +27,19 @@ struct ElementType;
 struct SetType;
 struct UnstructuredSetType;
 struct GridSetType;
-struct TupleType;
+struct UnnamedTupleType;
 struct NamedTupleType;
 struct ArrayType;
 
 class Type {
 public:
-  enum Kind {Undefined, Tensor, Element, Set, Tuple, NamedTuple, Array, Opaque};
+  enum Kind {Undefined, Tensor, Element, Set, UnnamedTuple, NamedTuple, Array, Opaque};
   Type() : _kind(Undefined), ptr(nullptr) {}
   Type(Kind kind) : _kind(kind) {}
   Type(TensorType* tensor);
   Type(ElementType* element);
   Type(SetType* set);
-  Type(TupleType* tuple);
+  Type(UnnamedTupleType* tuple);
   Type(NamedTupleType* tuple);
   Type(ArrayType* array);
 
@@ -51,8 +51,8 @@ public:
   bool isElement()         const { return kind()==Element; }
   bool isSet()             const { return kind()==Set; }
   bool isUnstructuredSet() const;
-  bool isGridSet()  const;
-  bool isTuple()           const { return kind()==Tuple; }
+  bool isGridSet()         const;
+  bool isUnnamedTuple()    const { return kind()==UnnamedTuple; }
   bool isNamedTuple()      const { return kind()==NamedTuple; }
   bool isArray()           const { return kind()==Array; }
   bool isOpaque()          const { return kind()==Opaque; }
@@ -74,8 +74,8 @@ public:
   }
   const UnstructuredSetType* toUnstructuredSet() const;
   const GridSetType*         toGridSet()         const;
-  const TupleType* toTuple() const {
-    iassert(isTuple());
+  const UnnamedTupleType* toUnnamedTuple() const {
+    iassert(isUnnamedTuple());
     return tuple;
   }
   const NamedTupleType* toNamedTuple() const {
@@ -94,7 +94,7 @@ private:
     TensorType     *tensor;
     ElementType    *element;
     SetType        *set;
-    TupleType      *tuple;
+    UnnamedTupleType      *tuple;
     NamedTupleType *namedTuple;
     ArrayType      *array;
   };
@@ -309,13 +309,13 @@ struct GridSetType : SetType {
                    size_t dimensions);
 };
 
-struct TupleType : TypeNode {
+struct UnnamedTupleType : TypeNode {
   Type elementType;
   int size;
 
   static Type make(Type elementType, int size) {
     iassert(elementType.isElement());
-    TupleType *type = new TupleType;
+    UnnamedTupleType *type = new UnnamedTupleType;
     type->elementType = elementType;
     type->size = size;
     return type;
@@ -375,8 +375,8 @@ inline Type::Type(ElementType* element)
     : _kind(Element), element(element), ptr(element) {}
 inline Type::Type(SetType* set)
     : _kind(Set), set(set), ptr(set) {}
-inline Type::Type(TupleType* tuple)
-    : _kind(Tuple), tuple(tuple), ptr(tuple) {}
+inline Type::Type(UnnamedTupleType* tuple)
+    : _kind(UnnamedTuple), tuple(tuple), ptr(tuple) {}
 inline Type::Type(NamedTupleType* namedTuple)
     : _kind(NamedTuple), namedTuple(namedTuple), ptr(namedTuple) {}
 inline Type::Type(ArrayType* array)
@@ -432,7 +432,7 @@ bool operator==(const TensorType&, const TensorType&);
 bool operator==(const ElementType&, const ElementType&);
 bool operator==(const UnstructuredSetType&, const UnstructuredSetType&);
 bool operator==(const GridSetType&, const GridSetType&);
-bool operator==(const TupleType&, const TupleType&);
+bool operator==(const UnnamedTupleType&, const UnnamedTupleType&);
 bool operator==(const NamedTupleType&, const NamedTupleType&);
 bool operator==(const ArrayType&, const ArrayType&);
 
@@ -441,7 +441,7 @@ bool operator!=(const TensorType&, const TensorType&);
 bool operator!=(const ElementType&, const ElementType&);
 bool operator!=(const UnstructuredSetType&, const UnstructuredSetType&);
 bool operator!=(const GridSetType&, const GridSetType&);
-bool operator!=(const TupleType&, const TupleType&);
+bool operator!=(const UnnamedTupleType&, const UnnamedTupleType&);
 bool operator!=(const NamedTupleType&, const NamedTupleType&);
 bool operator!=(const ArrayType&, const ArrayType&);
 
@@ -451,7 +451,7 @@ std::ostream& operator<<(std::ostream&, const TensorType&);
 std::ostream& operator<<(std::ostream&, const ElementType&);
 std::ostream& operator<<(std::ostream&, const UnstructuredSetType&);
 std::ostream& operator<<(std::ostream&, const GridSetType&);
-std::ostream& operator<<(std::ostream&, const TupleType&);
+std::ostream& operator<<(std::ostream&, const UnnamedTupleType&);
 std::ostream& operator<<(std::ostream&, const NamedTupleType&);
 std::ostream& operator<<(std::ostream&, const ArrayType&);
 
