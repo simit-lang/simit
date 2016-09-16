@@ -25,7 +25,14 @@ void FIRRewriter::visit(Endpoint::Ptr end) {
   node = end;
 }
 
-void FIRRewriter::visit(UnstructuredSetType::Ptr type) {
+void FIRRewriter::visit(HomogeneousEdgeSetType::Ptr type) {
+  type->element = rewrite<ElementType>(type->element);
+  type->endpoint = rewrite<Endpoint>(type->endpoint);
+  type->arity = rewrite<TupleLength>(type->arity);
+  node = type;
+}
+
+void FIRRewriter::visit(HeterogeneousEdgeSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   for (auto &endpoint : type->endpoints) {
     endpoint = rewrite<Endpoint>(endpoint);
@@ -39,7 +46,22 @@ void FIRRewriter::visit(GridSetType::Ptr type) {
   node = type;
 }
 
-void FIRRewriter::visit(TupleType::Ptr type) {
+void FIRRewriter::visit(TupleElement::Ptr type) {
+  if (type->name) {
+    type->name = rewrite<Identifier>(type->name);
+  }
+  type->element = rewrite<ElementType>(type->element);
+  node = type;
+}
+
+void FIRRewriter::visit(NamedTupleType::Ptr type) {
+  for (auto &elem : type->elems) {
+    elem = rewrite<TupleElement>(elem);
+  }
+  node = type;
+}
+
+void FIRRewriter::visit(UnnamedTupleType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   type->length = rewrite<TupleLength>(type->length);
   node = type;
@@ -255,7 +277,13 @@ void FIRRewriter::visit(SetReadExpr::Ptr expr) {
   node = expr;
 }
 
-void FIRRewriter::visit(TupleReadExpr::Ptr expr) {
+void FIRRewriter::visit(NamedTupleReadExpr::Ptr expr) {
+  expr->tuple = rewrite<Expr>(expr->tuple);
+  expr->elem = rewrite<Identifier>(expr->elem);
+  node = expr;
+}
+
+void FIRRewriter::visit(UnnamedTupleReadExpr::Ptr expr) {
   expr->tuple = rewrite<Expr>(expr->tuple);
   expr->index = rewrite<Expr>(expr->index);
   node = expr;

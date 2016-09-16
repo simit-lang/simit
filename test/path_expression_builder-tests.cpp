@@ -26,7 +26,7 @@ static const IndexVar j("j", dim);
 static const IndexVar k("k", dim, ReductionOperator::Sum);
 
 static
-Func f("f", {Var("e", eType), Var("v", TupleType::make(eType, 2))},
+Func f("f", {Var("e", eType), Var("v", UnnamedTupleType::make(eType, 2))},
        {Var("R",ir::TensorType::make(ir::typeOf<simit_float>(),{dim,dim}))},
        Func::External);
 

@@ -161,13 +161,14 @@ private:
 
   /// High-level IRNodes that should be lowered and never reach the backend
   using BackendVisitorBase::visitError;
-  void visit(const ir::IndexExpr* op)     {visitError("IndexExpr", op);}
-  void visit(const ir::TensorRead* op)    {visitError("TensorRead", op);}
-  void visit(const ir::TupleRead* op)     {visitError("TupleRead", op);}
-  void visit(const ir::IndexedTensor* op) {visitError("IndexedTensor", op);}
-  void visit(const ir::Map* op)           {visitError("Map", op);}
-  void visit(const ir::TensorWrite* op)   {visitError("TensorWrite", op);}
-  void visit(const ir::SetRead* op)       {visitError("SetRead", op);}
+  void visit(const ir::IndexExpr* op)        {visitError("IndexExpr", op);}
+  void visit(const ir::TensorRead* op)       {visitError("TensorRead", op);}
+  void visit(const ir::UnnamedTupleRead* op) {visitError("UnnamedTupleRead", op);}
+  void visit(const ir::NamedTupleRead* op)   {visitError("NamedTupleRead", op);}
+  void visit(const ir::IndexedTensor* op)    {visitError("IndexedTensor", op);}
+  void visit(const ir::Map* op)              {visitError("Map", op);}
+  void visit(const ir::TensorWrite* op)      {visitError("TensorWrite", op);}
+  void visit(const ir::SetRead* op)          {visitError("SetRead", op);}
 };
 
 }}

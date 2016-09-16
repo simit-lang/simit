@@ -51,6 +51,50 @@ TEST(assembly, vertices_two_results) {
   ASSERT_EQ(54, (int)b(v2));
 }
 
+TEST(assembly, edges_heterogeneous) {
+  Set P;
+  ElementRef p0 = P.add();
+  ElementRef p1 = P.add();
+  ElementRef p2 = P.add();
+  FieldRef<int> c = P.addField<int>("c");
+  c(p0) = 2;
+  c(p1) = 3;
+  c(p2) = 4;
+
+  Set V;
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  FieldRef<int> b = V.addField<int>("b");
+  b(v0) = 1;
+  b(v1) = 2;
+  b(v2) = 3;
+
+  Set E(P,V);
+  ElementRef e0 = E.add(p0,v0);
+  ElementRef e1 = E.add(p1,v0);
+  ElementRef e2 = E.add(p1,v1);
+  ElementRef e3 = E.add(p1,v2);
+  ElementRef e4 = E.add(p2,v2);
+  FieldRef<int> a = E.addField<int>("a");
+  a(e0) = 3;
+  a(e1) = 4;
+  a(e2) = 5;
+  a(e3) = 6;
+  a(e4) = 7;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("P", &P);
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(6, (int)c(p0));
+  ASSERT_EQ(64, (int)c(p1));
+  ASSERT_EQ(42, (int)c(p2));
+}
+
 TEST(assembly, edges_no_endpoints) {
   Set V;
   ElementRef v0 = V.add();

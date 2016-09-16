@@ -70,7 +70,8 @@ private:
   virtual void visit(const Comment *op);
   virtual void visit(const Pass *op);
 
-  virtual void visit(const TupleRead *op);
+  virtual void visit(const UnnamedTupleRead *op);
+  virtual void visit(const NamedTupleRead *op);
   virtual void visit(const SetRead *op);
   virtual void visit(const TensorRead *op);
   virtual void visit(const TensorWrite *op);

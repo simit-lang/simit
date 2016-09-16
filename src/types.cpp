@@ -220,8 +220,10 @@ bool operator==(const Type& l, const Type& r) {
         return false;
       }
       unreachable;
-    case Type::Tuple:
-      return *l.toTuple() == *r.toTuple();
+    case Type::UnnamedTuple:
+      return *l.toUnnamedTuple() == *r.toUnnamedTuple();
+    case Type::NamedTuple:
+      return *l.toNamedTuple() == *r.toNamedTuple();
     case Type::Array:
       return *l.toArray() == *r.toArray();
     case Type::Opaque:
@@ -293,8 +295,24 @@ bool operator==(const GridSetType& l, const GridSetType& r) {
       l.dimensions == r.dimensions;
 }
 
-bool operator==(const TupleType& l, const TupleType& r) {
+bool operator==(const UnnamedTupleType& l, const UnnamedTupleType& r) {
   return l.elementType == r.elementType && l.size == r.size;
+}
+
+bool operator==(const NamedTupleType& l, const NamedTupleType& r) {
+  if (l.elements.size() != r.elements.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < l.elements.size(); ++i) {
+    const Field &lElement = l.elements[i];
+    const Field &rElement = r.elements[i];
+    if (lElement.name != rElement.name || lElement.type != rElement.type) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool operator!=(const ScalarType& l, const ScalarType& r) {
@@ -317,7 +335,11 @@ bool operator!=(const GridSetType& l, const GridSetType& r) {
   return !(l == r);
 }
 
-bool operator!=(const TupleType& l, const TupleType& r) {
+bool operator!=(const UnnamedTupleType& l, const UnnamedTupleType& r) {
+  return !(l == r);
+}
+
+bool operator!=(const NamedTupleType& l, const NamedTupleType& r) {
   return !(l == r);
 }
 
@@ -342,8 +364,10 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
         unreachable;
         return os;
       }
-    case Type::Tuple:
-      return os << *type.toTuple();
+    case Type::UnnamedTuple:
+      return os << *type.toUnnamedTuple();
+    case Type::NamedTuple:
+      return os << *type.toNamedTuple();
     case Type::Array:
       return os << *type.toArray();
     case Type::Opaque:
@@ -418,9 +442,25 @@ std::ostream& operator<<(std::ostream& os, const GridSetType& type) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const TupleType& type) {
+std::ostream& operator<<(std::ostream& os, const UnnamedTupleType& type) {
   return os << "(" << type.elementType.toElement()->name << "*" << type.size
             << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const NamedTupleType& type) {
+  os << "(";
+
+  bool printDelimiter = false;
+  for (auto &element : type.elements) {
+    if (printDelimiter) {
+      os << ", ";
+    }
+
+    os << element.name << " : " << element.type;
+    printDelimiter = true;
+  }
+
+  return os << ")";
 }
 
 std::ostream& operator<<(std::ostream& os, const ArrayType& type) {

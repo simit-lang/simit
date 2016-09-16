@@ -1,0 +1,25 @@
+element Particle
+  val : float;
+end
+
+element Vertex
+  val : float;
+end
+
+element Edge
+end
+
+extern P : set{Particle};
+extern V : set{Vertex};
+extern E : set{Edge}(P,V);
+
+func swap(e : Edge, inout n : (p : Particle, v : Vertex))
+  tmp = n.p.val;
+  n.p.val = n.v.val;
+  n.v.val = tmp;
+end
+
+export func main()
+  apply swap to E;
+end
+

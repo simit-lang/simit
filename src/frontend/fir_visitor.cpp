@@ -27,7 +27,13 @@ void FIRVisitor::visit(Endpoint::Ptr end) {
   }
 }
 
-void FIRVisitor::visit(UnstructuredSetType::Ptr type) {
+void FIRVisitor::visit(HomogeneousEdgeSetType::Ptr type) {
+  type->element->accept(this);
+  type->endpoint->accept(this);
+  type->arity->accept(this);
+}
+
+void FIRVisitor::visit(HeterogeneousEdgeSetType::Ptr type) {
   type->element->accept(this);
   for (auto endpoint : type->endpoints) {
     endpoint->accept(this);
@@ -39,7 +45,20 @@ void FIRVisitor::visit(GridSetType::Ptr type) {
   type->underlyingPointSet->accept(this);
 }
 
-void FIRVisitor::visit(TupleType::Ptr type) {
+void FIRVisitor::visit(TupleElement::Ptr elem) {
+  if (elem->name) {
+    elem->name->accept(this);
+  }
+  elem->element->accept(this);
+}
+
+void FIRVisitor::visit(NamedTupleType::Ptr type) {
+  for (auto elem : type->elems) {
+    elem->accept(this);
+  }
+}
+
+void FIRVisitor::visit(UnnamedTupleType::Ptr type) {
   type->element->accept(this);
   type->length->accept(this);
 }
@@ -268,7 +287,12 @@ void FIRVisitor::visit(SetReadExpr::Ptr expr) {
   }
 }
 
-void FIRVisitor::visit(TupleReadExpr::Ptr expr) {
+void FIRVisitor::visit(NamedTupleReadExpr::Ptr expr) {
+  expr->tuple->accept(this);
+  expr->elem->accept(this);
+}
+
+void FIRVisitor::visit(UnnamedTupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
   expr->index->accept(this);
 }

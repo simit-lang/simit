@@ -40,14 +40,24 @@ void FIRPrinter::visit(Endpoint::Ptr end) {
   end->set->accept(this);
 }
 
-void FIRPrinter::visit(UnstructuredSetType::Ptr type) {
+void FIRPrinter::visit(HomogeneousEdgeSetType::Ptr type) {
+  oss << "set{";
+  type->element->accept(this);
+  oss << "}(";
+  type->endpoint->accept(this);
+  oss << " * ";
+  type->arity->accept(this);
+  oss << ")";
+}
+
+void FIRPrinter::visit(HeterogeneousEdgeSetType::Ptr type) {
   oss << "set{";
   type->element->accept(this);
   oss << "}";
-  
+
   if (!type->endpoints.empty()) {
     oss << "(";
-    
+
     bool printDelimiter = false;
     for (auto endpoint : type->endpoints) {
       if (printDelimiter) {
@@ -57,7 +67,7 @@ void FIRPrinter::visit(UnstructuredSetType::Ptr type) {
       endpoint->accept(this);
       printDelimiter = true;
     }
-    
+  
     oss << ")";
   }
 }
@@ -70,14 +80,38 @@ void FIRPrinter::visit(GridSetType::Ptr type) {
   oss << ")";
 }
 
+void FIRPrinter::visit(TupleElement::Ptr elem) {
+  if (elem->name) {
+    elem->name->accept(this);
+    oss << " : ";
+  }
+  elem->element->accept(this);
+}
+
+void FIRPrinter::visit(NamedTupleType::Ptr type) {
+  oss << "(";
+
+  bool printDelimiter = false;
+  for (auto elem : type->elems) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+
+    elem->accept(this);
+    printDelimiter = true;
+  }
+
+  oss << ")";
+}
+
 void FIRPrinter::visit(TupleLength::Ptr length) {
   oss << length->val;
 }
 
-void FIRPrinter::visit(TupleType::Ptr type) {
+void FIRPrinter::visit(UnnamedTupleType::Ptr type) {
   oss << "(";
   type->element->accept(this);
-  oss << "*";
+  oss << " * ";
   type->length->accept(this);
   oss << ")";
 }
@@ -106,24 +140,19 @@ void FIRPrinter::visit(ScalarType::Ptr type) {
 }
 
 void FIRPrinter::visit(NDTensorType::Ptr type) {
-  oss << "tensor";
-  if (!type->indexSets.empty()) {
-    oss << "[";
+  oss << "tensor[";
     
-    bool printDelimiter = false;
-    for (auto indexSet : type->indexSets) {
-      if (printDelimiter) {
-        oss << ",";
-      }
-      
-      indexSet->accept(this);
-      printDelimiter = true;
+  bool printDelimiter = false;
+  for (auto indexSet : type->indexSets) {
+    if (printDelimiter) {
+      oss << ",";
     }
     
-    oss << "]";
+    indexSet->accept(this);
+    printDelimiter = true;
   }
 
-  oss << "(";
+  oss << "](";
   type->blockType->accept(this);
   oss << ")";
   
@@ -544,18 +573,27 @@ void FIRPrinter::visit(TensorReadExpr::Ptr expr) {
 void FIRPrinter::visit(SetReadExpr::Ptr expr) {
   expr->set->accept(this);
   oss << "[";
+
   bool printDelimiter = false;
   for (auto param : expr->indices) {
     if (printDelimiter) {
       oss << ", ";
     }
+
     param->accept(this);
     printDelimiter = true;
   }
+
   oss << "]";
 }
 
-void FIRPrinter::visit(TupleReadExpr::Ptr expr) {
+void FIRPrinter::visit(NamedTupleReadExpr::Ptr expr) {
+  expr->tuple->accept(this);
+  oss << ".";
+  expr->elem->accept(this);
+}
+
+void FIRPrinter::visit(UnnamedTupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
   
   oss << "(";

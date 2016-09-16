@@ -406,14 +406,23 @@ void IRRewriter::visit(const TensorWrite *op) {
   }
 }
 
-void IRRewriter::visit(const TupleRead *op) {
+void IRRewriter::visit(const UnnamedTupleRead *op) {
   Expr tuple = rewrite(op->tuple);
   Expr index = rewrite(op->index);
   if (tuple == op->tuple && index == op->index) {
     expr = op;
   }
   else {
-    expr = TupleRead::make(tuple, index);
+    expr = UnnamedTupleRead::make(tuple, index);
+  }
+}
+
+void IRRewriter::visit(const NamedTupleRead *op) {
+  Expr tuple = rewrite(op->tuple);
+  if (tuple == op->tuple) {
+    expr = op;
+  } else {
+    expr = NamedTupleRead::make(tuple, op->elementName);
   }
 }
 
@@ -476,7 +485,15 @@ void IRRewriter::visit(const IndexExpr *op) {
 
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
-  Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
+
+  std::vector<Expr> neighbors(op->neighbors.size());
+  bool neighborsSame = true;
+  for (size_t i=0; i < op->neighbors.size(); ++i) {
+    neighbors[i] = rewrite(op->neighbors[i]);
+    if (neighbors[i] != op->neighbors[i]) {
+      neighborsSame = false;
+    }
+  }
 
   Expr through;
   if (op->through.defined()) {
@@ -492,8 +509,8 @@ void IRRewriter::visit(const Map *op) {
     }
   }
 
-  if (target == op->target && neighbors == op->neighbors &&
-      through == op->through && actualsSame) {
+  if (target == op->target && through == op->through && 
+      neighborsSame && actualsSame) {
     stmt = op;
   }
   else {

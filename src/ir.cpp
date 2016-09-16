@@ -288,7 +288,8 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
     }
     case Type::Set:
     case Type::Element:
-    case Type::Tuple:
+    case Type::UnnamedTuple:
+    case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
       iassert(false) << "only tensor and scalar literals currently supported";
@@ -879,13 +880,23 @@ Stmt Pass::make() {
   return node;
 }
 
-// struct TupleRead
-Expr TupleRead::make(Expr tuple, Expr index) {
-  iassert(tuple.type().isTuple());
-  TupleRead *node = new TupleRead;
-  node->type = tuple.type().toTuple()->elementType;
+// struct UnnamedTupleRead
+Expr UnnamedTupleRead::make(Expr tuple, Expr index) {
+  iassert(tuple.type().isUnnamedTuple());
+  UnnamedTupleRead *node = new UnnamedTupleRead;
+  node->type = tuple.type().toUnnamedTuple()->elementType;
   node->tuple = tuple;
   node->index = index;
+  return node;
+}
+
+// struct NamedTupleRead
+Expr NamedTupleRead::make(Expr tuple, std::string elementName) {
+  iassert(tuple.type().isNamedTuple());
+  NamedTupleRead *node = new NamedTupleRead;
+  node->type = tuple.type().toNamedTuple()->element(elementName).type;
+  node->tuple = tuple;
+  node->elementName = elementName;
   return node;
 }
 
@@ -1025,10 +1036,12 @@ Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
 // struct Map
 Stmt Map::make(std::vector<Var> vars,
                Func function, std::vector<Expr> partial_actuals,
-               Expr target, Expr neighbors, Expr through,
+               Expr target, std::vector<Expr> neighbors, Expr through,
                ReductionOperator reduction) {
   iassert(target.type().isSet());
-  iassert(!neighbors.defined() || neighbors.type().isSet());
+  for (auto neighbor : neighbors) {
+    iassert(neighbor.type().isSet());
+  }
   //iassert(vars.size() == function.getResults().size());
   Map *node = new Map;
   node->vars = vars;

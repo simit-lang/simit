@@ -45,7 +45,8 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
       break;
     case Type::Set:
       return llvmType(type.toSet(), addrspace);
-    case Type::Tuple:
+    case Type::UnnamedTuple:
+    case Type::NamedTuple:
       ierror << "Tuples not supported in the backend";
       break;
     case Type::Array:

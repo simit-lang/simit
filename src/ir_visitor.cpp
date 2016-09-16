@@ -187,9 +187,13 @@ void IRVisitor::visit(const Comment *op) {
 void IRVisitor::visit(const Pass *op) {
 }
 
-void IRVisitor::visit(const TupleRead *op) {
+void IRVisitor::visit(const UnnamedTupleRead *op) {
   op->tuple.accept(this);
   op->index.accept(this);
+}
+
+void IRVisitor::visit(const NamedTupleRead *op) {
+  op->tuple.accept(this);
 }
 
 void IRVisitor::visit(const SetRead *op) {
@@ -224,10 +228,9 @@ void IRVisitor::visit(const IndexExpr *op) {
 
 void IRVisitor::visit(const Map *op) {
   op->target.accept(this);
-  if (op->neighbors.defined()) {
-    op->neighbors.accept(this);
+  for (auto &n : op->neighbors) {
+    n.accept(this);
   }
-
   for (auto &p : op->partial_actuals) {
     p.accept(this);
   }

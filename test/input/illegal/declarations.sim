@@ -1,9 +1,16 @@
-%%% bad-set-type
+%%% bad-set-type-1
 element E
 end
 
 extern t : int;
 extern V : set{E}(t);
+
+%%% bad-set-type-2
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V*0);
 
 %%% bad-grid-link-set-type-1
 element E
