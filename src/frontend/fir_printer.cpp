@@ -140,24 +140,19 @@ void FIRPrinter::visit(ScalarType::Ptr type) {
 }
 
 void FIRPrinter::visit(NDTensorType::Ptr type) {
-  oss << "tensor";
-  if (!type->indexSets.empty()) {
-    oss << "[";
+  oss << "tensor[";
     
-    bool printDelimiter = false;
-    for (auto indexSet : type->indexSets) {
-      if (printDelimiter) {
-        oss << ",";
-      }
-      
-      indexSet->accept(this);
-      printDelimiter = true;
+  bool printDelimiter = false;
+  for (auto indexSet : type->indexSets) {
+    if (printDelimiter) {
+      oss << ",";
     }
     
-    oss << "]";
+    indexSet->accept(this);
+    printDelimiter = true;
   }
 
-  oss << "(";
+  oss << "](";
   type->blockType->accept(this);
   oss << ")";
   
@@ -578,14 +573,17 @@ void FIRPrinter::visit(TensorReadExpr::Ptr expr) {
 void FIRPrinter::visit(SetReadExpr::Ptr expr) {
   expr->set->accept(this);
   oss << "[";
+
   bool printDelimiter = false;
   for (auto param : expr->indices) {
     if (printDelimiter) {
       oss << ", ";
     }
+
     param->accept(this);
     printDelimiter = true;
   }
+
   oss << "]";
 }
 

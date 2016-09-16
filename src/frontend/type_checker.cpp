@@ -545,7 +545,7 @@ void TypeChecker::visit(EqExpr::Ptr expr) {
     } else if (!env.compareTypes(repType, opndType.type[0])) {
       std::stringstream errMsg;
       errMsg << "value of type " << toString(opndType)
-             << "cannot be compared to value of type " << toString(repType);
+             << " cannot be compared to value of type " << toString(repType);
       reportError(errMsg.str(), operand);
     }
   }
