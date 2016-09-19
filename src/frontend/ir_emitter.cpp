@@ -265,7 +265,7 @@ void IREmitter::visit(IfStmt::Ptr stmt) {
   }
   ctx->addStatement(ifStmt);
 
-  retStmt = ifStmt;
+  retStmt = ir::Block::make(*ctx->getStatements());
 }
 
 void IREmitter::visit(IndexSetDomain::Ptr domain) {

@@ -955,16 +955,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       reportError("cannot pass multiple values as a single argument", arg);
       continue;
     }
-
-    // Check that argument is a tensor.
-    // TODO: Remove once support for passing non-tensor arguments is added.
-    if (!(argTypes[i].isTensor() || argTypes[i].isOpaque())) {
-      std::stringstream errMsg;
-      errMsg << "expected argument to be a tensor or an opaque type but got "
-             << "an argument of type " << toString(argTypes[i]);
-      reportError(errMsg.str(), arg);
-      continue;
-    }
   }
 
   FuncDecl::Ptr func;

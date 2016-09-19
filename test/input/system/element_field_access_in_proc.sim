@@ -10,12 +10,20 @@ end
 extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
+func f(v : Vertex) -> r : float
+  r = v.b;
+end
+
+func g(e : Edge) -> r : float
+  r = e.e;
+end
+
 export func main()
   var i = 0.0;
   for p in V
-    i = i + p.b;
+    i = i + f(p);
     for edge in E
-      i = i + edge.e;
+      i = i + g(edge);
     end
   end
   for p in V

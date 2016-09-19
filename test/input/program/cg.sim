@@ -22,15 +22,9 @@ func eye(p : Point) -> (I : tensor[points,points](float))
   I(p,p) = 1.0;
 end
 
-export func main()
-  b = points.b;
-  I = map eye to points reduce +;
-  A = I - 0.01 * (map f to springs reduce +);
+func cg<S>(A : tensor[S,S](float), b : tensor[S](float)) -> x : tensor[S](float)
+  const xguess : tensor[S](float) = 0.0;
 
-  var xguess : tensor[points](float) = 0.0;
-  var x : tensor[points](float);
-
-% begin inlined CG
   tol = 1e-6;
   maxiters = 5;
   var r = b - (A*xguess);
@@ -56,7 +50,11 @@ export func main()
     normr = norm(r);
     iter = iter + 1;
   end
-% end inlined CG
+end
 
-  points.c = x;
+export func main()
+  b = points.b;
+  I = map eye to points reduce +;
+  A = I - 0.01 * (map f to springs reduce +);
+  points.c = cg(A, b);
 end

@@ -14,8 +14,12 @@ extern P : set{Particle};
 extern V : set{Vertex};
 extern E : set{Edge}(P, V);
 
+func f(e : Edge, n : (p : Particle, v : Vertex)) -> r : int
+  r = e.a + n.v.b + n.p.c;
+end
+
 func asm(e : Edge, n : (p : Particle, v : Vertex)) -> (A : matrix[P,V](int))
-  A(n.p,n.v) = e.a + n.v.b + n.p.c;
+  A(n.p,n.v) = f(e, n);
 end
 
 export func main()

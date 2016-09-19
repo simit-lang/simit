@@ -8,13 +8,99 @@
 #include "flatten.h"
 #include "intrinsics.h"
 #include "ir_codegen.h"
+#include "ir_queries.h"
+#include "ir_transforms.h"
 #include "grid_ops.h"
 #include "stencils.h"
+#include "var_replace_rewriter.h"
 
 using namespace std;
 
 namespace simit {
 namespace ir {
+
+bool CallRewriter::shouldInline(const CallStmt *op) {
+  for (auto &arg : op->actuals) {
+    if (!arg.type().isTensor() || arg.type().toTensor()->isSparse()) {
+      return true;
+    }
+  }
+  
+  //for (auto &res : op->callee.getResults()) {
+  //  if (!res.getType().isTensor() || res.getType().toTensor()->isSparse()) {
+  //    return true;
+  //  }
+  //}
+
+  class ReferencesSet : public IRQuery {
+    using IRQuery::visit;
+
+    void visit(const VarExpr *op) {
+      if (op->type.isSet()) {
+        result = true;
+      }
+    }
+  };
+
+  return ReferencesSet().query(op->callee.getBody());
+}
+
+void CallRewriter::visit(const CallStmt *op) {
+  stmt = op->callee.getBody();
+
+  if (!stmt.defined() || !shouldInline(op)) {
+    stmt = op;
+    return;
+  }
+
+  // Replace callee parameters with arguments
+  iassert(op->actuals.size() == op->callee.getArguments().size());
+  for (size_t i = 0; i < op->actuals.size(); ++i) {
+    stmt = replaceVarByExpr(stmt, op->callee.getArguments()[i], op->actuals[i]);
+  }
+
+  // Replace callee result variables with assignment targets
+  iassert(op->results.size() == op->callee.getResults().size());
+  for (size_t i = 0; i < op->results.size(); ++i) {
+    stmt = replaceVar(stmt, op->callee.getResults()[i], op->results[i]);
+  }
+    
+  // Add comment
+  stmt = Comment::make(util::toString(*op), stmt, true);
+
+  // // Add storage descriptor for the new tensors in inlined call
+  // updateStorage(stmt, storage, env);
+ 
+  // // Add result variable indices to the environment
+  // for (auto result : op->results) {
+  //   if (storage->hasStorage(result)) {
+  //     auto tensorStorage = storage->getStorage(result);
+  //     if (tensorStorage.getKind() == TensorStorage::Indexed) {
+  //       auto& pexpr = tensorStorage.getTensorIndex().getPathExpression();
+  //       env->addTensorIndex(pexpr, result);
+  //     }
+  //   }
+  // }
+ 
+  // // Add storage from called Func's environment
+  // Func noBody(op->callee, Pass::make());
+  // updateStorage(noBody, storage, env);
+
+  // Add constants from inlined callee into environment
+  for (auto &c : op->callee.getEnvironment().getConstants()) {
+    env->addConstant(c.first, c.second);
+  }
+}
+
+Func inlineCalls(Func func) {
+  CallRewriter rewriter(&func.getStorage(),&func.getEnvironment());
+  Stmt body = rewriter.rewrite(func.getBody());
+
+  func = Func(func, body);
+  func = insertVarDecls(func);
+
+  return func;
+}
 
 Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
                        MapFunctionRewriter &rewriter, Storage* storage);

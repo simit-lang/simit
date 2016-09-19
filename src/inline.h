@@ -11,6 +11,22 @@
 namespace simit {
 namespace ir {
 
+class CallRewriter : public IRRewriter {
+public:
+  CallRewriter(Storage *storage, Environment *env)
+      : storage(storage), env(env) {}
+
+protected:
+  Storage *storage;
+  Environment *env;
+
+  using IRRewriter::visit;
+
+  bool shouldInline(const CallStmt *op);
+
+  void visit(const CallStmt *op);
+};
+
 /// Rewrites a mapped function body to compute on sets w.r.t. a loop variable,
 /// instead of arguments.
 class MapFunctionRewriter : protected IRRewriter {
@@ -77,6 +93,8 @@ protected:
   /// Replace function formal results with map actual results
   void visit(const VarExpr *op);
 };
+
+Func inlineCalls(Func func);
 
 /// Inlines the map returning a loop, using the given rewriter.
 Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
