@@ -290,7 +290,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
   class LoopVarsBuilder : protected SIGVisitor {
   public:
     LoopVarsBuilder(const Storage &storage)
-        : storage(storage), numBlockLevels(0), currBlockLevel(0) {
+        : storage(storage), currBlockLevel(0), numBlockLevels(0) {
     }
     LoopVars build(const SIG &sig) {
       vertexLoopVars.clear();
