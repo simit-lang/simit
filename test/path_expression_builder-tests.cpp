@@ -14,7 +14,6 @@ using namespace simit::ir;
 static const Type vType = ElementType::make("Vertex", {});
 static const Type VType = UnstructuredSetType::make(vType, {});
 static const ir::Var V("V", VType);
-static const ir::Var U("U", VType);
 
 static const Type eType = ElementType::make("Edge", {});
 static const Type EType = UnstructuredSetType::make(eType, {V,V});
