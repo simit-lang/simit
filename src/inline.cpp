@@ -20,18 +20,13 @@ namespace simit {
 namespace ir {
 
 bool CallRewriter::shouldInline(const CallStmt *op) {
+  // Check for non-dense tensor arguments
   for (auto &arg : op->actuals) {
     if (!arg.type().isTensor() || arg.type().toTensor()->isSparse()) {
       return true;
     }
   }
   
-  //for (auto &res : op->callee.getResults()) {
-  //  if (!res.getType().isTensor() || res.getType().toTensor()->isSparse()) {
-  //    return true;
-  //  }
-  //}
-
   class ReferencesSet : public IRQuery {
     using IRQuery::visit;
 
@@ -42,6 +37,7 @@ bool CallRewriter::shouldInline(const CallStmt *op) {
     }
   };
 
+  // Check for references to sets within function body
   return ReferencesSet().query(op->callee.getBody());
 }
 
@@ -67,24 +63,6 @@ void CallRewriter::visit(const CallStmt *op) {
     
   // Add comment
   stmt = Comment::make(util::toString(*op), stmt, true);
-
-  // // Add storage descriptor for the new tensors in inlined call
-  // updateStorage(stmt, storage, env);
- 
-  // // Add result variable indices to the environment
-  // for (auto result : op->results) {
-  //   if (storage->hasStorage(result)) {
-  //     auto tensorStorage = storage->getStorage(result);
-  //     if (tensorStorage.getKind() == TensorStorage::Indexed) {
-  //       auto& pexpr = tensorStorage.getTensorIndex().getPathExpression();
-  //       env->addTensorIndex(pexpr, result);
-  //     }
-  //   }
-  // }
- 
-  // // Add storage from called Func's environment
-  // Func noBody(op->callee, Pass::make());
-  // updateStorage(noBody, storage, env);
 
   // Add constants from inlined callee into environment
   for (auto &c : op->callee.getEnvironment().getConstants()) {
