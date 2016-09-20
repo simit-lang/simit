@@ -1228,24 +1228,6 @@ protected:
   virtual FIRNode::Ptr cloneNode(); 
 };
 
-#if 0
-struct TensorBlock : public Expr {
-  std::vector<Expr::Ptr> elems;
-  bool                   transposed;
-  
-  typedef std::shared_ptr<TensorBlock> Ptr;
-
-  virtual void accept(FIRVisitor *visitor) {
-    visitor->visit(self<TensorBlock>());
-  }
-
-protected:
-  virtual void copy(FIRNode::Ptr);
-
-  virtual FIRNode::Ptr cloneNode(); 
-};
-#endif
-
 struct TensorLiteral : public Expr {
   typedef std::shared_ptr<TensorLiteral> Ptr;
 };
