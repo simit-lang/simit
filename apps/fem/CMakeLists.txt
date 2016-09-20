@@ -8,14 +8,14 @@ endif ()
 include_directories($ENV{SIMIT_INCLUDE_DIR})
 find_library(simit simit $ENV{SIMIT_LIBRARY_DIR})
 
-# compile the fem2 application
+# compile the static scalar 2D equation solver
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-file(GLOB FEM2_SOURCE ${PROJECT_SOURCE_DIR}/fem2.cpp)
-add_executable(fem2 ${FEM2_SOURCE})
-target_link_libraries(fem2 LINK_PUBLIC ${simit})
+file(GLOB FEM2_SOURCE ${PROJECT_SOURCE_DIR}/static_scalar_2D.cpp)
+add_executable(static_scalar_2D ${FEM2_SOURCE})
+target_link_libraries(static_scalar_2D LINK_PUBLIC ${simit})
 
-# compile the fem2 application
+# compile the static scalar 3D equation solver
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-file(GLOB FEM2_SOURCE ${PROJECT_SOURCE_DIR}/fem3.cpp)
-add_executable(fem3 ${FEM2_SOURCE})
-target_link_libraries(fem3 LINK_PUBLIC ${simit})
+file(GLOB FEM3_SOURCE ${PROJECT_SOURCE_DIR}/static_scalar_3D.cpp)
+add_executable(static_scalar_3D ${FEM3_SOURCE})
+target_link_libraries(static_scalar_3D LINK_PUBLIC ${simit})
