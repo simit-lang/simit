@@ -152,7 +152,8 @@ void IRPrinter::visit(const Literal *op) {
     
     case Type::Element:
     case Type::Set:
-    case Type::Tuple:
+    case Type::UnnamedTuple:
+    case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
       not_supported_yet;
@@ -266,12 +267,18 @@ void IRPrinter::visit(const CallStmt *op) {
     util::join(op->actuals) << ")" << ";";
 }
 
-void IRPrinter::visit(const TupleRead *op) {
+void IRPrinter::visit(const UnnamedTupleRead *op) {
   clearSkipParen();
   print(op->tuple);
   os << "(";
   print(op->index);
   os << ")";
+}
+
+void IRPrinter::visit(const NamedTupleRead *op) {
+  clearSkipParen();
+  print(op->tuple);
+  os << "." << op->elementName;
 }
 
 void IRPrinter::visit(const SetRead *op) {
@@ -337,9 +344,8 @@ void IRPrinter::visit(const Map *op) {
 
   os << " to ";
   print(op->target);
-  if (op->neighbors.defined()) {
-    os << " with ";
-    print(op->neighbors);
+  if (!op->neighbors.empty()) {
+    os << " with " << util::join(op->neighbors);
   }
   if (op->reduction.getKind() != ReductionOperator::Undefined) {
     os << " reduce " << op->reduction;

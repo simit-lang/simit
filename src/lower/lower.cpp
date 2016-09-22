@@ -11,6 +11,7 @@
 #include "lower_string_ops.h"
 #include "lower_stencil_assemblies.h"
 
+#include "inline.h"
 #include "storage.h"
 #include "timers.h"
 #include "temps.h"
@@ -102,6 +103,10 @@ Func lower(Func func, std::ostream* os, bool time) {
   func = rewriteCallGraph(func, insertTemporaries);
   printCallGraph("Insert Temporaries and Flatten Index Expressions", func, os);
 
+  // Inline function calls
+  func = rewriteCallGraph(func, inlineCalls);
+  printCallGraph("Inline Fuction Calls", func, os);
+
   // Determine Storage
   func = rewriteCallGraph(func, [](Func func) -> Func {
     updateStorage(func, &func.getStorage(), &func.getEnvironment());
@@ -126,6 +131,7 @@ Func lower(Func func, std::ostream* os, bool time) {
   func = rewriteCallGraph(func, lowerPrints);
   printCallGraph("Lower String Operations and Prints", func, os);
 
+  // Lower field accesses
   func = rewriteCallGraph(func, lowerFieldAccesses);
   printCallGraph("Lower Field Accesses", func, os);
 

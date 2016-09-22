@@ -42,16 +42,12 @@ void IREmitter::visit(Endpoint::Ptr end) {
   retExpr = setExprs[end->set->setDef];
 }
 
-void IREmitter::visit(UnstructuredSetType::Ptr type) {
-  const ir::Type elementType = emitType(type->element);
+void IREmitter::visit(HomogeneousEdgeSetType::Ptr type) {
+  emitUnstructuredSetType(type);
+}
 
-  std::vector<ir::Expr> endpoints;
-  for (auto end : type->endpoints) {
-    const ir::Expr endpoint = emitExpr(end);
-    endpoints.push_back(endpoint);
-  }
-
-  retType = ir::UnstructuredSetType::make(elementType, endpoints);
+void IREmitter::visit(HeterogeneousEdgeSetType::Ptr type) {
+  emitUnstructuredSetType(type);
 }
 
 void IREmitter::visit(GridSetType::Ptr type) {
@@ -61,11 +57,26 @@ void IREmitter::visit(GridSetType::Ptr type) {
       elementType, underlyingPointSet, type->dimensions);
 }
 
-void IREmitter::visit(TupleType::Ptr type) {
-  const ir::Type elementType = emitType(type->element);
+void IREmitter::visit(TupleElement::Ptr elem) {
+  const ir::Type type = emitType(elem->element);
+  retField = ir::Field(elem->name->ident, type);
+}
+
+void IREmitter::visit(NamedTupleType::Ptr type) {
+  std::vector<ir::Field> elements;
+  for (auto elem : type->elems) {
+    const ir::Field tupleElement = emitTupleElement(elem);
+    elements.push_back(tupleElement);
+  }
+
+  retType = ir::NamedTupleType::make(elements);
+}
+
+void IREmitter::visit(UnnamedTupleType::Ptr type) {
+  iassert(type->length->val > 0);
   
-  iassert(type->length > 0);
-  retType = ir::TupleType::make(elementType, type->length->val);
+  const ir::Type elementType = emitType(type->element);
+  retType = ir::UnnamedTupleType::make(elementType, type->length->val);
 }
 
 void IREmitter::visit(ScalarType::Ptr type) {
@@ -254,7 +265,7 @@ void IREmitter::visit(IfStmt::Ptr stmt) {
   }
   ctx->addStatement(ifStmt);
 
-  retStmt = ifStmt;
+  retStmt = ir::Block::make(*ctx->getStatements());
 }
 
 void IREmitter::visit(IndexSetDomain::Ptr domain) {
@@ -391,8 +402,8 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   
   std::vector<ir::Expr> endpoints;
   if (target.type().isUnstructuredSet()) {
-    for (const ir::Expr *endpoint :
-             target.type().toUnstructuredSet()->endpointSets) {
+    const auto targetSet = target.type().toUnstructuredSet();
+    for (const ir::Expr *endpoint : targetSet->endpointSets) {
       endpoints.push_back(*endpoint);
     }
   }
@@ -404,10 +415,8 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
   retExpr = ir::VarExpr::make(tmp);
 
-  // TODO: Should eventually support heterogeneous edge sets.
-  const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   const ir::Stmt mapStmt = ir::Map::make({tmp}, func, partialActuals, target,
-                                         endpoint, through, reduction);
+                                         endpoints, through, reduction);
   calls.push_back(mapStmt);
 }
 
@@ -707,12 +716,19 @@ void IREmitter::visit(SetReadExpr::Ptr expr) {
   retExpr = ir::SetRead::make(set, indices);
 }
 
-void IREmitter::visit(TupleReadExpr::Ptr expr) {
+void IREmitter::visit(NamedTupleReadExpr::Ptr expr) {
+  const ir::Expr tuple = emitExpr(expr->tuple);
+  
+  iassert(tuple.type().isNamedTuple());
+  retExpr = ir::NamedTupleRead::make(tuple, expr->elem->ident);
+}
+
+void IREmitter::visit(UnnamedTupleReadExpr::Ptr expr) {
   const ir::Expr tuple = emitExpr(expr->tuple);
   const ir::Expr index = emitExpr(expr->index);
 
-  iassert(tuple.type().isTuple());
-  retExpr = ir::TupleRead::make(tuple, index);
+  iassert(tuple.type().isUnnamedTuple());
+  retExpr = ir::UnnamedTupleRead::make(tuple, index);
 }
 
 void IREmitter::visit(FieldReadExpr::Ptr expr) {
@@ -767,6 +783,18 @@ void IREmitter::visit(ComplexVectorLiteral::Ptr lit) {
 
 void IREmitter::visit(NDTensorLiteral::Ptr lit) {
   emitDenseTensorLiteral(lit);
+}
+
+void IREmitter::emitUnstructuredSetType(UnstructuredSetType::Ptr type) {
+  const ir::Type elementType = emitType(type->element);
+
+  std::vector<ir::Expr> endpoints;
+  for (unsigned i = 0; i < type->getArity(); ++i) {
+    const ir::Expr endpoint = emitExpr(type->getEndpoint(i));
+    endpoints.push_back(endpoint);
+  }
+
+  retType = ir::UnstructuredSetType::make(elementType, endpoints);
 }
 
 void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
@@ -908,6 +936,94 @@ void IREmitter::DenseTensorValues::merge(
   ++dimSizes[dimSizes.size() - 1];
 }
 
+ir::Expr IREmitter::emitExpr(FIRNode::Ptr ptr) {
+  const ir::Expr tmpExpr = retExpr;
+  retExpr = ir::Expr();
+  
+  ptr->accept(this);
+  const ir::Expr ret = retExpr;
+
+  retExpr = tmpExpr;
+  return ret;
+}
+
+ir::Stmt IREmitter::emitStmt(Stmt::Ptr ptr) {
+  const auto tmpStmt = retStmt;
+  retStmt = ir::Stmt();
+
+  ptr->accept(this);
+  const ir::Stmt ret = retStmt;
+
+  retStmt = tmpStmt;
+  return ret;
+}
+
+ir::Type IREmitter::emitType(Type::Ptr ptr) {
+  const ir::Type tmpType = retType;
+  retType = ir::Type();
+
+  ptr->accept(this);
+  const ir::Type ret = retType;
+
+  retType = tmpType;
+  return ret;
+}
+
+ir::IndexSet IREmitter::emitIndexSet(IndexSet::Ptr ptr) {
+  const ir::IndexSet tmpIndexSet = retIndexSet;
+  retIndexSet = ir::IndexSet();
+
+  ptr->accept(this);
+  const ir::IndexSet ret = retIndexSet;
+
+  retIndexSet = tmpIndexSet;
+  return ret;
+}
+
+ir::Field IREmitter::emitField(FieldDecl::Ptr ptr) {
+  const ir::Field tmpField = retField;
+  retField = ir::Field("", ir::Type());
+
+  ptr->accept(this);
+  const ir::Field ret = retField;
+
+  retField = tmpField;
+  return ret;
+}
+
+ir::Field IREmitter::emitTupleElement(TupleElement::Ptr ptr) {
+  const ir::Field tmpField = retField;
+  retField = ir::Field("", ir::Type());
+
+  ptr->accept(this);
+  const ir::Field ret = retField;
+
+  retField = tmpField;
+  return ret;
+}
+
+ir::Var IREmitter::emitVar(IdentDecl::Ptr ptr) {
+  const ir::Var tmpVar = retVar;
+  retVar = ir::Var();
+
+  ptr->accept(this);
+  const ir::Var ret = retVar;
+
+  retVar = tmpVar;
+  return ret;
+}
+
+IREmitter::Domain IREmitter::emitDomain(ForDomain::Ptr ptr) {
+  const Domain tmpDomain = retDomain;
+  retDomain = Domain();
+
+  ptr->accept(this);
+  const Domain ret = retDomain;
+
+  retDomain = tmpDomain;
+  return ret;
+}
+ 
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   iassert(decl->initVal || !isConst);
   

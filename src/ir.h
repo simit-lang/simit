@@ -470,10 +470,17 @@ struct Pass : public StmtNode {
   void accept(IRVisitorStrict *v) const {v->visit((const Pass*)this);}
 };
 
-struct TupleRead : public ExprNode {
+struct UnnamedTupleRead : public ExprNode {
   Expr tuple, index;
   static Expr make(Expr tuple, Expr index);
-  void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
+  void accept(IRVisitorStrict *v) const {v->visit((const UnnamedTupleRead*)this);}
+};
+
+struct NamedTupleRead : public ExprNode {
+  Expr tuple;
+  std::string elementName;
+  static Expr make(Expr tuple, std::string elementName);
+  void accept(IRVisitorStrict *v) const {v->visit((const NamedTupleRead*)this);}
 };
 
 /// Expression that reads a set element, used by grid graphs for stencil
@@ -532,14 +539,15 @@ struct Map : public StmtNode {
   std::vector<Var> vars;
   Func function;
   Expr target;
-  Expr neighbors;
+  std::vector<Expr> neighbors;
   Expr through;
   std::vector<Expr> partial_actuals;
   ReductionOperator reduction;
 
-  static Stmt make(std::vector<Var> vars,
-                   Func function, std::vector<Expr> partial_actuals,
-                   Expr target, Expr neighbors=Expr(), Expr through=Expr(),
+  static Stmt make(std::vector<Var> vars, Func function, 
+                   std::vector<Expr> partial_actuals, Expr target, 
+                   std::vector<Expr> neighbors = std::vector<Expr>(), 
+                   Expr through=Expr(),
                    ReductionOperator reduction=ReductionOperator());
   void accept(IRVisitorStrict *v) const {v->visit((const Map*)this);}
 };

@@ -10,11 +10,19 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
+func f(s : Spring, p : (Point*2), i : int) -> r : float
+  r = s.a + p(i).b;
+end
+
+func g(t : Spring, q : (Point*2)) -> r : float
+  r = t.a + q(0).c + q(1).c;
+end
+
 func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
-  A(p(0),p(0)) = s.a + p(0).b;
-  A(p(0),p(1)) = s.a + p(0).c + p(1).c;
-  A(p(1),p(0)) = s.a + p(0).c + p(1).c;
-  A(p(1),p(1)) = s.a + p(1).b;
+  A(p(0),p(0)) = f(s, p, 0);
+  A(p(0),p(1)) = g(s, p);
+  A(p(1),p(0)) = g(s, p);
+  A(p(1),p(1)) = f(s, p, 1);
 end
 
 export func main()

@@ -1,0 +1,32 @@
+element Vertex
+  a : float;
+  b : float;
+end
+
+element Edge
+  e : float;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+extern F : set{Edge}(V,V);
+
+const PI = 3;
+
+func f(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
+  A(v(0),v(0)) = e.e;
+  A(v(0),v(1)) = e.e;
+  A(v(1),v(0)) = e.e;
+  A(v(1),v(1)) = e.e;
+end
+
+func computeSystemTensors() -> (G : matrix[V,V](float), H : matrix[V,V](float))
+  G = map f to E reduce +;
+  H = map f to F reduce +;
+end
+
+export func main()
+  B, C = computeSystemTensors();
+  A = B + C;
+  V.a = A * V.b;
+end

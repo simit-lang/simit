@@ -1208,7 +1208,7 @@ TEST(system, gemv_diagonal_storage_and_sysreduced) {
  }
 
  
-TEST(system, DISABLED_gemv_pass_element) {
+TEST(system, gemv_pass_element) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");

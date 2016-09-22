@@ -116,21 +116,6 @@ export func main()
   g(x);
 end
 
-%%% bad-call-10
-element E
-end
-
-extern elems : set{E};
-
-func f(e : E)
-end
-
-export func main()
-  for e in elems
-    f(e);
-  end
-end
-
 %%% bad-call-11
 export func main()
   foo<1>();

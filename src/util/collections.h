@@ -1,6 +1,11 @@
 #ifndef SIMIT_UTIL_COLLECTIONS_H
 #define SIMIT_UTIL_COLLECTIONS_H
 
+#include <map>
+#include <set>
+#include <unordered_set>
+#include <unordered_map>
+
 #include "interfaces/comparable.h"
 
 namespace simit {
@@ -21,6 +26,18 @@ bool contains(const std::set<V> &container, const V &value) {
 /// Query whether a map contains an element
 template <typename K, typename V>
 bool contains(const std::map<K,V> &container, const K &key) {
+  return container.find(key) != container.end();
+}
+
+/// Query whether a set contains an element
+template <typename V>
+bool contains(const std::unordered_set<V> &container, const V &value) {
+  return container.find(value) != container.end();
+}
+
+/// Query whether a map contains an element
+template <typename K, typename V>
+bool contains(const std::unordered_map<K,V> &container, const K &key) {
   return container.find(key) != container.end();
 }
 

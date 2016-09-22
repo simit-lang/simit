@@ -98,8 +98,122 @@ public:
     }
   }
 
+  void visit(const Map *op) {
+    std::vector<Var> vars(op->vars.size());
+    for (size_t i = 0; i < op->vars.size(); ++i) {
+      vars[i] = (op->vars[i] == init) ? final : op->vars[i];
+    }
+
+    Expr target = rewrite(op->target);
+  
+    std::vector<Expr> neighbors(op->neighbors.size());
+    for (size_t i = 0; i < op->neighbors.size(); ++i) {
+      neighbors[i] = rewrite(op->neighbors[i]);
+    }
+  
+    Expr through;
+    if (op->through.defined()) {
+      through = rewrite(op->through);
+    }
+    
+    std::vector<Expr> partial_actuals(op->partial_actuals.size());
+    for (size_t i = 0; i < op->partial_actuals.size(); ++i) {
+      partial_actuals[i] = rewrite(op->partial_actuals[i]);
+    }
+  
+    stmt = Map::make(vars, op->function, partial_actuals, target,
+                     neighbors, through, op->reduction);
+  }
+
 private:
   Var init, final;
+};
+
+class ReplaceVarByExprRewriter : public IRRewriter {
+public:
+  ReplaceVarByExprRewriter(Var init, Expr final) : init(init), final(final) {}
+
+  using IRRewriter::visit;
+
+  void visit(const VarExpr *op) {
+    if (op->var == init) {
+      expr = final;
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const AssignStmt *op) {
+    Expr value = rewrite(op->value);
+    if (op->var == init) {
+      if (isa<VarExpr>(final)) {
+        stmt = AssignStmt::make(to<VarExpr>(final)->var, value, op->cop);
+      }
+      else if (isa<FieldRead>(final)) {
+        const auto fieldRead = to<FieldRead>(final);
+        stmt = FieldWrite::make(fieldRead->elementOrSet, fieldRead->fieldName,
+                                value, op->cop);
+      }
+      else if (isa<TensorRead>(final)) {
+        const auto tensorRead = to<TensorRead>(final);
+        stmt = TensorWrite::make(tensorRead->tensor, tensorRead->indices,
+                                 value, op->cop);
+      }
+      else {
+        not_supported_yet;
+      }
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const CallStmt *op) {
+    std::vector<Var> finalResults(op->results.size());
+    for (size_t i = 0; i < op->results.size(); ++i) {
+      finalResults[i] = (op->results[i] == init) ? to<VarExpr>(final)->var : 
+                        op->results[i];
+    }
+
+    std::vector<Expr> actuals(op->actuals.size());
+    for (size_t i = 0; i < op->actuals.size(); ++i) {
+      actuals[i] = rewrite(op->actuals[i]);
+    }
+
+    stmt = CallStmt::make(finalResults, op->callee, actuals);
+  }
+
+  void visit(const Map *op) {
+    std::vector<Var> vars(op->vars.size());
+    for (size_t i = 0; i < op->vars.size(); ++i) {
+      vars[i] = (op->vars[i] == init) ? to<VarExpr>(final)->var : op->vars[i];
+    }
+
+    Expr target = rewrite(op->target);
+  
+    std::vector<Expr> neighbors(op->neighbors.size());
+    for (size_t i = 0; i < op->neighbors.size(); ++i) {
+      neighbors[i] = rewrite(op->neighbors[i]);
+    }
+  
+    Expr through;
+    if (op->through.defined()) {
+      through = rewrite(op->through);
+    }
+    
+    std::vector<Expr> partial_actuals(op->partial_actuals.size());
+    for (size_t i = 0; i < op->partial_actuals.size(); ++i) {
+      partial_actuals[i] = rewrite(op->partial_actuals[i]);
+    }
+  
+    stmt = Map::make(vars, op->function, partial_actuals, target,
+                     neighbors, through, op->reduction);
+  }
+
+private:
+  Var  init;
+  Expr final;
 };
 
 Stmt replaceVar(Stmt stmt, Var init, Var final) {
@@ -108,6 +222,10 @@ Stmt replaceVar(Stmt stmt, Var init, Var final) {
 
 Func replaceVar(Func func, Var init, Var final) {
   return VarReplaceRewriter(init, final).rewrite(func);
+}
+
+Stmt replaceVarByExpr(Stmt stmt, Var init, Expr final) {
+  return ReplaceVarByExprRewriter(init, final).rewrite(stmt);
 }
 
 }}  // namespace simit::ir

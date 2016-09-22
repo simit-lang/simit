@@ -234,6 +234,46 @@ TEST(system, swap) {
   ASSERT_EQ(3.0, val.get(v3));
 }
 
+TEST(system, swap_heterogeneous) {
+  Set P;
+  ElementRef p0 = P.add();
+  ElementRef p1 = P.add();
+  ElementRef p2 = P.add();
+  FieldRef<simit_float> valP = P.addField<simit_float>("val");
+  valP(p0) = 1.0;
+  valP(p1) = 2.0;
+  valP(p2) = 3.0;
+
+  Set V;
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  FieldRef<simit_float> valV = V.addField<simit_float>("val");
+  valV(v0) = 4.0;
+  valV(v1) = 5.0;
+  valV(v2) = 6.0;
+
+  Set E(P,V);
+  E.add(p0,v0);
+  E.add(p1,v1);
+  E.add(p2,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("P", &P);
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  // Check that inputs are swapped appropriately
+  ASSERT_EQ(4.0, valP.get(p0));
+  ASSERT_EQ(5.0, valP.get(p1));
+  ASSERT_EQ(6.0, valP.get(p2));
+  ASSERT_EQ(1.0, valV.get(v0));
+  ASSERT_EQ(2.0, valV.get(v1));
+  ASSERT_EQ(3.0, valV.get(v2));
+}
+
 TEST(system, element_field_access_in_proc) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");

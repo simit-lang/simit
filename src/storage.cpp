@@ -355,7 +355,7 @@ private:
             tensorStorage = TensorStorage(TensorStorage::Dense);
           }
           else {
-            if (!op->neighbors.defined()) {
+            if (op->neighbors.empty()) {
               tensorStorage = TensorStorage(TensorStorage::Diagonal);
             }
             else {

@@ -7,7 +7,7 @@ element Edge
 end
 
 extern V : set{Vertex};
-extern E : set{Edge}(V,V);
+extern E : set{Edge}(V*2);
 
 func f(e : Edge, p : (Vertex*2)) -> Ae : tensor[V,V](int)
   Ae(p(0),p(0)) = 1;

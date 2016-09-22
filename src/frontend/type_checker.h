@@ -36,9 +36,12 @@ private:
   virtual void visit(GenericIndexSet::Ptr op) {}
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
-  virtual void visit(UnstructuredSetType::Ptr);
+  virtual void visit(HomogeneousEdgeSetType::Ptr);
+  virtual void visit(HeterogeneousEdgeSetType::Ptr);
   virtual void visit(GridSetType::Ptr);
-  virtual void visit(TupleType::Ptr);
+  virtual void visit(TupleElement::Ptr);
+  virtual void visit(NamedTupleType::Ptr);
+  virtual void visit(UnnamedTupleType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
@@ -74,7 +77,8 @@ private:
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
   virtual void visit(SetReadExpr::Ptr);
-  virtual void visit(TupleReadExpr::Ptr);
+  virtual void visit(NamedTupleReadExpr::Ptr);
+  virtual void visit(UnnamedTupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(ParenExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
@@ -209,13 +213,13 @@ private:
       };
 
     public:
-      typedef std::unordered_map<std::string, Type::Ptr> ElementMap;
+      typedef std::unordered_map<std::string, Type::Ptr> TypeMap;
       typedef util::ScopedMap<std::string, SymbolType>   SymbolTable;
       typedef SymbolTable::SearchScope                   Scope;
 
     private:
       typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
-      typedef std::unordered_map<std::string, ElementMap>    ElementDeclMap;
+      typedef std::unordered_map<std::string, TypeMap>    ElementDeclMap;
       typedef std::unordered_map<FIRNode::Ptr, SetType::Ptr> SetDefinitionMap;
 
     public:
@@ -248,7 +252,7 @@ private:
         return funcReplace.at(sig);
       }
 
-      void addElementType(const std::string& name, const ElementMap &map) {
+      void addElementType(const std::string& name, const TypeMap &map) {
         elementDecls[name] = map;
       }
 

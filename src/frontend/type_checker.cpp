@@ -3,11 +3,13 @@
 #include <iostream>
 #include <algorithm>
 #include <exception>
+#include <unordered_set>
 
 #include "error.h"
 #include "fir.h"
 #include "intrinsics.h"
 #include "type_checker.h"
+#include "util/collections.h"
 #include "util/util.h"
 
 namespace simit {
@@ -55,7 +57,7 @@ void TypeChecker::visit(SetIndexSet::Ptr set) {
   const Type::Ptr type = env.getSymbolType(set->setName);
 
   // Check that index set pointed to by identifier is indeed of set type.
-  if (!set->setDef && !isa<SetType>(type)) {
+  if (!env.hasSetDefinition(set) && !isa<SetType>(type)) {
     std::stringstream errMsg;
     errMsg << "expected a set but '" << set->setName 
            << "' is of type " << toString(type);
@@ -74,12 +76,25 @@ void TypeChecker::visit(Endpoint::Ptr end) {
   retTypeChecked = typeCheck(end->set);
  
   if (retTypeChecked) {
-    const auto endSetType = env.getSetDefinition(end->set);
-    end->element = endSetType->element;
+    end->element = env.getSetDefinition(end->set)->element;
   }
 }
 
-void TypeChecker::visit(UnstructuredSetType::Ptr type) {
+void TypeChecker::visit(HomogeneousEdgeSetType::Ptr type) {
+  const bool elementTypeChecked = typeCheck(type->element);
+  const bool endpointTypeChecked = typeCheck(type->endpoint);
+  const bool arityTypeChecked = typeCheck(type->arity);
+
+  retTypeChecked = elementTypeChecked && endpointTypeChecked && 
+                   arityTypeChecked;
+  
+  // Check that arity is positive.
+  if (type->arity->val < 1) {
+    reportError("edge set must have positive arity", type->arity);
+  }
+}
+
+void TypeChecker::visit(HeterogeneousEdgeSetType::Ptr type) {
   retTypeChecked = typeCheck(type->element);
 
   for (auto end : type->endpoints) {
@@ -94,7 +109,11 @@ void TypeChecker::visit(GridSetType::Ptr type) {
 
   retTypeChecked = elementTypeChecked && gridSetTypeChecked;
  
-  const auto gridSetDef = type->underlyingPointSet->set->setDef;
+  if (!retTypeChecked) {
+    return;
+  }
+
+  const auto gridSetDef = env.getSetDefinition(type->underlyingPointSet->set);
   const auto gridSetName = type->underlyingPointSet->set->setName;
 
   // Check underlying point set is an unstructured set
@@ -103,24 +122,47 @@ void TypeChecker::visit(GridSetType::Ptr type) {
     errMsg << "expected underlying point set of unstructured kind, but set '"
            << gridSetName << "' is not an unstructured set";
     reportError(errMsg.str(), type->underlyingPointSet);
+    return;
   }
+
+  const auto gridSetType = to<UnstructuredSetType>(gridSetDef);
+  const auto gridSetArity = gridSetType->getArity();
+
   // Check underlying point set is cardinality zero
-  else if (!to<UnstructuredSetType>(gridSetDef)->endpoints.empty()) {
+  if (gridSetArity != 0) {
     std::stringstream errMsg;
     errMsg << "expected underlying point set of zero cardinality, but set '" 
-           << gridSetName << "' has cardinality "
-           << to<UnstructuredSetType>(gridSetDef)->endpoints.size();
+           << gridSetName << "' has cardinality " << gridSetArity;
     reportError(errMsg.str(), type->underlyingPointSet);
   }
 }
 
-void TypeChecker::visit(TupleType::Ptr type) {
+void TypeChecker::visit(TupleElement::Ptr elem) {
+  retTypeChecked = typeCheck(elem->element);
+}
+
+void TypeChecker::visit(NamedTupleType::Ptr type) {
+  std::unordered_set<std::string> elems;
+  for (const auto elem : type->elems) {
+    const bool typeChecked = typeCheck(elem);
+    retTypeChecked = typeChecked && retTypeChecked;
+
+    const std::string elemName = elem->name->ident;
+
+    if (util::contains(elems, elemName)) {
+      reportRedefinition("tuple element", elemName, elem);
+    }
+
+    elems.insert(elemName);
+  }
+}
+
+void TypeChecker::visit(UnnamedTupleType::Ptr type) {
   retTypeChecked = typeCheck(type->element);
 
   // Check that tuple length is positive.
   if (type->length->val < 1) {
-    const auto msg = "tuple must have length greater than or equal to one";
-    reportError(msg, type->length);
+    reportError("tuple must have positive length", type->length);
   }
 }
 
@@ -148,14 +190,14 @@ void TypeChecker::visit(IdentDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
-  Environment::ElementMap elemFields;
+  Environment::TypeMap elemFields;
   for (auto field : decl->fields) {
     const std::string fieldName = field->name->ident;
     const Type::Ptr fieldType = field->type;
 
     const bool typeChecked = typeCheck(field);
 
-    if (elemFields.find(fieldName) != elemFields.end()) {
+    if (util::contains(elemFields, fieldName)) {
       reportRedefinition("element field", fieldName, field);
     }
 
@@ -345,8 +387,7 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
     loopVarType = makeTensorType(ScalarType::Type::INT);
   } else if (isa<IndexSetDomain>(stmt->domain) && typeChecked) {
     const auto setDomain = to<IndexSetDomain>(stmt->domain);
-    const auto setType = env.getSetDefinition(setDomain->set);
-    loopVarType = setType->element;
+    loopVarType = env.getSetDefinition(setDomain->set)->element;
   }
 
   env.addSymbol(stmt->loopVar->ident, loopVarType, Access::READ);
@@ -504,7 +545,7 @@ void TypeChecker::visit(EqExpr::Ptr expr) {
     } else if (!env.compareTypes(repType, opndType.type[0])) {
       std::stringstream errMsg;
       errMsg << "value of type " << toString(opndType)
-             << "cannot be compared to value of type " << toString(repType);
+             << " cannot be compared to value of type " << toString(repType);
       reportError(errMsg.str(), operand);
     }
   }
@@ -914,16 +955,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       reportError("cannot pass multiple values as a single argument", arg);
       continue;
     }
-
-    // Check that argument is a tensor.
-    // TODO: Remove once support for passing non-tensor arguments is added.
-    if (!(argTypes[i].isTensor() || argTypes[i].isOpaque())) {
-      std::stringstream errMsg;
-      errMsg << "expected argument to be a tensor or an opaque type but got "
-             << "an argument of type " << toString(argTypes[i]);
-      reportError(errMsg.str(), arg);
-      continue;
-    }
   }
 
   FuncDecl::Ptr func;
@@ -1238,8 +1269,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       const auto elemSource = elemType->source; 
       const auto elemName = elemType->ident;
 
-      const auto domainType = env.getSetDefinition(setIndexSet);
-      const auto domainElem = domainType->element;
+      const auto domainElem = env.getSetDefinition(setIndexSet)->element;
       const auto domainElemName = domainElem->ident;
 
       if (!domainElemName.empty() && domainElemName != elemName) {
@@ -1329,7 +1359,7 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
   if (isa<UnstructuredSetType>(type)) {
     // TODO: No good way to check indices = #dims
 
-    if (!to<UnstructuredSetType>(type)->endpoints.empty()) {
+    if (to<UnstructuredSetType>(type)->getArity() != 0) {
       const auto msg = "underlying point set cannot have non-zero cardinality";
       reportError(msg, expr->set);
     }
@@ -1351,7 +1381,42 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
   }
 }
 
-void TypeChecker::visit(TupleReadExpr::Ptr expr) {
+void TypeChecker::visit(NamedTupleReadExpr::Ptr expr) {
+  const ExprType lhsType = inferType(expr->tuple);
+  
+  if (!lhsType.defined) {
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  iassert(lhsType.isSingleValue());
+  
+  if (!isa<NamedTupleType>(lhsType.type[0])) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of tuple access to be a named tuple "
+           << "but got a " << toString(lhsType.type[0]);
+    reportError(errMsg.str(), expr->tuple);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  const auto tupleType = to<NamedTupleType>(lhsType.type[0]);
+  const auto elemName = expr->elem->ident;
+
+  for (const auto elem : tupleType->elems) {
+    if (elem->name->ident == elemName) {
+      retType = ExprType(elem->element, lhsType.access);
+      return;
+    }
+  }
+
+  std::stringstream errMsg;
+  errMsg << "undefined tuple element '" << elemName << "'";
+  reportError(errMsg.str(), expr->elem);
+  retType = ExprType(lhsType.access);
+}
+
+void TypeChecker::visit(UnnamedTupleReadExpr::Ptr expr) {
   const ExprType lhsType = inferType(expr->tuple);
   const ExprType indexType = inferType(expr->index);
 
@@ -1368,8 +1433,18 @@ void TypeChecker::visit(TupleReadExpr::Ptr expr) {
   }
 
   iassert(lhsType.isSingleValue());
-  
-  retType = ExprType(to<TupleType>(lhsType.type[0])->element, lhsType.access);
+
+  if (!isa<UnnamedTupleType>(lhsType.type[0])) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of tuple access to be an unnamed tuple "
+           << "but got a " << toString(lhsType.type[0]);
+    reportError(errMsg.str(), expr->tuple);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  const auto tupleType = to<UnnamedTupleType>(lhsType.type[0]);
+  retType = ExprType(tupleType->element, lhsType.access);
 }
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
@@ -1686,13 +1761,12 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   // Check that assembly function has been declared.
   if (!env.hasFunction(funcName)) {
     reportUndeclared("function", funcName, expr->func);
-    return;
   } else {
     func = env.getFunction(funcName);
   }
 
   // Check that target has been declared and is a (non-generic) set.
-  if (!typeCheck(expr->target)) {
+  if (!typeCheck(expr->target) || !env.getSymbolType(expr->target->setName)) {
     retTypeChecked = false;
   } else if (isa<GenericIndexSet>(expr->target)) {
     std::stringstream errMsg;
@@ -1704,7 +1778,9 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   
   // If through is declared, check that it is a grid edge set.
   if (expr->through) {
-    if (!typeCheck(expr->through)) {
+    const std::string throughSetName = expr->through->setName;
+
+    if (!typeCheck(expr->through) || !env.getSymbolType(throughSetName)) {
       retTypeChecked = false;
     } else if (isa<GenericIndexSet>(expr->through)) {
       std::stringstream errMsg;
@@ -1718,15 +1794,17 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
         errMsg << opString << " operation can only be applied through grid "
                << "edge sets";
         reportError(errMsg.str(), expr->through);
-      }
-      else if (to<GridSetType>(throughSetType)
-               ->underlyingPointSet->set->setName !=
-               expr->target->setName) {
-        std::stringstream errMsg;
-        errMsg << opString << " operation can only be mapped through grid "
-               << "edge set with target " << expr->target->setName
-               << " as an endpoint";
-        reportError(errMsg.str(), expr->through);
+      } else {
+        const auto throughGridSet = to<GridSetType>(throughSetType);
+        const auto underlyingPointSet = throughGridSet->underlyingPointSet->set;
+        
+        if (underlyingPointSet->setName != expr->target->setName) {
+          std::stringstream errMsg;
+          errMsg << opString << " operation can only be mapped through grid "
+                 << "edge set with target " << expr->target->setName
+                 << " as an endpoint";
+          reportError(errMsg.str(), expr->through);
+        }
       }
     }
   }
@@ -1772,33 +1850,31 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   // Infer assembly function's required argument types.
   actualsType.push_back(ExprType(targetSetType->element, Access::READ_WRITE));
   
-  if (isa<UnstructuredSetType>(targetSetType) &&
-      !to<UnstructuredSetType>(targetSetType)->endpoints.empty()) {
-    UnstructuredSetType::Ptr utype = to<UnstructuredSetType>(targetSetType);
-    const auto endpoint = utype->endpoints[0];
-    const auto neighborSet = endpoint->set->setName;
-    
-    // Check for heterogeneous edge sets, which are currently unsupported.
-    // TODO: Should remove this once support for heterogeneous edge sets 
-    //       has been added.
-    for (unsigned i = 1; i < utype->endpoints.size(); ++i) {
-      if (utype->endpoints[i]->set->setName != neighborSet) {
-        std::stringstream errMsg;
-        errMsg << opString << " operation is currently unsupported for "
-               << "heterogeneous edge sets";
-        reportError(errMsg.str(), expr->target);
-        return;
-      }
-    }
-    
-    if (actualsType.size() != func->args.size()) {
-      const auto neighborsLength = std::make_shared<TupleLength>();
-      neighborsLength->val = utype->endpoints.size();
+  if (actualsType.size() < func->args.size() &&
+      isa<UnstructuredSetType>(targetSetType)) {
+    const auto utype = to<UnstructuredSetType>(targetSetType);
 
-      const auto neighborsType = std::make_shared<TupleType>();
-      neighborsType->element = endpoint->element;
-      neighborsType->length = neighborsLength; 
-      actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+    if (utype->getArity() > 0) {
+      if (!utype->isHomogeneous() || 
+          isa<NamedTupleType>(func->args[actualsType.size()]->type)) {
+        const auto neighborsType = std::make_shared<NamedTupleType>();
+
+        for (unsigned i = 0; i < utype->getArity(); ++i) {
+          const auto elem = std::make_shared<TupleElement>();
+          elem->element = utype->getEndpoint(i)->element;
+          neighborsType->elems.push_back(elem);
+        }
+
+        actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+      } else {
+        const auto neighborsLength = std::make_shared<TupleLength>();
+        neighborsLength->val = utype->getArity();
+
+        const auto neighborsType = std::make_shared<UnnamedTupleType>();
+        neighborsType->element = utype->getEndpoint(0)->element;
+        neighborsType->length = neighborsLength; 
+        actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+      }
     }
   }
   
@@ -2314,10 +2390,36 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
         specializedSets[genericName] = argElemType->source;
       }
     }
-  } else if (isa<TupleType>(paramType) && isa<TupleType>(argType)) {
-    const auto paramTupleType = to<TupleType>(paramType);
-    const auto argTupleType = to<TupleType>(argType);
-    unify(paramTupleType->element, argTupleType->element);
+  } else if (isa<UnnamedTupleType>(paramType)) {
+    const auto paramTupleType = to<UnnamedTupleType>(paramType);
+    
+    if (isa<UnnamedTupleType>(argType)) {
+      const auto argTupleType = to<UnnamedTupleType>(argType);
+      unify(paramTupleType->element, argTupleType->element);
+    } else if (isa<NamedTupleType>(argType)) {
+      const auto argTupleType = to<NamedTupleType>(argType);
+      unify(paramTupleType->element, argTupleType->elems[0]->element);
+    }
+  } else if (isa<NamedTupleType>(paramType)) {
+    const auto paramTupleType = to<NamedTupleType>(paramType);
+
+    if (isa<NamedTupleType>(argType)) {
+      const auto argTupleType = to<NamedTupleType>(argType);
+      const auto tupleLength = std::min(paramTupleType->elems.size(),
+                                        argTupleType->elems.size());
+      
+      for (unsigned i = 0; i < tupleLength; ++i) {
+        const auto paramTupleElem = paramTupleType->elems[i]->element;
+        const auto argTupleElem = argTupleType->elems[i]->element;
+        unify(paramTupleElem, argTupleElem);
+      }
+    } else if (isa<UnnamedTupleType>(argType)) {
+      const auto argTupleType = to<UnnamedTupleType>(argType);
+      
+      for (const auto elem : paramTupleType->elems) {
+        unify(elem->element, argTupleType->element);
+      }
+    }
   }
 }
 
@@ -2527,13 +2629,13 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
       const auto ltype = to<UnstructuredSetType>(lgentype);
       const auto rtype = to<UnstructuredSetType>(rgentype);
       
-      if (ltype->endpoints.size() != rtype->endpoints.size()) {
+      if (ltype->getArity() != rtype->getArity()) {
         return false;
       }
 
-      for (unsigned i = 0; i < ltype->endpoints.size(); ++i) {
-        const auto lEndpointElem = ltype->endpoints[i]->element;
-        const auto rEndpointElem = rtype->endpoints[i]->element;
+      for (unsigned i = 0; i < ltype->getArity(); ++i) {
+        const auto lEndpointElem = ltype->getEndpoint(i)->element;
+        const auto rEndpointElem = rtype->getEndpoint(i)->element;
       
         if (!compareTypes(lEndpointElem, rEndpointElem)) {
           return false;
@@ -2564,19 +2666,44 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r,
         return false;
       }
 
-      return compareTypes(ltype->underlyingPointSet->set->setDef,
-                          rtype->underlyingPointSet->set->setDef);
+      return compareTypes(getSetDefinition(ltype->underlyingPointSet->set),
+                          getSetDefinition(rtype->underlyingPointSet->set));
     }
 
     return false;
   }
-  else if (isa<TupleType>(l)) {
-    if (!isa<TupleType>(r)) {
+  else if (isa<NamedTupleType>(l)) {
+    if (!isa<NamedTupleType>(r)) {
+      return false;
+    }
+    
+    const auto ltype = to<NamedTupleType>(l);
+    const auto rtype = to<NamedTupleType>(r);
+
+    if (ltype->elems.size() != rtype->elems.size()) {
       return false;
     }
 
-    const auto ltype = to<TupleType>(l);
-    const auto rtype = to<TupleType>(r);
+    for (unsigned i = 0; i < ltype->elems.size(); ++i) {
+      const auto lElem = ltype->elems[i];
+      const auto rElem = rtype->elems[i];
+
+      if ((lElem->name && rElem->name && 
+          lElem->name->ident != rElem->name->ident) || 
+          !compareTypes(lElem->element, rElem->element)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+  else if (isa<UnnamedTupleType>(l)) {
+    if (!isa<UnnamedTupleType>(r)) {
+      return false;
+    }
+
+    const auto ltype = to<UnnamedTupleType>(l);
+    const auto rtype = to<UnnamedTupleType>(r);
 
     return (ltype->length->val == rtype->length->val) && 
            compareTypes(ltype->element, rtype->element);
@@ -2707,8 +2834,12 @@ std::string TypeChecker::toString(Type::Ptr type, bool printQuotes) {
     if (elemType->source) {
       oss << " from set '" << *elemType->source << "'";
     }
-  } else if (isa<TupleType>(type)) {
-    const auto tupleType = to<TupleType>(type);
+  } else if (isa<NamedTupleType>(type)) {
+    const auto tupleType = to<NamedTupleType>(type);
+
+    // TODO: Print source sets
+  } else if (isa<UnnamedTupleType>(type)) {
+    const auto tupleType = to<UnnamedTupleType>(type);
 
     if (tupleType->element->source) {
       oss << " from set '(" << *tupleType->element->source << " * " 

@@ -30,9 +30,12 @@ private:
   virtual void visit(DynamicIndexSet::Ptr);
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
-  virtual void visit(UnstructuredSetType::Ptr);
+  virtual void visit(HomogeneousEdgeSetType::Ptr);
+  virtual void visit(HeterogeneousEdgeSetType::Ptr);
   virtual void visit(GridSetType::Ptr);
-  virtual void visit(TupleType::Ptr);
+  virtual void visit(TupleElement::Ptr);
+  virtual void visit(NamedTupleType::Ptr);
+  virtual void visit(UnnamedTupleType::Ptr);
   virtual void visit(ScalarType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(OpaqueType::Ptr);
@@ -71,7 +74,8 @@ private:
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
   virtual void visit(SetReadExpr::Ptr);
-  virtual void visit(TupleReadExpr::Ptr);
+  virtual void visit(NamedTupleReadExpr::Ptr);
+  virtual void visit(UnnamedTupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);
@@ -123,55 +127,14 @@ private:
   typedef std::unordered_map<SetType::Ptr, ir::Expr> SetExprMap;
 
 private:
-  ir::Expr emitExpr(FIRNode::Ptr ptr) {
-    retExpr = ir::Expr();
-    ptr->accept(this);
-    const ir::Expr ret = retExpr;
-    retExpr = ir::Expr();
-    return ret;
-  }
-  ir::Stmt emitStmt(Stmt::Ptr ptr) {
-    retStmt = ir::Stmt();
-    ptr->accept(this);
-    const ir::Stmt ret = retStmt;
-    retStmt = ir::Stmt();
-    return ret;
-  }
-  ir::Type emitType(Type::Ptr ptr) {
-    retType = ir::Type();
-    ptr->accept(this);
-    const ir::Type ret = retType;
-    retType = ir::Type();
-    return ret;
-  }
-  ir::IndexSet emitIndexSet(IndexSet::Ptr ptr) {
-    retIndexSet = ir::IndexSet();
-    ptr->accept(this);
-    const ir::IndexSet ret = retIndexSet;
-    retIndexSet = ir::IndexSet();
-    return ret;
-  }
-  ir::Field emitField(FieldDecl::Ptr ptr) {
-    retField = ir::Field("", ir::Type());
-    ptr->accept(this);
-    const ir::Field ret = retField;
-    retField = ir::Field("", ir::Type());
-    return ret;
-  }
-  ir::Var emitVar(IdentDecl::Ptr ptr) {
-    retVar = ir::Var();
-    ptr->accept(this);
-    const ir::Var ret = retVar;
-    retVar = ir::Var();
-    return ret;
-  }
-  Domain emitDomain(ForDomain::Ptr ptr) {
-    retDomain = Domain();
-    ptr->accept(this);
-    const Domain ret = retDomain;
-    retDomain = Domain();
-    return ret;
-  }
+  ir::Expr     emitExpr(FIRNode::Ptr);
+  ir::Stmt     emitStmt(Stmt::Ptr);
+  ir::Type     emitType(Type::Ptr);
+  ir::IndexSet emitIndexSet(IndexSet::Ptr);
+  ir::Field    emitField(FieldDecl::Ptr);
+  ir::Field    emitTupleElement(TupleElement::Ptr);
+  ir::Var      emitVar(IdentDecl::Ptr);
+  Domain       emitDomain(ForDomain::Ptr);
  
   void addVarOrConst(VarDecl::Ptr, bool = false);
   void addWhileOrDoWhile(WhileStmt::Ptr, bool = false);
@@ -181,6 +144,7 @@ private:
   void addSymbol(const std::string&, ir::Var, internal::Symbol::Access, 
                  IdentDecl::Ptr = IdentDecl::Ptr());
 
+  void              emitUnstructuredSetType(UnstructuredSetType::Ptr);
   void              emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
   DenseTensorValues emitTensorValues(DenseTensorLiteral::Ptr);
 

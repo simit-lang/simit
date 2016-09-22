@@ -27,18 +27,20 @@ struct ElementType;
 struct SetType;
 struct UnstructuredSetType;
 struct GridSetType;
-struct TupleType;
+struct UnnamedTupleType;
+struct NamedTupleType;
 struct ArrayType;
 
 class Type {
 public:
-  enum Kind {Undefined, Tensor, Element, Set, Tuple, Array, Opaque};
+  enum Kind {Undefined, Tensor, Element, Set, UnnamedTuple, NamedTuple, Array, Opaque};
   Type() : _kind(Undefined), ptr(nullptr) {}
   Type(Kind kind) : _kind(kind) {}
   Type(TensorType* tensor);
   Type(ElementType* element);
   Type(SetType* set);
-  Type(TupleType* tuple);
+  Type(UnnamedTupleType* tuple);
+  Type(NamedTupleType* tuple);
   Type(ArrayType* array);
 
   bool defined() const { return kind() != Undefined; }
@@ -49,34 +51,52 @@ public:
   bool isElement()         const { return kind()==Element; }
   bool isSet()             const { return kind()==Set; }
   bool isUnstructuredSet() const;
-  bool isGridSet()  const;
-  bool isTuple()           const { return kind()==Tuple; }
+  bool isGridSet()         const;
+  bool isUnnamedTuple()    const { return kind()==UnnamedTuple; }
+  bool isNamedTuple()      const { return kind()==NamedTuple; }
   bool isArray()           const { return kind()==Array; }
   bool isOpaque()          const { return kind()==Opaque; }
 
-  const TensorType*  toTensor()  const {
+  const TensorType* toTensor() const {
     if (!isTensor()) {
       assert(false);
     }
     iassert(isTensor());
     return tensor;
   }
-  const ElementType* toElement() const {iassert(isElement()); return element;}
-  const SetType*     toSet()     const {iassert(isSet());     return set;}
+  const ElementType* toElement() const {
+    iassert(isElement());
+    return element;
+  }
+  const SetType* toSet() const {
+    iassert(isSet());
+    return set;
+  }
   const UnstructuredSetType* toUnstructuredSet() const;
-  const GridSetType* toGridSet() const;
-  const TupleType*   toTuple()   const {iassert(isTuple());   return tuple;}
-  const ArrayType*   toArray()   const {iassert(isArray());   return array;}
+  const GridSetType*         toGridSet()         const;
+  const UnnamedTupleType* toUnnamedTuple() const {
+    iassert(isUnnamedTuple());
+    return tuple;
+  }
+  const NamedTupleType* toNamedTuple() const {
+    iassert(isNamedTuple());
+    return namedTuple;
+  }
+  const ArrayType* toArray() const {
+    iassert(isArray());
+    return array;
+  }
 
 
 private:
   Kind _kind;
   union {
-    TensorType  *tensor;
-    ElementType *element;
-    SetType     *set;
-    TupleType   *tuple;
-    ArrayType   *array;
+    TensorType     *tensor;
+    ElementType    *element;
+    SetType        *set;
+    UnnamedTupleType      *tuple;
+    NamedTupleType *namedTuple;
+    ArrayType      *array;
   };
   std::shared_ptr<TypeNode> ptr;
 };
@@ -289,15 +309,47 @@ struct GridSetType : SetType {
                    size_t dimensions);
 };
 
-struct TupleType : TypeNode {
+struct UnnamedTupleType : TypeNode {
   Type elementType;
   int size;
 
   static Type make(Type elementType, int size) {
     iassert(elementType.isElement());
-    TupleType *type = new TupleType;
+    UnnamedTupleType *type = new UnnamedTupleType;
     type->elementType = elementType;
     type->size = size;
+    return type;
+  }
+};
+
+struct NamedTupleType : TypeNode {
+  /// Maps element names to their types and locations in the tuple
+  std::vector<Field> elements;
+
+  /// Lookup data structure, use the element method to access elements by names.
+  std::map<std::string, unsigned> elementNames;
+
+  bool hasElement(std::string elementName) const {
+    return elementNames.find(elementName) != elementNames.end();
+  }
+
+  unsigned elementIndex(const std::string& elementName) const {
+    iassert(hasElement(elementName)) << "Undefined element '" 
+                                     << elementName << "'";
+    return elementNames.at(elementName); 
+  }
+
+  const Field& element(const std::string& elementName) const {
+    return elements[elementIndex(elementName)];
+  }
+
+  static Type make(std::vector<Field> elements) {
+    NamedTupleType *type = new NamedTupleType;
+    type->elements = elements;
+    for (size_t i=0; i < elements.size(); ++i) {
+      iassert(elements[i].type.isElement());
+      type->elementNames[elements[i].name] = i;
+    }
     return type;
   }
 };
@@ -323,8 +375,10 @@ inline Type::Type(ElementType* element)
     : _kind(Element), element(element), ptr(element) {}
 inline Type::Type(SetType* set)
     : _kind(Set), set(set), ptr(set) {}
-inline Type::Type(TupleType* tuple)
-    : _kind(Tuple), tuple(tuple), ptr(tuple) {}
+inline Type::Type(UnnamedTupleType* tuple)
+    : _kind(UnnamedTuple), tuple(tuple), ptr(tuple) {}
+inline Type::Type(NamedTupleType* namedTuple)
+    : _kind(NamedTuple), namedTuple(namedTuple), ptr(namedTuple) {}
 inline Type::Type(ArrayType* array)
     : _kind(Array), array(array), ptr(array) {}
 
@@ -378,7 +432,8 @@ bool operator==(const TensorType&, const TensorType&);
 bool operator==(const ElementType&, const ElementType&);
 bool operator==(const UnstructuredSetType&, const UnstructuredSetType&);
 bool operator==(const GridSetType&, const GridSetType&);
-bool operator==(const TupleType&, const TupleType&);
+bool operator==(const UnnamedTupleType&, const UnnamedTupleType&);
+bool operator==(const NamedTupleType&, const NamedTupleType&);
 bool operator==(const ArrayType&, const ArrayType&);
 
 bool operator!=(const ScalarType&, const ScalarType&);
@@ -386,7 +441,8 @@ bool operator!=(const TensorType&, const TensorType&);
 bool operator!=(const ElementType&, const ElementType&);
 bool operator!=(const UnstructuredSetType&, const UnstructuredSetType&);
 bool operator!=(const GridSetType&, const GridSetType&);
-bool operator!=(const TupleType&, const TupleType&);
+bool operator!=(const UnnamedTupleType&, const UnnamedTupleType&);
+bool operator!=(const NamedTupleType&, const NamedTupleType&);
 bool operator!=(const ArrayType&, const ArrayType&);
 
 std::ostream& operator<<(std::ostream&, const Type&);
@@ -395,7 +451,8 @@ std::ostream& operator<<(std::ostream&, const TensorType&);
 std::ostream& operator<<(std::ostream&, const ElementType&);
 std::ostream& operator<<(std::ostream&, const UnstructuredSetType&);
 std::ostream& operator<<(std::ostream&, const GridSetType&);
-std::ostream& operator<<(std::ostream&, const TupleType&);
+std::ostream& operator<<(std::ostream&, const UnnamedTupleType&);
+std::ostream& operator<<(std::ostream&, const NamedTupleType&);
 std::ostream& operator<<(std::ostream&, const ArrayType&);
 
 // Common types

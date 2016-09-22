@@ -183,3 +183,19 @@ func f(p : bool) -> (r : bool)
   end
 end
 
+%%% if-call
+%! f(1) == 2;
+func g(p : int) -> (r : bool)
+  r = (p == 1);
+end
+
+func f(p : int) -> (r : int)
+  if g(p - 2)
+    r = 0;
+  elif g(p - 1)
+    r = 1;
+  elif g(p)
+    r = 2;
+  end
+end
+
