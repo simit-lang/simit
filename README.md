@@ -5,7 +5,7 @@ high-performance code to compute on sparse systems.  For more information see
 Build Simit
 ===========
 To build Simit you must install
-[CMake 2.8.3 or greater](http//www.cmake.org/cmake/resources/software.html) and
+[CMake 2.8.3 or greater](http://www.cmake.org/cmake/resources/software.html) and
 [LLVM 3.7 or greater](http://llvm.org/releases/download.html).
 You must then make sure llvm-config is available in your path.
 

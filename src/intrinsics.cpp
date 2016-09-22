@@ -291,6 +291,24 @@ const Func& inv() {
   return invVar;
 }
 
+static Func crossVar;
+void crossInit() {
+  crossVar = Func("cross",
+                {Var("a", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3)})),
+                 Var("b", TensorType::make(ScalarType::Float,
+                						   {IndexDomain(3)}))},
+                {Var("r", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3)}))},
+                Func::External);
+}
+const Func& cross() {
+  if (!crossVar.defined()) {
+    crossInit();
+  }
+  return crossVar;
+}
+
 static Func solveVar;
 void solveInit() {
   solveVar = Func("__solve",
@@ -567,6 +585,7 @@ const std::map<std::string,Func> &byNames() {
     dotInit();
     detInit();
     invInit();
+    crossInit();
     solveInit();
     luInit();
     lufreeInit();
@@ -605,7 +624,8 @@ const std::map<std::string,Func> &byNames() {
                       {"dot",dotVar},
                       {"det",detVar},
                       {"inv",invVar},
-                      {"__solve",solveVar},
+                      {"cross",crossVar},
+					  {"__solve",solveVar},
                       {"lu", luVar},
                       {"lufree", lufreeVar},
                       {"lusolve", lusolveVar},

@@ -76,3 +76,10 @@ end
 func doinv(a : tensor[3,3](float)) -> (c : tensor[3,3](float))
   c = inv(a);
 end
+
+%%% cross
+%! docross([1.0, 2.0, 3.0]', [4.0, 5.0, 6.0]') == [-3.0, 6.0, -3.0]';
+func docross(a : tensor[3](float), b:tensor[3](float)) -> (c : tensor[3](float))
+  c = cross(a,b);
+end
+

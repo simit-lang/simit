@@ -94,11 +94,3 @@ func col2row(a : tensor[3](float)) -> c : tensor[3](float)'
   c = a';
 end
 
-%%% cross
-%! cross([0.0, 1.0, 0.0], [0.0, 0.0, 1.0]) == [1.0, 0.0, 0.0];
-%! cross([0.0, 1.0, 2.0], [1.0, 2.0, 0.0]) == [-4.0, 2.0, -1.0];
-func cross(v1 : tensor[3](float)', v2 : tensor[3](float)') -> result : tensor[3](float)'
-  result(0) = v1(1)*v2(2)-v1(2)*v2(1);
-  result(1) = v1(2)*v2(0)-v1(0)*v2(2);
-  result(2) = v1(0)*v2(1)-v1(1)*v2(0);
-end
