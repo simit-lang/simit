@@ -54,7 +54,7 @@ private:
 class SparseTensorActual : public TensorActual {
 public:
   SparseTensorActual(const unsigned* coords, const unsigned* sinks, void* data)
-      : TensorActual(data) {}
+      : TensorActual(data), coords(coords), sinks{sinks} {}
   virtual ~SparseTensorActual() {}
 
   const unsigned* getCoords() const {return coords;}
