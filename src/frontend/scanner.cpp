@@ -364,6 +364,19 @@ TokenStream Scanner::lex(std::istream &programStream) {
           }
           break;
         }
+        case '\r':
+          programStream.get();
+          if (programStream.peek() == '\n') {
+            programStream.get();
+          }
+          if (state == ScanState::SLTEST) {
+            state = ScanState::INITIAL;
+          }
+          ++line;
+          col = 1;
+          break;
+        case '\v':
+        case '\f':
         case '\n':
           programStream.get();
           if (state == ScanState::SLTEST) {
