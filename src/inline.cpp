@@ -20,9 +20,18 @@ namespace simit {
 namespace ir {
 
 bool CallRewriter::shouldInline(const CallStmt *op) {
-  // Check for non-dense tensor arguments
-  for (auto &arg : op->actuals) {
-    if (!arg.type().isTensor() || arg.type().toTensor()->isSparse()) {
+  // Check for non-element tensor arguments
+  for (auto &arg : op->callee.getArguments()) {
+    if (!arg.getType().isTensor() || 
+        arg.getType().toTensor()->hasSystemDimensions()) {
+      return true;
+    }
+  }
+  
+  // Check for non-element tensor results
+  for (auto &res : op->callee.getResults()) {
+    if (!res.getType().isTensor() || 
+        res.getType().toTensor()->hasSystemDimensions()) {
       return true;
     }
   }
@@ -31,9 +40,21 @@ bool CallRewriter::shouldInline(const CallStmt *op) {
     using IRQuery::visit;
 
     void visit(const VarExpr *op) {
+      // TODO: Check for references to extern variables
       if (op->type.isSet()) {
         result = true;
       }
+    }
+
+    void visit(const VarDecl *op) {
+      if (!op->var.getType().isTensor() ||
+          op->var.getType().toTensor()->hasSystemDimensions()) {
+        result = true;
+      }
+    }
+
+    void visit(const For *op) {
+      result = true;
     }
   };
 
@@ -62,7 +83,7 @@ void CallRewriter::visit(const CallStmt *op) {
   }
     
   // Add comment
-  stmt = Comment::make(util::toString(*op), stmt, true);
+  stmt = Comment::make(util::toString(*op), stmt, true, true);
 
   // Add constants from inlined callee into environment
   for (auto &c : op->callee.getEnvironment().getConstants()) {
