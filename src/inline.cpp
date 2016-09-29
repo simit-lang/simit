@@ -12,7 +12,9 @@
 #include "ir_transforms.h"
 #include "grid_ops.h"
 #include "stencils.h"
+#include "rw_analysis.h"
 #include "var_replace_rewriter.h"
+#include "util/collections.h"
 
 using namespace std;
 
@@ -21,7 +23,7 @@ namespace ir {
 
 bool CallRewriter::shouldInline(const CallStmt *op) {
   // Check for non-element tensor arguments
-  for (auto &arg : op->callee.getArguments()) {
+  for (auto arg : op->callee.getArguments()) {
     if (!arg.getType().isTensor() || 
         arg.getType().toTensor()->hasSystemDimensions()) {
       return true;
@@ -29,13 +31,23 @@ bool CallRewriter::shouldInline(const CallStmt *op) {
   }
   
   // Check for non-element tensor results
-  for (auto &res : op->callee.getResults()) {
+  for (auto res : op->callee.getResults()) {
     if (!res.getType().isTensor() || 
         res.getType().toTensor()->hasSystemDimensions()) {
       return true;
     }
   }
-  
+
+  // Check for writes to inout arguments that are not variables
+  ReadWriteAnalysis rwAnalysis(op->callee.getArguments());
+  op->callee.getBody().accept(&rwAnalysis);
+  for (size_t i = 0; i < op->actuals.size(); ++i) {
+    if (!isa<VarExpr>(op->actuals[i]) && 
+        util::contains(rwAnalysis.getWrites(), op->callee.getArguments()[i])) {
+      return true;
+    }
+  }
+
   class ReferencesSet : public IRQuery {
     using IRQuery::visit;
 

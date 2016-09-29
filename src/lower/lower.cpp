@@ -98,14 +98,14 @@ Func lower(Func func, std::ostream* os, bool time) {
   }
 #endif
 
+  // Inline function calls
+  func = rewriteCallGraph(func, inlineCalls);
+  printCallGraph("Inline Fuction Calls", func, os);
+
   // Flatten index expressions and insert temporaries
   func = rewriteCallGraph(func, (Func(*)(Func))flattenIndexExpressions);
   func = rewriteCallGraph(func, insertTemporaries);
   printCallGraph("Insert Temporaries and Flatten Index Expressions", func, os);
-
-  // Inline function calls
-  func = rewriteCallGraph(func, inlineCalls);
-  printCallGraph("Inline Fuction Calls", func, os);
 
   // Determine Storage
   func = rewriteCallGraph(func, [](Func func) -> Func {
