@@ -141,7 +141,7 @@ private:
 
   void visit(const Map *op) {
     iassert(hasStorage(op->vars, *storage))
-        << "Every assembled tensor should have a storage descriptor";
+        << "Every assembled tensor should have a storage descriptor (" << util::join(op->vars) << ")";
 
     LowerMapFunctionRewriter mapFunctionRewriter;
     stmt = inlineMap(op, mapFunctionRewriter, storage);

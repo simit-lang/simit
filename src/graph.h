@@ -667,7 +667,9 @@ private:
   template <typename F>
   void addEndpoints(int which, F f) {
     uassert(endpointSets[which]->getSize() > f.ident)
-        << "Invalid member of set in addEdge";
+        << "Invalid member of set (" << endpointSets[which]->getName()
+		<< ") in addEdge (" << f.ident << " < "
+		<< endpointSets[which]->getSize() << ")";
     endpoints[numElements*getCardinality()+which] = f.ident;
   }
   void addEndpoints(int) {}
