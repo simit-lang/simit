@@ -151,6 +151,10 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                      {ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
   addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::cbrt().getName(),
+                     {ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::log().getName(),
                      {ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});

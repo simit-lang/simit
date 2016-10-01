@@ -464,3 +464,16 @@ extern "C" void dcross(int an, double* a, int bn, double* b, int cn, double* c) 
   return cross(an, a, bn, b, cn, c);
 }
 
+/// cube root
+template <typename Float>
+void cbrt(Float x, Float* r){
+  *r = std::cbrt(x);
+}
+extern "C" void scbrt(float x, float* r) {
+  return cbrt(x,r);
+}
+extern "C" void dcbrt(double x, double* r) {
+	return cbrt(x,r);
+}
+
+

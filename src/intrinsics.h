@@ -21,6 +21,7 @@ const Func& asin();
 const Func& acos();
 const Func& atan2();
 const Func& sqrt();
+const Func& cbrt();
 const Func& log();
 const Func& exp();
 const Func& pow();
