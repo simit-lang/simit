@@ -107,3 +107,10 @@ func docross(a : tensor[3](float), b:tensor[3](float)) -> (c : tensor[3](float))
   c = cross(a,b);
 end
 
+%%% cbrt
+%! docbrt(27.0) == 3.0;
+func docbrt(a : float) -> (c : float)
+  c = cbrt(a);
+end
+
+
