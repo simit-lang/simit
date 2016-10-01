@@ -594,7 +594,7 @@ extern "C" void dcross(int an, double* a, int bn, double* b, int cn, double* c) 
 
 /// cube root
 template <typename Float>
-void cbrt(Float x, Float* r){
+void cbrt(Float x, Float* r) {
   *r = std::cbrt(x);
 }
 extern "C" void scbrt(float x, float* r) {
