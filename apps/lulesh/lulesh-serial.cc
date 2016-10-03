@@ -672,6 +672,7 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
                hourgam[2][i] * xd[2] + hourgam[3][i] * xd[3] +
                hourgam[4][i] * xd[4] + hourgam[5][i] * xd[5] +
                hourgam[6][i] * xd[6] + hourgam[7][i] * xd[7];
+//		  std::cout << "hx " << hxx[i] << std::endl;
    }
    for(Index_t i = 0; i < 8; i++) {
       hgfx[i] = coefficient *
@@ -823,6 +824,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
                                                   dvdz[i3+7] * hourmodz );
 
       }
+//      std::cout << "hourgam ";
 //      for (int i=0;i<4;i++){
 //    	  for (int j =0;j<8;j++) {
 //    		  std::cout << " " << hourgam[j][i] ;
@@ -874,13 +876,16 @@ void CalcFBHourglassForceForElems( Domain &domain,
       zd1[7] = domain.zd(n7si2);
 
       coefficient = - hourg * Real_t(0.01) * ss1 * mass1 / volume13;
+//            std::cout << "Coef " << coefficient << std::endl;
+//                  std::cout << "nodeVel " << xd1[0] << " " << xd1[1] << " "<< xd1[2] << " "<< xd1[3] << " "<< xd1[4] << " "<< xd1[5] << " "<< xd1[6] << " "<< xd1[7] << std::endl;
 
       CalcElemFBHourglassForce(xd1,yd1,zd1,
                       hourgam,
                       coefficient, hgfx, hgfy, hgfz);
 
-//      std::cout << hgfx[0] << " " << hgfy[0] << " " << hgfz[0] << std::endl;
-
+//          	  for (int j =0;j<8;j++) {
+//          		  std::cout << "hgf " << hgfx[j] << " " << hgfy[j] << " " << hgfz[j] << std::endl;
+//          	  }
       domain.fx(n0si2) += hgfx[0];
       domain.fy(n0si2) += hgfy[0];
       domain.fz(n0si2) += hgfz[0];
@@ -1032,6 +1037,9 @@ static inline void CalcForceForNodes(Domain& domain)
      domain.fz(i) = Real_t(0.0) ;
   }
 
+//  for (Index_t i=0; i<numNode; ++i) {
+//     std:: cout << " Force " << domain.fx(i) << " " << domain.fy(i) << " " << domain.fz(i) << std::endl;
+//  }
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
 
@@ -1052,9 +1060,7 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
    }
-//     for (Index_t i=0; i<numNode; ++i) {
-//        std:: cout << " Acceleration " << domain.xdd(i) << " " << domain.ydd(i) << " " << domain.zdd(i) << std::endl;
-//     }
+
 
 }
 
@@ -1823,9 +1829,12 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 {
    Real_t *pHalfStep = Allocate<Real_t>(length) ;
 
-//   std::cout << "e_new " << *e_new << " q_new " << *q_new << " bvc " <<  *bvc << " pbvc " << *pbvc
-//		     << " compression " << *compression << " compHalfStep " << *compHalfStep
-//			 << " delvc " <<  *delvc << std::endl;
+//   for (Index_t i = 0 ; i < length ; ++i) {
+//
+//   std::cout << "e_new " << e_new[i] << " q_new " << q_new[i] << " bvc " <<  bvc[i] << " pbvc " << pbvc[i]
+//		     << " compression " << compression[i] << " compHalfStep " << compHalfStep[i]
+//			 << " delvc " <<  delvc[i] << std::endl;
+//   }
 
    for (Index_t i = 0 ; i < length ; ++i) {
       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
@@ -2043,7 +2052,17 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 		   work[i] = Real_t(0.) ;
 	   }
 //	   std::cout << " rep " << rep << " j " << j << std::endl;
-      CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
+//	   for (Index_t i = 0 ; i < numElemReg ; ++i) {
+//		   if (j==1) {
+////	   std::cout << "e_new " << e_new[i] << " q_new " << q_new[i] << " bvc " <<  bvc[i] << " pbvc " << pbvc[i]
+////			     << " compression " << compression[i] << " compHalfStep " << compHalfStep[i]
+////				 << " delvc " <<  delvc[i] << std::endl;
+//			   std::cout << "e_new " << e_new[i] << " q_new " << q_new[i]
+//					     << " compression " << compression[i] << " compHalfStep " << compHalfStep[i]
+//						 << " delvc " <<  delvc[i] << std::endl;
+//		   }
+//	   }
+	   CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
                          p_old, e_old,  q_old, compression, compHalfStep,
                          vnewc, work,  delvc, pmin,
                          p_cut, e_cut, q_cut, emin,
@@ -2185,19 +2204,22 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //       }
 
   ApplyMaterialPropertiesForElems(domain, vnew) ;
+//         for (Index_t i=0; i<numElem; ++i) {
+//            std:: cout << " pressure " << domain.p(i) << std::endl;
+//         }
 
   UpdateVolumesForElems(domain, vnew, domain.v_cut(), numElem) ;
 //       for (Index_t i=0; i<numElem; ++i) {
 //          std:: cout << " volume " << domain.v(i) << std::endl;
 //       }
-         for (Index_t i=0; i<5; ++i) {
-            std:: cout << " BILAN : volume " << domain.v(i) << " energy " << domain.e(i)
-            		<< " arealg " << domain.arealg(i)
-					<< " pressure " << domain.p(i) << " q "<<  domain.q(i)
-					<< " qq " << domain.qq(i) << " ql " << domain.ql(i)
-					<< " volo " << domain.volo(i) << " vdov " << domain.vdov(i)
-					<< " delv " << domain.delv(i) << " ss " << domain.ss(i) << " elemMass " << domain.elemMass(i) << std::endl;
-         }
+//         for (Index_t i=0; i<5; ++i) {
+//            std:: cout << " BILAN : volume " << domain.v(i) << " energy " << domain.e(i)
+//            		<< " arealg " << domain.arealg(i)
+//					<< " pressure " << domain.p(i) << " q "<<  domain.q(i)
+//					<< " qq " << domain.qq(i) << " ql " << domain.ql(i)
+//					<< " volo " << domain.volo(i) << " vdov " << domain.vdov(i)
+//					<< " delv " << domain.delv(i) << " ss " << domain.ss(i) << " elemMass " << domain.elemMass(i) << std::endl;
+//         }
   Release(&vnew);
 }
 
@@ -2362,7 +2384,7 @@ int main(int argc, char *argv[])
 //debug to see region sizes
 //   for(Int_t i = 0; i < locDom->numReg(); i++)
 //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
-   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < 4)) {
+   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
       TimeIncrement(*locDom) ;
       LagrangeLeapFrog(*locDom) ;

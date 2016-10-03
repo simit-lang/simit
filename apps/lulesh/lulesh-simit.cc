@@ -497,7 +497,7 @@ int main(int argc, char *argv[])
    timeval start;
    gettimeofday(&start, NULL) ;
 
-   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < 4)) {
+   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
 //	   std::cout << " set coord " << coord << std::endl;
 //	   std::cout << " End of CPP " << std::endl;

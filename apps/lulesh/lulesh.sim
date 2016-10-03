@@ -292,6 +292,10 @@ func CalcElemFBHourglassForce(nodeVel:vector[3](vector[8](float)),hourgam:matrix
         for j in 0:3
             hx(j)(i) = dot(hourgam(i,:),nodeVel(j));
         end
+    %    print "nodeVel ", nodeVel(0)(0), " ",  nodeVel(0)(1), " ", nodeVel(0)(2), " ", nodeVel(0)(3), " ", nodeVel(0)(4), " ", nodeVel(0)(5), " ", nodeVel(0)(6), " ", nodeVel(0)(7),"\n";
+    %    print "hourgam ", hourgam(0)(0), " ",  hourgam(0)(1), " ", hourgam(0)(2), " ", hourgam(0)(3), " ", hourgam(0)(4), " ", hourgam(0)(5), " ", hourgam(0)(6), " ", hourgam(0)(7),"\n"; 
+     %  print "hx ", hx(0)(i), "\n"; 
+     %  print "hx ", hx(0)(i), "\n"; 
     end
     for i in 0:8
         for j in 0:3
@@ -308,10 +312,12 @@ func CalcFBHourglassForceForElems(gamma:matrix[4,8](float),determ:vector[elems](
     %   compute the hourglass modes
     var hgf:vector[8](vector[3](float));
     var coefficient:float;
+    var volume13:vector[3](float);
     var hourgam:matrix[4,8](float);
     var d1:vector[8](vector[3](float));
     var volinv= 1.0 / determ(e);
     var hourmod:vector[3](float);
+%    print "hourgam ";
     for i in 0:4
         hourmod=[0.0,0.0,0.0]';
         for j in 0:8
@@ -319,22 +325,27 @@ func CalcFBHourglassForceForElems(gamma:matrix[4,8](float),determ:vector[elems](
         end
         for j in 0:8
             hourgam(i,j) = gamma(i,j) - volinv*(dot(dv(e)(j),hourmod));
-%            print hourgam(i,j), " ";
+%            print " ", hourgam(i,j);
         end
     end
-%        println "\n";
+%    print "\n";
     %   compute forces
-    volume13=sqrt(determ(e));
-    %%  TODOm change sqrt by cbrt and add it to intrinsics
-    coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13;
+    var hack:vector[3](float);
+    hack(0) = determ(e);
+    volume13=cbrt(hack);
+    %%  TODOm change cbrt and add it to intrinsics
+    coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13(0);
+ %   print "Coef ", coefficient,"\n";
     var nodeVel:vector[3](vector[8](float));
     for i in 0:8
         for j in 0:3
             nodeVel(j)(i) = n(i).vel(j);
         end
     end
+%    print "nodeVel ", nodeVel(0)(0), " ", nodeVel(0)(1), " ", nodeVel(0)(2), " ", nodeVel(0)(3), " ", nodeVel(0)(4), " ", nodeVel(0)(5), " ", nodeVel(0)(6), " ", nodeVel(0)(7),"\n"; 
     CalcElemFBHourglassForce(nodeVel,hourgam,coefficient,hgf);
     for i in 0:8
+  %      print "hgf ", hgf(i)(0), " ", hgf(i)(1), " ", hgf(i)(2), "\n"; 
        n(i).f = n(i).f + hgf(i);
   %     println n(i).f;
    end
@@ -342,13 +353,15 @@ end
 
 func CalcHourglassControlForElems(inout determ:vector[elems](float), hgcoef:float)
     dv,determ = map CalcElemVolumeDerivative to elems;
-%    var i=0;
-%    for e in elems
-%        if i<5
-%            print " dv ", dv(e)(0), " ", dv(e)(1), " ", dv(e)(2), "\n";
-%        end
-%        i=i+1;
-%    end
+  %  var i=0;
+  %  for e in elems
+  %      if i<5
+  %          for j in 0:8
+  %              print "dv ", dv(e)(j)(0), " ", dv(e)(j)(1), " ", dv(e)(j)(2), "\n";
+  %          end
+  %      end
+  %      i=i+1;
+  %  end
     var gamma:matrix[4,8](float);
     gamma = [ [ 1.0, 1.0,-1.0,-1.0,-1.0,-1.0, 1.0, 1.0 ],
               [ 1.0,-1.0,-1.0, 1.0,-1.0, 1.0, 1.0,-1.0 ],
@@ -377,10 +390,23 @@ func CalcVolumeForceForElems(hgcoef:float)
 
     CalcHourglassControlForElems(determ, hgcoef) ;
 end
-   
+
+func ResetNodeForces(inout n:Node)
+    n.f(0)=0.0;
+    n.f(1)=0.0;
+    n.f(2)=0.0;
+end
+
 func CalcForceForNodes(hgcoef:float)
   	% Calcforce calls partial, force, hourq 
-  	CalcVolumeForceForElems(hgcoef);
+ %   for n in nodes
+ %       println " Force ", n.f(0), " ",n.f(1), " ", n.f(2);
+ %   end
+    map ResetNodeForces() to nodes;
+    CalcVolumeForceForElems(hgcoef);
+ %   for n in nodes
+ %       println " Force ", n.f(0), " ",n.f(1), " ", n.f(2);
+ %   end
 end
 
 
@@ -719,16 +745,16 @@ func CalcEnergyForElems(inout p_new:float, inout e_new:float, inout q_new:float,
                         qq_old:float, ql_old:float, rho0:float, eosvmax:float,
                         vnew:vector[elems](float), e:Elem)
     var pHalfStep:float;
-    %print "e_new ", e_new, " q_new ", q_new, " bvc ", bvc, " pbvc ", pbvc, " compression ",compression, " compHalfStep ", compHalfStep, " delvc ", delvc, "\n\n";
+  %  print "e_new ", e_new, " q_new ", q_new, " bvc ", bvc, " pbvc ", pbvc, " compression ",compression, " compHalfStep ", compHalfStep, " delvc ", delvc, "\n";
 
-    e_new = e_old - 0.5 * delvc * p_old + q_old + 0.5 * work;
+    e_new = e_old - 0.5 * delvc * (p_old + q_old) + 0.5 * work;
     if e_new < emin
         e_new = emin ;
     end
 
     CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, pmin, p_cut, eosvmax, vnew, e);
 
-    vhalf = 1.0 / 1.0 + compHalfStep ;
+    vhalf = 1.0 / (1.0 + compHalfStep) ;
     if delvc > 0.0
         q_new = 0.0 ;
     else
@@ -840,6 +866,10 @@ for i in 0:2
     end
 
  %   println " TURN ", i;
+%    if i==1
+    %print "e_new ", e_new, " q_new ", q_new, " bvc ", bvc, " pbvc ", pbvc, " compression ",compression, " compHalfStep ", compHalfStep, " delvc ", delvc, "\n";
+%    print "e_new ", e_new, " q_new ", q_new, " compression ",compression, " compHalfStep ", compHalfStep, " delvc ", delvc, "\n";
+%   end
     
     CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
                          p_old, e_old,  q_old, compression, compHalfStep,
@@ -884,20 +914,26 @@ func LagrangeElements(dt:float,qstop:float, monoq_limiter_mult:float, monoq_max_
  
     map ApplyMaterialPropertiesForElems(eosvmin,eosvmax,vnew) to elems;
     map EvalEOSForElems(eosvmin,eosvmax,rho0,ss4o3,e_cut,p_cut,q_cut,pmin,emin,vnew) to elems;
-    map UpdateVolumesForElems(vnew, v_cut) to elems ;
-    %map CalcLagrangeElements(vnew) to elems;
-    var i=0;
-    for e in elems
-        if i < 5
-            println " BILAN : volume ", e.v, " energy ", e.e,
-            " arealg ", e.arealg,
-            " pressure ",e.p ," q ", e.q,
-            " qq ",e.qq, " ql ", e.ql,
-            " volo ", e.volo, " vdov ", e.vdov,
-            " delv ", e.delv, " ss ", e.ss, " elemMass ", e.elemMass;
-        i=i+1;
-        end
-    end
+ %   for e in elems
+ %       println " pressure ", e.p;
+ %   end
+ map UpdateVolumesForElems(vnew, v_cut) to elems ;
+ %   for e in elems
+ %       println " volume ", e.v;
+ %   end
+%map CalcLagrangeElements(vnew) to elems;
+ %   var i=0;
+ %   for e in elems
+ %       if i < 5
+ %           println " BILAN : volume ", e.v, " energy ", e.e,
+ %           " arealg ", e.arealg,
+ %           " pressure ",e.p ," q ", e.q,
+ %           " qq ",e.qq, " ql ", e.ql,
+ %           " volo ", e.volo, " vdov ", e.vdov,
+ %           " delv ", e.delv, " ss ", e.ss, " elemMass ", e.elemMass;
+ %       i=i+1;
+ %       end
+ %   end
 end
 
 func CalcCourantConstraintForElems(qqc:float, dtcourant:float, inout e:Elem, n:(Node*8))->dt:vector[elems](float)

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(lulesh)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -O3 -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -Wall")
 file(GLOB COMMON_CODE ${PROJECT_SOURCE_DIR}/lulesh-util.cc ${PROJECT_SOURCE_DIR}/lulesh-init.cc)
 file(GLOB SERIAL_CODE ${COMMON_CODE} ${PROJECT_SOURCE_DIR}/lulesh-serial.cc)
 add_executable(${PROJECT_NAME}-serial ${SERIAL_CODE})
