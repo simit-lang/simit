@@ -2,6 +2,8 @@
 #define SIMIT_RW_ANALYSIS
 
 #include <algorithm>
+#include <set>
+#include <vector>
 
 #include "ir_visitor.h"
 
@@ -12,6 +14,11 @@ class ReadWriteAnalysis : public IRVisitor {
 public:
   ReadWriteAnalysis(std::set<Var> vars) {
     this->vars = vars;
+  }
+
+  ReadWriteAnalysis(std::vector<Var> vars) {
+    this->vars = std::set<Var>(std::make_move_iterator(vars.begin()),
+                               std::make_move_iterator(vars.end()));
   }
 
   std::set<Var> getReads() {
