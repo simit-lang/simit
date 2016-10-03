@@ -158,7 +158,7 @@ Additional BSD Notice
 
 #include "lulesh.h"
 
-// DLU : using simit namespace
+// using simit namespace
 #include "graph.h"
 #include "program.h"
 #include "mesh.h"
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
       printf("See help (-h) for more options\n\n");
    }
 
-   // DLU - Initialize Simit
+   // Initialize Simit
    simit::init("cpu", sizeof(double));
 
    // Set up the mesh and decompose. Assumes regular cubes for now
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
    locDom = new Domain(numRanks, col, row, plane, opts.nx,
                        side, opts.numReg, opts.balance, opts.cost) ;
 
-   // DLU - Create a graph and initialize it with Domain data
+   // Create a graph and initialize it with Domain data
    Set nodes;
    Set elems(nodes, nodes, nodes, nodes, nodes, nodes, nodes, nodes);
    Set connects(elems,elems,elems,elems,elems,elems,elems);
@@ -293,9 +293,6 @@ int main(int argc, char *argv[])
 										 nodeRefs[locDom->nodelist(nidx)[4]], nodeRefs[locDom->nodelist(nidx)[5]],
 										 nodeRefs[locDom->nodelist(nidx)[6]], nodeRefs[locDom->nodelist(nidx)[7]]);
     	     elemRefs.push_back(elem);
-    	     //dxyz.set(elem, {locDom->dxx(nidx),locDom->dyy(nidx),locDom->dzz(nidx)});
-    	     //delvel.set(elem, {locDom->delv_xi(nidx),locDom->delv_eta(nidx),locDom->delv_zeta(nidx)});
-    	     //delx.set(elem, {locDom->delx_xi(nidx),locDom->delx_eta(nidx),locDom->delx_zeta(nidx)});
     	     e.set(elem,{locDom->e(nidx)});
     	     p.set(elem,{locDom->p(nidx)});
     	     q.set(elem,{locDom->q(nidx)});
@@ -351,7 +348,6 @@ int main(int argc, char *argv[])
     	         case ZETA_P_SYMM: maskzetap[0]=0;maskzetap[1]=1;maskzetap[2]=0; break ;
     	         case ZETA_P_FREE: maskzetap[0]=1;maskzetap[1]=0;maskzetap[2]=0; break ;
     	      }
-//    	      elemBC.set(elem,{0,0,0,0,0,0, 0,0,0,0,0,0, 0,1,0,0,0,0});
     	      elemBC.set(elem,{maskxim[2],maskxip[2],masketam[2],masketap[2],maskzetam[2],maskzetap[2],
     	    		  	  	   maskxim[1],maskxip[1],masketam[1],masketap[1],maskzetam[1],maskzetap[1],
 							   maskxim[0],maskxip[0],masketam[0],masketap[0],maskzetam[0],maskzetap[0]});
@@ -489,40 +485,16 @@ int main(int argc, char *argv[])
    TimeIncrement_sim.init();
    LagrangeLeapFrog_sim.init();
 
-//   std::cout << locDom->x(locDom->nodelist(0)[7]) << std::endl;
-//   std::cout << locDom->y(locDom->nodelist(0)[7]) << std::endl;
-//   std::cout << locDom->z(locDom->nodelist(0)[7]) << std::endl;
-
    // BEGIN timestep to solution */
    timeval start;
    gettimeofday(&start, NULL) ;
 
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
-//	   std::cout << " set coord " << coord << std::endl;
-//	   std::cout << " End of CPP " << std::endl;
-	   TimeIncrement_sim.run() ;
+	  TimeIncrement_sim.run() ;
       locDom->cycle() = cycle(0);
       locDom->time() = time(0);
       locDom->deltatime() = deltatime(0);
-//  	stoptime(0)=locDom->stoptime();
-//  	dtfixed(0)=locDom->dtfixed();
-//  	deltatimemultlb(0)=locDom->deltatimemultlb();
-//  	deltatimemultub(0)=locDom->deltatimemultub();
-//  	dtmax(0)=locDom->dtmax();
-//  	hgcoef(0)=locDom->hgcoef();
-//  	u_cut(0)=locDom->u_cut();
-//  	qstop(0)=locDom->qstop();
-//  	monoq_limiter_mult(0)=locDom->monoq_limiter_mult();
-//  	monoq_max_slope(0)=locDom->monoq_max_slope();
-//  	qlc_monoq(0)=locDom->qlc_monoq();
-//  	qqc_monoq(0)=locDom->qqc_monoq();
-//  	eosvmin(0)=locDom->eosvmin();
-//  	eosvmax(0)=locDom->eosvmax();
-//  	v_cut(0)=locDom->v_cut();
-//  	qqc(0)=locDom->qqc();
-//  	dvovmax(0)=locDom->dvovmax();
-      //LagrangeLeapFrog_sim.bind("deltatime", Tensor<double>(double(locDom->deltatime())));
       LagrangeLeapFrog_sim.run();
       locDom->dtcourant() = dtcourant(0);
       locDom->dthydro() = dthydro(0);
@@ -545,7 +517,17 @@ int main(int argc, char *argv[])
    //if (opts.viz) {
    //   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
    //}
-   
+
+   // Put Energy back in locDom to verify results
+   nidx = 0 ;
+   for (Index_t plane=0; plane<edgeElems; ++plane) {
+     for (Index_t row=0; row<edgeElems; ++row) {
+       for (Index_t col=0; col<edgeElems; ++col) {
+    	     locDom->e(nidx)=e.get(elemRefs[nidx]);
+    	     nidx++;
+       }
+     }
+   }
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
