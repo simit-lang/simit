@@ -123,8 +123,10 @@ const Func& sqrt() {
 static Func cbrtVar;
 void cbrtInit() {
   cbrtVar = Func("cbrt",
-                 {Var("x", Float)},
-                 {Var("r", Float)},
+                 {Var("x", TensorType::make(ScalarType::Float,
+                         {IndexDomain(3)}))},
+                 {Var("r", TensorType::make(ScalarType::Float,
+                         {IndexDomain(3)}))},
                  Func::External);
 }
 const Func& cbrt() {
