@@ -10,8 +10,11 @@ Build the lulesh example like so:
     cmake ..
     make
 
-Run the lulesh example like so:
+Run the lulesh orginal example like so (only one region):
 
-    ./lulesh 
+    ./lulesh-serial -r 1 
 
 
+Run the lulesh simit version like so :
+
+    ./lulesh-simit 
