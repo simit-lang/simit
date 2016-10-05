@@ -219,6 +219,10 @@ int main(int argc, char *argv[])
    Set nodes;
    Set elems(nodes, nodes, nodes, nodes, nodes, nodes, nodes, nodes);
    Set connects(elems,elems,elems,elems,elems,elems,elems);
+   Set symmX(nodes);
+   Set symmY(nodes);
+   Set symmZ(nodes);
+
    // The fields of the nodes set
    FieldRef<double,3> coord 	= nodes.addField<double,3>("coord");	// Nodal coordinates
    FieldRef<double,3> coord_local 	= nodes.addField<double,3>("coord_local");	// Nodal coordinates
@@ -233,20 +237,7 @@ int main(int argc, char *argv[])
    Index_t edgeElems = opts.nx;
    Index_t edgeNodes = edgeElems+1;  // In Lulesh same number of elems and nodes in each dimension
    Index_t nidx = 0 ;
-   std::vector<int> symmX(edgeNodes*edgeNodes*edgeNodes,0) ;
-   std::vector<int> symmY(edgeNodes*edgeNodes*edgeNodes,0) ;
-   std::vector<int> symmZ(edgeNodes*edgeNodes*edgeNodes,0) ;
-   for (int bc =0; bc<edgeNodes*edgeNodes; ++bc){
-	   if (!locDom->symmXempty() != 0) {
-		   symmX[locDom->symmX(bc)]=1;
-	   }
-	   if (!locDom->symmYempty() != 0) {
-		   symmY[locDom->symmY(bc)]=1;
-	   }
-	   if (!locDom->symmZempty() != 0) {
-		   symmZ[locDom->symmZ(bc)]=1;
-	   }
-   }
+
    for (Index_t plane=0; plane<edgeNodes; ++plane) {
      for (Index_t row=0; row<edgeNodes; ++row) {
        for (Index_t col=0; col<edgeNodes; ++col) {
@@ -257,7 +248,6 @@ int main(int argc, char *argv[])
     	     a.set(node, {locDom->xdd(nidx),locDom->ydd(nidx),locDom->zdd(nidx)});
     	     f.set(node, {locDom->fx(nidx),locDom->fy(nidx),locDom->fz(nidx)});
     	     nodalMass.set(node, locDom->nodalMass(nidx));
-    	     symm.set(node, {symmX[nidx],symmY[nidx],symmZ[nidx]});
     	     ++nidx ;
        }
      }
@@ -275,7 +265,6 @@ int main(int argc, char *argv[])
    FieldRef<double> qq    		= elems.addField<double>("qq");   		/* quadratic term for q */
    FieldRef<double> v     		= elems.addField<double>("v");   		/* relative volume */
    FieldRef<double> volo     	= elems.addField<double>("volo");   	/* reference volume */
-   FieldRef<double> vnew   		= elems.addField<double>("vnew");   	/* new relative volume -- temporary */
    FieldRef<double> delv     	= elems.addField<double>("delv");   	/* m_vnew - m_v */
    FieldRef<double> vdov     	= elems.addField<double>("vdov");    	/* volume derivative over volume */
    FieldRef<double> arealg     	= elems.addField<double>("arealg");   	/* characteristic length of an element */
@@ -371,8 +360,28 @@ int main(int argc, char *argv[])
        }
      }
    }
-	simit::Tensor<int,2> cycle;
+   std::vector<ElementRef> symmXRefs;
+   std::vector<ElementRef> symmYRefs;
+   std::vector<ElementRef> symmZRefs;
+   for (int bc =0; bc<edgeNodes*edgeNodes; ++bc){
+	   if (!locDom->symmXempty() != 0) {
+		   ElementRef BoundNode = symmX.add(nodeRefs[locDom->symmX(bc)]);
+		   symmXRefs.push_back(BoundNode);
+	   }
+	   if (!locDom->symmYempty() != 0) {
+		   ElementRef BoundNode = symmY.add(nodeRefs[locDom->symmY(bc)]);
+		   symmYRefs.push_back(BoundNode);
+	   }
+	   if (!locDom->symmZempty() != 0) {
+		   ElementRef BoundNode = symmZ.add(nodeRefs[locDom->symmZ(bc)]);
+		   symmZRefs.push_back(BoundNode);
+	   }
+   }
+
+	simit::Tensor<int,2> cycle, iterMax, showProg;
 	cycle(0)= locDom->cycle();
+	iterMax(0)=opts.its;
+	showProg(0)=opts.showProg;
 	simit::Tensor<double,2> time, deltatime, stoptime, dtfixed,
 							dtcourant, dthydro, deltatimemultlb,
 							deltatimemultub, dtmax,
@@ -414,96 +423,52 @@ int main(int argc, char *argv[])
    Program program;
    program.loadFile(codefile);
 
-   Function TimeIncrement_sim = program.compile("TimeIncrement_sim");
-   TimeIncrement_sim.bind("nodes",  &nodes);
-   TimeIncrement_sim.bind("elems", &elems);
-   TimeIncrement_sim.bind("connects", &connects);
-   TimeIncrement_sim.bind("cycle", &cycle);
-   TimeIncrement_sim.bind("time", &time);
-   TimeIncrement_sim.bind("deltatime", &deltatime);
-   TimeIncrement_sim.bind("stoptime", &stoptime);
-   TimeIncrement_sim.bind("dtfixed", &dtfixed);
-   TimeIncrement_sim.bind("dtcourant", &dtcourant);
-   TimeIncrement_sim.bind("dthydro", &dthydro);
-   TimeIncrement_sim.bind("deltatimemultlb", &deltatimemultlb);
-   TimeIncrement_sim.bind("deltatimemultub", &deltatimemultub);
-   TimeIncrement_sim.bind("dtmax", &dtmax);
-   TimeIncrement_sim.bind("hgcoef", &hgcoef);
-   TimeIncrement_sim.bind("u_cut", &u_cut);
-   TimeIncrement_sim.bind("qstop", &qstop);
-   TimeIncrement_sim.bind("monoq_limiter_mult", &monoq_limiter_mult);
-   TimeIncrement_sim.bind("monoq_max_slope", &monoq_max_slope);
-   TimeIncrement_sim.bind("qlc_monoq", &qlc_monoq);
-   TimeIncrement_sim.bind("qqc_monoq", &qqc_monoq);
-   TimeIncrement_sim.bind("eosvmin", &eosvmin);
-   TimeIncrement_sim.bind("eosvmax", &eosvmax);
-   TimeIncrement_sim.bind("v_cut", &v_cut);
-   TimeIncrement_sim.bind("qqc", &qqc);
-   TimeIncrement_sim.bind("dvovmax", &dvovmax);
-   TimeIncrement_sim.bind("rho0", &rho0);
-   TimeIncrement_sim.bind("ss4o3", &ss4o3);
-   TimeIncrement_sim.bind("e_cut", &e_cut);
-   TimeIncrement_sim.bind("p_cut", &p_cut);
-   TimeIncrement_sim.bind("q_cut", &q_cut);
-   TimeIncrement_sim.bind("emin", &emin);
-   TimeIncrement_sim.bind("pmin", &pmin);
+   Function lulesh_sim = program.compile("lulesh_sim");
+   lulesh_sim.bind("nodes",  &nodes);
+   lulesh_sim.bind("elems", &elems);
+   lulesh_sim.bind("connects", &connects);
+   lulesh_sim.bind("symmX", &symmX);
+   lulesh_sim.bind("symmY", &symmY);
+   lulesh_sim.bind("symmZ", &symmZ);
+   lulesh_sim.bind("cycle", &cycle);
+   lulesh_sim.bind("time", &time);
+   lulesh_sim.bind("deltatime", &deltatime);
+   lulesh_sim.bind("stoptime", &stoptime);
+   lulesh_sim.bind("iterMax", &iterMax);
+   lulesh_sim.bind("showProg", &showProg);
+   lulesh_sim.bind("dtfixed", &dtfixed);
+   lulesh_sim.bind("dtcourant", &dtcourant);
+   lulesh_sim.bind("dthydro", &dthydro);
+   lulesh_sim.bind("deltatimemultlb", &deltatimemultlb);
+   lulesh_sim.bind("deltatimemultub", &deltatimemultub);
+   lulesh_sim.bind("dtmax", &dtmax);
+   lulesh_sim.bind("hgcoef", &hgcoef);
+   lulesh_sim.bind("u_cut", &u_cut);
+   lulesh_sim.bind("qstop", &qstop);
+   lulesh_sim.bind("monoq_limiter_mult", &monoq_limiter_mult);
+   lulesh_sim.bind("monoq_max_slope", &monoq_max_slope);
+   lulesh_sim.bind("qlc_monoq", &qlc_monoq);
+   lulesh_sim.bind("qqc_monoq", &qqc_monoq);
+   lulesh_sim.bind("eosvmin", &eosvmin);
+   lulesh_sim.bind("eosvmax", &eosvmax);
+   lulesh_sim.bind("v_cut", &v_cut);
+   lulesh_sim.bind("qqc", &qqc);
+   lulesh_sim.bind("dvovmax", &dvovmax);
+   lulesh_sim.bind("rho0", &rho0);
+   lulesh_sim.bind("ss4o3", &ss4o3);
+   lulesh_sim.bind("e_cut", &e_cut);
+   lulesh_sim.bind("p_cut", &p_cut);
+   lulesh_sim.bind("q_cut", &q_cut);
+   lulesh_sim.bind("emin", &emin);
+   lulesh_sim.bind("pmin", &pmin);
 
-   Function LagrangeLeapFrog_sim = program.compile("LagrangeLeapFrog_sim");
-   LagrangeLeapFrog_sim.bind("nodes",  &nodes);
-   LagrangeLeapFrog_sim.bind("elems", &elems);
-   LagrangeLeapFrog_sim.bind("connects", &connects);
-   LagrangeLeapFrog_sim.bind("cycle", &cycle);
-   LagrangeLeapFrog_sim.bind("time", &time);
-   LagrangeLeapFrog_sim.bind("deltatime", &deltatime);
-   LagrangeLeapFrog_sim.bind("stoptime", &stoptime);
-   LagrangeLeapFrog_sim.bind("dtfixed", &dtfixed);
-   LagrangeLeapFrog_sim.bind("dtcourant", &dtcourant);
-   LagrangeLeapFrog_sim.bind("dthydro", &dthydro);
-   LagrangeLeapFrog_sim.bind("deltatimemultlb", &deltatimemultlb);
-   LagrangeLeapFrog_sim.bind("deltatimemultub", &deltatimemultub);
-   LagrangeLeapFrog_sim.bind("dtmax", &dtmax);
-   LagrangeLeapFrog_sim.bind("hgcoef", &hgcoef);
-   LagrangeLeapFrog_sim.bind("u_cut", &u_cut);
-   LagrangeLeapFrog_sim.bind("qstop", &qstop);
-   LagrangeLeapFrog_sim.bind("monoq_limiter_mult", &monoq_limiter_mult);
-   LagrangeLeapFrog_sim.bind("monoq_max_slope", &monoq_max_slope);
-   LagrangeLeapFrog_sim.bind("qlc_monoq", &qlc_monoq);
-   LagrangeLeapFrog_sim.bind("qqc_monoq", &qqc_monoq);
-   LagrangeLeapFrog_sim.bind("eosvmin", &eosvmin);
-   LagrangeLeapFrog_sim.bind("eosvmax", &eosvmax);
-   LagrangeLeapFrog_sim.bind("v_cut", &v_cut);
-   LagrangeLeapFrog_sim.bind("qqc", &qqc);
-   LagrangeLeapFrog_sim.bind("dvovmax", &dvovmax);
-   LagrangeLeapFrog_sim.bind("rho0", &rho0);
-   LagrangeLeapFrog_sim.bind("ss4o3", &ss4o3);
-   LagrangeLeapFrog_sim.bind("e_cut", &e_cut);
-   LagrangeLeapFrog_sim.bind("p_cut", &p_cut);
-   LagrangeLeapFrog_sim.bind("q_cut", &q_cut);
-   LagrangeLeapFrog_sim.bind("emin", &emin);
-   LagrangeLeapFrog_sim.bind("pmin", &pmin);
-
-   TimeIncrement_sim.init();
-   LagrangeLeapFrog_sim.init();
+   lulesh_sim.init();
 
    // BEGIN timestep to solution */
    timeval start;
    gettimeofday(&start, NULL) ;
 
-   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
-
-	  TimeIncrement_sim.run() ;
-      locDom->cycle() = cycle(0);
-      locDom->time() = time(0);
-      locDom->deltatime() = deltatime(0);
-      LagrangeLeapFrog_sim.run();
-      locDom->dtcourant() = dtcourant(0);
-      locDom->dthydro() = dthydro(0);
-
-      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
-         printf("cycle = %d, time = %e, dt=%e\n",
-                locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
-      }
-   }
+   lulesh_sim.run();
 
    // Use reduced max elapsed time
    double elapsed_time;
