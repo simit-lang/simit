@@ -270,7 +270,6 @@ func CalcFBHourglassForceForElems(determ:vector[elems](float),
     var hgf:vector[8](vector[3](float));
     var coefficient:float;
     var hourgam:matrix[4,8](float);
-    var d1:vector[8](vector[3](float));
     var volinv= 1.0 / determ(e);
     var hourmod:vector[3](float);
 
