@@ -21,7 +21,6 @@ element Elem
     v       : float;            % Relative volume
     delv    : float;
     volo    : float;            % Reference volume
-    vnew    : float;            % 
     vdov    : float;            % volume derivative over volume
     arealg  : float;            % Element characteristic length
     ss      : float;            % sound speed
@@ -29,18 +28,25 @@ element Elem
 end
 
 element Connect
+end
 
+element BoundNode
 end
 
 extern nodes  : set{Node};
 extern elems  : set{Elem}(nodes,nodes,nodes,nodes,nodes,nodes,nodes,nodes);
 extern connects : set{Connect}(elems,elems,elems,elems,elems,elems,elems);
+extern symmX  : set{BoundNode}(nodes);
+extern symmY  : set{BoundNode}(nodes);
+extern symmZ  : set{BoundNode}(nodes);
 
 % TODOi correct bug when binding scalars
 extern time:vector[2](float);
 extern cycle:vector[2](int);
 extern deltatime:vector[2](float);
 extern stoptime:vector[2](float);
+extern iterMax:vector[2](int);
+extern showProg:vector[2](int);
 extern dtfixed:vector[2](float);
 extern dtcourant:vector[2](float);
 extern dthydro:vector[2](float);
@@ -76,7 +82,11 @@ const XIETAZETA_MP=[[1,0,0,0,0,0],
                     [0,0,0,0,1,0],
                     [0,0,0,0,0,1]];
 const ptiny = 1.0e-36 ;
-
+const gamma = [ [ 1.0, 1.0,-1.0,-1.0,-1.0,-1.0, 1.0, 1.0 ],
+                [ 1.0,-1.0,-1.0, 1.0,-1.0, 1.0, 1.0,-1.0 ],
+                [ 1.0,-1.0, 1.0,-1.0, 1.0,-1.0, 1.0,-1.0 ],
+                [-1.0, 1.0,-1.0, 1.0, 1.0,-1.0, 1.0,-1.0 ] ];
+              
 %% TODOm : add abs and max to intrinsics 
 func abs(a:float)->r:float
     if a<0.0
@@ -130,9 +140,7 @@ func CalcElemShapeFunctionDerivatives(local:bool,e:Elem, n:(Node*8))->
     volume(e) = 8.0 * dot(fjet,cjet);
 end
 
-func SumElemFaceNormal(normal0:vector[3](float), normal1:vector[3](float),
-                       normal2:vector[3](float), normal3:vector[3](float),
-                       n0:vector[3](float), n1:vector[3](float), n2:vector[3](float), n3:vector[3](float))
+func SumElemFaceNormal( n0:vector[3](float), n1:vector[3](float), n2:vector[3](float), n3:vector[3](float))
                        ->(r0:vector[3](float),r1:vector[3](float),r2:vector[3](float),r3:vector[3](float))
                         
     bisectX0 = 0.5 * (n3(0) + n2(0) - n1(0) - n0(0));
@@ -154,21 +162,21 @@ end
 
 func CalcElemNodeNormals(e:Elem, n:(Node*8))-> B :vector[elems](vector[8](vector[3](float)))
     % evaluate face one: nodes 0, 1, 2, 3
-    B(e)(0),B(e)(1),B(e)(2),B(e)(3) = SumElemFaceNormal(B(e)(0),B(e)(1),B(e)(2),B(e)(3),n(0).coord,n(1).coord,n(2).coord,n(3).coord);
+    B(e)(0),B(e)(1),B(e)(2),B(e)(3) = SumElemFaceNormal(n(0).coord,n(1).coord,n(2).coord,n(3).coord);
     % evaluate face two: nodes 0, 4, 5, 1
-    B(e)(0),B(e)(4),B(e)(5),B(e)(1) = SumElemFaceNormal(B(e)(0),B(e)(4),B(e)(5),B(e)(1),n(0).coord,n(4).coord,n(5).coord,n(1).coord);
+    B(e)(0),B(e)(4),B(e)(5),B(e)(1) = SumElemFaceNormal(n(0).coord,n(4).coord,n(5).coord,n(1).coord);
     % evaluate face three: nodes 1, 5, 6, 2
-    B(e)(1),B(e)(5),B(e)(6),B(e)(2) = SumElemFaceNormal(B(e)(1),B(e)(5),B(e)(6),B(e)(2),n(1).coord,n(5).coord,n(6).coord,n(2).coord);
+    B(e)(1),B(e)(5),B(e)(6),B(e)(2) = SumElemFaceNormal(n(1).coord,n(5).coord,n(6).coord,n(2).coord);
     % evaluate face four: nodes 2, 6, 7, 3 
-    B(e)(2),B(e)(6),B(e)(7),B(e)(3) = SumElemFaceNormal(B(e)(2),B(e)(6),B(e)(7),B(e)(3),n(2).coord,n(6).coord,n(7).coord,n(3).coord);
+    B(e)(2),B(e)(6),B(e)(7),B(e)(3) = SumElemFaceNormal(n(2).coord,n(6).coord,n(7).coord,n(3).coord);
     % evaluate face five: nodes 3, 7, 4, 0
-    B(e)(3),B(e)(7),B(e)(4),B(e)(0) = SumElemFaceNormal(B(e)(3),B(e)(7),B(e)(4),B(e)(0),n(3).coord,n(7).coord,n(4).coord,n(0).coord);
+    B(e)(3),B(e)(7),B(e)(4),B(e)(0) = SumElemFaceNormal(n(3).coord,n(7).coord,n(4).coord,n(0).coord);
     % evaluate face six: nodes 4, 7, 6, 5 
-    B(e)(4),B(e)(7),B(e)(6),B(e)(5) = SumElemFaceNormal(B(e)(4),B(e)(7),B(e)(6),B(e)(5),n(4).coord,n(7).coord,n(6).coord,n(5).coord);
+    B(e)(4),B(e)(7),B(e)(6),B(e)(5) = SumElemFaceNormal(n(4).coord,n(7).coord,n(6).coord,n(5).coord);
 end
 
 func SumElemStressesToNodeForces(B:vector[elems](vector[8](vector[3](float))),stress:vector[elems](vector[3](float)),
-                                 e:Elem, inout n:(Node*8))%-> f :vector[nodes](vector[3](float))
+                                 e:Elem, inout n:(Node*8))
     for i in 0:8
         n(i).f = n(i).f-(stress(e).*B(e)(i));
     end
@@ -179,7 +187,6 @@ func IntegrateStressForElems(stress:vector[elems](vector[3](float)), inout deter
 	var B:vector[elems](vector[8](vector[3](float))); % shape function derivatives
     B, determ = map CalcElemShapeFunctionDerivatives(false) to elems reduce + ;
 
-    B = 0.0;
     B = map CalcElemNodeNormals to elems reduce + ;
 
     % copy nodal force contributions to global force arrray.
@@ -195,7 +202,7 @@ func InitStressTermsForElems(e:Elem)-> sig :vector[elems](vector[3](float))
 end
 
 func TestPositiveVolume(volume:vector[elems](float), e:Elem)-> result:int
-    if volume(e)>0.0
+    if volume(e)<0.0
         result=1;
     else
         result=0;
@@ -254,7 +261,7 @@ func CalcElemFBHourglassForce(nodeVel:vector[3](vector[8](float)),hourgam:matrix
     end
 end
 
-func CalcFBHourglassForceForElems(gamma:matrix[4,8](float),determ:vector[elems](float),
+func CalcFBHourglassForceForElems(determ:vector[elems](float),
                                   dv:vector[elems](vector[8](vector[3](float))), hgcoef:float,
                                   e:Elem, inout n:(Node*8))
     % Calculates the Flanagan-Belytschko anti-hourglass force.
@@ -297,20 +304,15 @@ end
 
 func CalcHourglassControlForElems(inout determ:vector[elems](float), hgcoef:float)
     dv,determ = map CalcElemVolumeDerivative to elems;
-    var gamma:matrix[4,8](float);
-    gamma = [ [ 1.0, 1.0,-1.0,-1.0,-1.0,-1.0, 1.0, 1.0 ],
-              [ 1.0,-1.0,-1.0, 1.0,-1.0, 1.0, 1.0,-1.0 ],
-              [ 1.0,-1.0, 1.0,-1.0, 1.0,-1.0, 1.0,-1.0 ],
-              [-1.0, 1.0,-1.0, 1.0, 1.0,-1.0, 1.0,-1.0 ] ];
     if hgcoef > 0.0
-        map CalcFBHourglassForceForElems(gamma,determ,dv,hgcoef) to elems;
+        map CalcFBHourglassForceForElems(determ,dv,hgcoef) to elems;
     end
 end
 
 func CalcVolumeForceForElems(hgcoef:float)
 	% Sum contributions to total stress tensor
 	stress = map InitStressTermsForElems to elems reduce +;
-	
+        
 	% call elemlib stress integration loop to produce nodal forces from
 	% material stresses.
     var determ:vector[elems](float);
@@ -323,29 +325,18 @@ func CalcVolumeForceForElems(hgcoef:float)
     CalcHourglassControlForElems(determ, hgcoef) ;
 end
 
-func ResetNodeForces(inout n:Node)
-    n.f(0)=0.0;
-    n.f(1)=0.0;
-    n.f(2)=0.0;
-end
-
 func CalcForceForNodes(hgcoef:float)
   	% Calcforce calls partial, force, hourq 
-    map ResetNodeForces() to nodes;
-    % TODOi authorize to write Nodes.f=0.0;
+    nodes.f=0.0;
     CalcVolumeForceForElems(hgcoef);
 end
-
 
 func CalcAccelerationForNodes(inout n:Node)
     n.a = n.f / n.nodalMass;
 end
 
-func ApplyAccelerationBoundaryConditionsForNodes(inout n:Node)
-    %% TODOi : Improvement possible with edgeset on Boundary nodes
-    for i in 0:3
-        if (n.symm(i)!=0)  n.a(i) = 0.0; end
-    end
+func ApplyAccelerationBoundaryConditionsForNodes(dir:int ,bc: BoundNode,inout n:(Node*1))
+    n(0).a(dir)=0.0;
 end
 
 func CalcVelocityForNodes(dt:float,u_cut:float,inout n:Node)
@@ -359,22 +350,20 @@ func CalcVelocityForNodes(dt:float,u_cut:float,inout n:Node)
     end
 end
 
-func CalcPositionForNodes(dt:float,inout n:Node)
-    n.coord = n.coord + n.vel*dt;
-end
-
 func LagrangeNodal(dt:float,hgcoef:float,u_cut:float)
   	% time of boundary condition evaluation is beginning of step for force and
    	% acceleration boundary conditions. 
    	CalcForceForNodes(hgcoef);
 
     map CalcAccelerationForNodes to nodes;
-   
-    map ApplyAccelerationBoundaryConditionsForNodes to nodes;
+    
+    map ApplyAccelerationBoundaryConditionsForNodes(0) to symmX;
+    map ApplyAccelerationBoundaryConditionsForNodes(1) to symmY;
+    map ApplyAccelerationBoundaryConditionsForNodes(2) to symmZ;
 
     map CalcVelocityForNodes(dt,u_cut) to nodes;
 
-    map CalcPositionForNodes(dt) to nodes;
+    nodes.coord = nodes.coord + nodes.vel*dt;
 end
 
 func CalcElemVolume(nodeCoord:vector[8](vector[3](float)))->volume:float
@@ -425,16 +414,16 @@ func CalcKinematicsForElems(dt:float, inout e:Elem, inout n:(Node*8))->vnew:vect
     volume = CalcElemVolume(nodeCoord);
     vnew(e) = volume / e.volo ;
     e.delv = vnew(e) - e.v ;
+    if vnew(e) <= 0.0
+        print "VolumeError3";
+    end
     % set characteristic length
     e.arealg = CalcElemCharacteristicLength(nodeCoord, volume);
 end
 
-func CalcLagrangeElements(vnew:vector[elems](float), inout e:Elem, inout n:(Node*8))
+func CalcLagrangeElements(inout e:Elem, inout n:(Node*8))
     e.vdov = e.dxyz(0) + e.dxyz(1) + e.dxyz(2);
     e.dxyz = e.dxyz - e.vdov / 3.0;
-    if vnew(e) <= 0.0
-        print "VolumeError3";
-    end
 end
 
 func CalcElemVelocityGradient(B:vector[elems](vector[8](vector[3](float))),detJ:vector[elems](float),
@@ -557,23 +546,20 @@ func CalcMonotonicQForElems(vnew:vector[elems](float),
     e(0).ql = qlin  ;
 end
 
-func TestArticialViscosity(qstop:float,e:Elem)-> result:bool
-    result=(e.q>qstop);
-end
-
-func CalcQForElems(vnew:vector[elems](float), monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float,qstop:float)
+func CalcQForElems(vnew:vector[elems](float), monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float)
     % MONOTONIC Q option
     % Calculate velocity gradients
     map CalcMonotonicQGradientsForElems(vnew) to elems;
     map CalcMonotonicQForElems(vnew,monoq_limiter_mult,monoq_max_slope,qlc_monoq,qqc_monoq) to connects;
-
-    % Don't allow excessive artificial viscosity 
-    Viscosity = map TestArticialViscosity(qstop) to elems;
-    if Viscosity  print "QStopError";  end
 end
 
-func ApplyMaterialPropertiesForElems(eosvmin:float, eosvmax: float,
+func ApplyMaterialPropertiesForElems(eosvmin:float, eosvmax: float, qstop:float,
                                      inout vnew:vector[elems](float), inout e:Elem, n:(Node*8))
+    % Don't allow excessive artificial viscosity
+    if e.q > qstop
+        print "QStopError";
+    end
+
     % Bound the updated relative volumes with eosvmin/max
     if eosvmin != 0.0 and vnew(e) < eosvmin
         vnew(e) = eosvmin ;
@@ -707,7 +693,7 @@ func CalcEnergyForElems(inout p_new:float, inout e_new:float, inout q_new:float,
 end
 
 func EvalEOSForElems(eosvmin:float, eosvmax:float, rho0:float, ss4o3:float,
-                     e_cut:float, p_cut:float, q_cut:float, emin:float, pmin:float,
+                     e_cut:float, p_cut:float, q_cut:float, v_cut:float, emin:float, pmin:float,
                      vnew:vector[elems](float),inout e:Elem, n:(Node*8))
     var p_new=0.0;
     var e_new=0.0;
@@ -752,11 +738,10 @@ func EvalEOSForElems(eosvmin:float, eosvmax:float, rho0:float, ss4o3:float,
     e.q = q_new ;
 
     CalcSoundSpeedForElems(vnew, rho0, e_new, p_new, pbvc, bvc, ss4o3, e);
-end
 
-func UpdateVolumesForElems(vnew:vector[elems](float), v_cut:float, inout e:Elem, n:(Node*8))
+    % UpdateVolumeForElems
     vne=vnew(e)-1.0;
-    if abs(vne) < v_cut
+    if abs(vne) < v_cut 
         e.v=1.0;
     else
         e.v=vnew(e);
@@ -764,22 +749,18 @@ func UpdateVolumesForElems(vnew:vector[elems](float), v_cut:float, inout e:Elem,
 end
 
 func LagrangeElements(dt:float,qstop:float, monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float,eosvmin:float,eosvmax:float,v_cut:float,rho0:float,ss4o3:float,e_cut:float, p_cut:float, q_cut:float, emin:float, pmin:float)
-    var vnew:vector[elems](float);
-    vnew=0.0;
-    vnew = map CalcKinematicsForElems(dt) to elems; % vnew relative vol 
+    var vnew = map CalcKinematicsForElems(dt) to elems; % vnew relative vol 
     B, detJ = map CalcElemShapeFunctionDerivatives(true) to elems reduce + ;
     % put velocity gradient quantities into their global arrays.
     map CalcElemVelocityGradient(B,detJ) to elems;
-    map CalcLagrangeElements(vnew) to elems;
+    map CalcLagrangeElements to elems;
     
     % Calculate Q.  (Monotonic q option requires communication)
-    CalcQForElems(vnew,monoq_limiter_mult,monoq_max_slope,qlc_monoq,qqc_monoq,qstop);
+    CalcQForElems(vnew,monoq_limiter_mult,monoq_max_slope,qlc_monoq,qqc_monoq);
 
-    map ApplyMaterialPropertiesForElems(eosvmin,eosvmax,vnew) to elems;
-    map EvalEOSForElems(eosvmin,eosvmax,rho0,ss4o3,e_cut,p_cut,q_cut,pmin,emin,vnew) to elems;
+    map ApplyMaterialPropertiesForElems(eosvmin,eosvmax,qstop,vnew) to elems;
+    map EvalEOSForElems(eosvmin,eosvmax,rho0,ss4o3,e_cut,p_cut,q_cut,v_cut,pmin,emin,vnew) to elems;
 
-    map UpdateVolumesForElems(vnew, v_cut) to elems ;
- 
  %   var i=0;
  %   for e in elems
  %       if i < 5
@@ -823,15 +804,13 @@ func CalcTimeConstraintsForElems(inout dtcourant:float,inout dthydro:float,qqc:f
     dthydro = 1.0e+20;
     % evaluate time constraint
     dtc = map CalcCourantConstraintForElems(qqc, dtcourant) to elems ;
-    for e in elems
-        if dtc(e)<dtcourant
-            dtcourant=dtc(e);
-        end
-    end
     % TODOm add a MIN function to intrinsics dtcourant = Min(dt);
     % check hydro constraint 
     dth = map CalcHydroConstraintForElems(dvovmax,dthydro) to elems ;
     for e in elems
+        if dtc(e)<dtcourant
+            dtcourant=dtc(e);
+        end
         if dth(e)<dthydro
             dthydro=dth(e);
         end
@@ -839,7 +818,7 @@ func CalcTimeConstraintsForElems(inout dtcourant:float,inout dthydro:float,qqc:f
     %dthydro=Mini(dte);
 end
 
-export func LagrangeLeapFrog_sim()
+func LagrangeLeapFrog()
     % calculate nodal forces, accelerations, velocities, positions, with
     % applied boundary conditions and slide surface considerations
     LagrangeNodal(deltatime(0),hgcoef(0),u_cut(0));
@@ -851,28 +830,29 @@ export func LagrangeLeapFrog_sim()
     CalcTimeConstraintsForElems(dtcourant(0),dthydro(0),qqc(0),dvovmax(0));
 end
 
-export func TimeIncrement_sim()
-    var targetdt = stoptime(0) - time(0) ;
-    if dtfixed(0) <= 0.0 and cycle(0) != 0
+func TimeIncrement(inout cycle:vector[2](int), inout time:vector[2](float), stoptime:float, dtcourant:float, dthydro:float, dtfixed:float,
+                   dtmax:float,inout deltatime:vector[2](float),deltatimemultlb:float,deltatimemultub:float)
+    var targetdt = stoptime - time(0) ;
+    if dtfixed <= 0.0 and cycle(0) != 0
         olddt = deltatime(0) ;
         var gnewdt = 1.0e+20 ;
-        if dtcourant(0) < gnewdt
-            gnewdt = dtcourant(0) / 2.0 ;
+        if dtcourant < gnewdt
+            gnewdt = dtcourant / 2.0 ;
         end
-        if dthydro(0) < gnewdt 
-            gnewdt = dthydro(0) * 2.0 / 3.0 ;
+        if dthydro < gnewdt 
+            gnewdt = dthydro * 2.0 / 3.0 ;
         end
 
         var newdt = gnewdt;
         ratio = newdt / olddt ;
         if ratio >= 1.0 
-            if ratio < deltatimemultlb(0)
+            if ratio < deltatimemultlb
                 newdt = olddt ;
-            elif ratio > deltatimemultub(0)
-                newdt = olddt*deltatimemultub(0) ;
+            elif ratio > deltatimemultub
+                newdt = olddt*deltatimemultub ;
             end
         end
-        if (newdt > dtmax(0))  newdt = dtmax(0) ;  end
+        if (newdt > dtmax)  newdt = dtmax ;  end
         deltatime(0) = newdt ;
     end
 
@@ -884,4 +864,15 @@ export func TimeIncrement_sim()
     if (targetdt < deltatime(0))  deltatime(0) = targetdt ;  end
     time(0) = time(0) + deltatime(0) ;
     cycle(0) = cycle(0) +1 ;
+end
+
+export func lulesh_sim()
+    do
+      TimeIncrement(cycle, time, stoptime(0), dtcourant(0), dthydro(0), dtfixed(0),
+                   dtmax(0), deltatime, deltatimemultlb(0), deltatimemultub(0));
+      LagrangeLeapFrog();
+      if showProg(0) != 0
+        print "cycle = ", cycle(0),", time = ",time(0),", dt = ", deltatime(0),"\n";
+      end
+    end while ((time(0) < stoptime(0)) and (cycle(0)) < iterMax(0))
 end
