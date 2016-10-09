@@ -135,7 +135,14 @@ void ParseCommandLineOptions(int argc, char *argv[],
          /* -v */
          else if (strcmp(argv[i], "-v") == 0) {
 #if VIZ_MESH            
-            opts->viz = 1;
+        	 if (i+1 >= argc) {
+                ParseError("Missing integer argument to -v\n", myRank);
+             }
+             ok = StrToInt(argv[i+1], &(opts->viz));
+             if (!ok) {
+                ParseError("Parse Error on option -c integer value required after argument\n", myRank);
+             }
+             i+=2;
 #else
             ParseError("Use of -v requires compiling with -DVIZ_MESH\n", myRank);
 #endif

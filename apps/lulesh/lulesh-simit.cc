@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
    opts.numFiles = (int)(numRanks+10)/9;
    opts.showProg = 0;
    opts.quiet = 0;
-   opts.viz = 0;
+   opts.viz = -1;
    opts.balance = 1;
    opts.cost = 1;
 
@@ -378,10 +378,11 @@ int main(int argc, char *argv[])
 	   }
    }
 
-	simit::Tensor<int,2> cycle, iterMax, showProg;
+	simit::Tensor<int,2> cycle, iterMax, showProg, frequency;
 	cycle(0)= locDom->cycle();
 	iterMax(0)=opts.its;
 	showProg(0)=opts.showProg;
+	frequency(0)=opts.viz;
 	simit::Tensor<double,2> time, deltatime, stoptime, dtfixed,
 							dtcourant, dthydro, deltatimemultlb,
 							deltatimemultub, dtmax,
@@ -432,6 +433,7 @@ int main(int argc, char *argv[])
    lulesh_sim.bind("symmZ", &symmZ);
    lulesh_sim.bind("cycle", &cycle);
    lulesh_sim.bind("time", &time);
+   lulesh_sim.bind("frequency", &frequency);
    lulesh_sim.bind("deltatime", &deltatime);
    lulesh_sim.bind("stoptime", &stoptime);
    lulesh_sim.bind("iterMax", &iterMax);
@@ -467,8 +469,35 @@ int main(int argc, char *argv[])
    // BEGIN timestep to solution */
    timeval start;
    gettimeofday(&start, NULL) ;
+   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
-   lulesh_sim.run();
+	   lulesh_sim.run();
+	   locDom->cycle()=cycle(0);
+	   locDom->time()=time(0);
+	   if (opts.viz>0) {
+		   // Put some physical quantitites back in locDom to dump with visit
+		   nidx = 0 ;
+		   for (Index_t plane=0; plane<edgeElems; ++plane) {
+			   for (Index_t row=0; row<edgeElems; ++row) {
+				   for (Index_t col=0; col<edgeElems; ++col) {
+					   locDom->e(nidx)=e.get(elemRefs[nidx]);
+					   locDom->p(nidx)=p.get(elemRefs[nidx]);
+					   locDom->v(nidx)=v.get(elemRefs[nidx]);
+					   locDom->q(nidx)=q.get(elemRefs[nidx]);
+					   locDom->x(nidx)=coord.get(elemRefs[nidx])(0);
+					   locDom->y(nidx)=coord.get(elemRefs[nidx])(1);
+					   locDom->z(nidx)=coord.get(elemRefs[nidx])(2);
+					   locDom->xd(nidx)=vel.get(elemRefs[nidx])(0);
+					   locDom->yd(nidx)=vel.get(elemRefs[nidx])(1);
+					   locDom->zd(nidx)=vel.get(elemRefs[nidx])(2);
+					   nidx++;
+				   }
+			   }
+		   }
+		   // Write out final viz file */
+		   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
+	   }
+   }
 
    // Use reduced max elapsed time
    double elapsed_time;
@@ -478,24 +507,29 @@ int main(int argc, char *argv[])
    double elapsed_timeG;
    elapsed_timeG = elapsed_time;
 
-   // Write out final viz file */
-   //if (opts.viz) {
-   //   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
-   //}
-
-   // Put Energy back in locDom to verify results
+   // Put some physical quantitites back in locDom to verify results
    nidx = 0 ;
    for (Index_t plane=0; plane<edgeElems; ++plane) {
      for (Index_t row=0; row<edgeElems; ++row) {
        for (Index_t col=0; col<edgeElems; ++col) {
-    	     locDom->e(nidx)=e.get(elemRefs[nidx]);
-    	     nidx++;
+  	     locDom->e(nidx)=e.get(elemRefs[nidx]);
+	     locDom->p(nidx)=p.get(elemRefs[nidx]);
+	     locDom->v(nidx)=v.get(elemRefs[nidx]);
+	     locDom->q(nidx)=q.get(elemRefs[nidx]);
+	     locDom->x(nidx)=coord.get(elemRefs[nidx])(0);
+	     locDom->y(nidx)=coord.get(elemRefs[nidx])(1);
+	     locDom->z(nidx)=coord.get(elemRefs[nidx])(2);
+	     locDom->xd(nidx)=vel.get(elemRefs[nidx])(0);
+	     locDom->yd(nidx)=vel.get(elemRefs[nidx])(1);
+	     locDom->zd(nidx)=vel.get(elemRefs[nidx])(2);
+	     nidx++;
        }
      }
    }
+   locDom->cycle()=cycle(0);
+   locDom->time()=time(0);
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-
    return 0 ;
 }
