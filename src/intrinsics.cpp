@@ -125,7 +125,7 @@ void cbrtInit() {
   cbrtVar = Func("cbrt",
                  {Var("x", Float)},
                  {Var("r", Float)},
-                 Func::External);
+                 Func::Intrinsic);
 }
 const Func& cbrt() {
   if (!cbrtVar.defined()) {
@@ -148,6 +148,48 @@ const Func& cbrt3() {
     cbrt3Init();
   }
   return cbrt3Var;
+}
+
+static Func absVar;
+void absInit() {
+  absVar = Func("abs",
+                {Var("x", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& abs() {
+  if (!absVar.defined()) {
+    absInit();
+  }
+  return absVar;
+}
+
+static Func maxVar;
+void maxInit() {
+  maxVar = Func("max",
+                {Var("a", Float), Var("b", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& max() {
+  if (!maxVar.defined()) {
+    maxInit();
+  }
+  return maxVar;
+}
+
+static Func minVar;
+void minInit() {
+  minVar = Func("min",
+                {Var("a", Float), Var("b", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& min() {
+  if (!minVar.defined()) {
+    minInit();
+  }
+  return minVar;
 }
 
 static Func logVar;
@@ -667,6 +709,9 @@ const std::map<std::string,Func> &byNames() {
     sqrtInit();
     cbrtInit();    
     cbrt3Init();
+    absInit();
+    maxInit();
+    minInit();
     logInit();
     expInit();
     powInit();
@@ -712,6 +757,9 @@ const std::map<std::string,Func> &byNames() {
                       {"sqrt",sqrtVar},
                       {"cbrt",cbrtVar},
                       {"cbrt3",cbrt3Var},
+                      {"abs",absVar},
+                      {"max",maxVar},
+                      {"min",minVar},
                       {"log",logVar},
                       {"exp",expVar},
                       {"pow",powVar},

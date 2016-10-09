@@ -119,4 +119,23 @@ func docbrt3(a : tensor[3](float)) -> (c : tensor[3](float))
   c = cbrt3(a);
 end
 
+%%% abs
+%! doabs(-27.7) == 27.7;
+%! doabs(27.7) == 27.7;
+func doabs(a : float) -> (c : float)
+  c = abs(a);
+end
 
+%%% max
+%! domax(1.1, 2.2) == 2.2;
+%! domax(2.2, 1.1) == 2.2;
+func domax(a : float, b : float) -> (c : float)
+  c = max(a, b);
+end
+
+%%% min
+%! domin(1.1, 2.2) == 1.1;
+%! domin(2.2, 1.1) == 1.1;
+func domin(a : float, b : float) -> (c : float)
+  c = min(a, b);
+end

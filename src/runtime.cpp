@@ -59,6 +59,45 @@ float acos_f32(float x) {
   return (float)acos(d_x);
 }
 
+// cube root
+double cbrt_f64(double x) {
+  return cbrt(x);
+}
+
+float cbrt_f32(float x) {
+  double d_x = x;
+  return (float)cbrt(d_x);
+}
+
+double abs_f64(double x) {
+  return fabs(x);
+}
+
+float abs_f32(float x) {
+  double d_x = x;
+  return (float)fabs(d_x);
+}
+
+double max_f64(double a,double b) {
+  return max(a,b);
+}
+
+float max_f32(float a, float b) {
+  double d_a = a;
+  double d_b = b;
+  return (float)max(d_a,d_b);
+}
+
+double min_f64(double a,double b) {
+  return min(a,b);
+}
+
+float min_f32(float a, float b) {
+  double d_a = a;
+  double d_b = b;
+  return (float)min(d_a,d_b);
+}
+
 double det3_f64(double * a){
   return a[0] * (a[4]*a[8]-a[5]*a[7])
        - a[1] * (a[3]*a[8]-a[5]*a[6])
@@ -593,16 +632,6 @@ extern "C" void dcross(int an, double* a, int bn, double* b, int cn, double* c) 
 }
 
 /// cube root
-template <typename Float>
-void cbrt(Float x, Float* r) {
-  *r = std::cbrt(x);
-}
-extern "C" void scbrt(float x, float* r) {
-  return cbrt(x,r);
-}
-extern "C" void dcbrt(double x, double* r) {
-  return cbrt(x,r);
-}
 template <typename Float>
 void cbrt3(int xn, Float* x, int rn, Float* r){
   assert(xn==3 && rn==3);
