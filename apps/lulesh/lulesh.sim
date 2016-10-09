@@ -43,6 +43,7 @@ extern symmZ  : set{BoundNode}(nodes);
 % TODOi correct bug when binding scalars
 extern time:vector[2](float);
 extern cycle:vector[2](int);
+extern frequency:vector[2](int);
 extern deltatime:vector[2](float);
 extern stoptime:vector[2](float);
 extern iterMax:vector[2](int);
@@ -873,5 +874,6 @@ export func lulesh_sim()
       if showProg(0) != 0
         print "cycle = ", cycle(0),", time = ",time(0),", dt = ", deltatime(0),"\n";
       end
-    end while ((time(0) < stoptime(0)) and (cycle(0)) < iterMax(0))
+    end while ((time(0) < stoptime(0)) and (cycle(0)) < iterMax(0)
+          and ((frequency(0)<0) or (mod(cycle(0),frequency(0)) != 0)))
 end

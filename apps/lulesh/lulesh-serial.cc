@@ -2236,7 +2236,7 @@ int main(int argc, char *argv[])
    opts.numFiles = (int)(numRanks+10)/9;
    opts.showProg = 0;
    opts.quiet = 0;
-   opts.viz = 0;
+   opts.viz = -1;
    opts.balance = 1;
    opts.cost = 1;
 
@@ -2278,6 +2278,11 @@ int main(int argc, char *argv[])
          printf("cycle = %d, time = %e, dt=%e\n",
                 locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
       }
+      // Write out final viz file */
+      if ((opts.viz>0) && (locDom->cycle()%opts.viz) == 0) {
+         DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
+      }
+
    }
 
    // Use reduced max elapsed time
@@ -2289,9 +2294,9 @@ int main(int argc, char *argv[])
    elapsed_timeG = elapsed_time;
 
    // Write out final viz file */
-   //if (opts.viz) {
-   //   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
-   //}
+   if (opts.viz>0) {
+      DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
+   }
    
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
