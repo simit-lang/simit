@@ -150,10 +150,22 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                      ir::intrinsics::sqrt().getName(),
                      {ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
-  addIntrinsic(&intrinsics,
+  addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::cbrt().getName(),
-					 {threeVectorType},
-					 {threeVectorType});
+					 {ScalarType::Type::FLOAT},
+					 {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::abs().getName(),
+					 {ScalarType::Type::FLOAT},
+					 {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::max().getName(),
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::min().getName(),
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
   addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::log().getName(),
                      {ScalarType::Type::FLOAT},

@@ -88,21 +88,6 @@ const gamma = [ [ 1.0, 1.0,-1.0,-1.0,-1.0,-1.0, 1.0, 1.0 ],
                 [ 1.0,-1.0, 1.0,-1.0, 1.0,-1.0, 1.0,-1.0 ],
                 [-1.0, 1.0,-1.0, 1.0, 1.0,-1.0, 1.0,-1.0 ] ];
               
-%% TODOm : add abs and max to intrinsics 
-func abs(a:float)->r:float
-    if a<0.0
-        r=-a;
-    else
-        r=a;
-    end
-end
-func max(a:float,b:float)->r:float
-    if a>b
-        r=a;
-    else
-        r=b;
-    end
-end
 
 func CalcElemShapeFunctionDerivatives(local:bool,e:Elem, n:(Node*8))->
                                      (B :vector[elems](vector[8](vector[3](float))), volume:vector[elems](float))
@@ -286,10 +271,7 @@ func CalcFBHourglassForceForElems(determ:vector[elems](float),
     end
 
     %   compute forces
-    var hack:vector[3](float);
-    hack(0) = determ(e);
-    volume13=cbrt(hack);
-    %%  TODOm improve cbrt and add it to intrinsics
+    volume13=cbrt(determ(e));
     coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13(0);
     var nodeVel:vector[3](vector[8](float));
     for i in 0:8
