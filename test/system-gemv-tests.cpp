@@ -1205,8 +1205,45 @@ TEST(system, gemv_diagonal_storage_and_sysreduced) {
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)c.get(p0));
- }
+}
 
+TEST(system, gemv_diagonal_edge) {
+  // Points
+  Set points;
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a.set(p0, 1.0);
+  a.set(p1, 3.0);
+  a.set(p2, 2.0);
+
+  // Springs
+  Set springs(points,points);
+  FieldRef<simit_float> b = springs.addField<simit_float>("b");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  b.set(s0, 0.0);
+  b.set(s1, 0.0);
+
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(2.0, (simit_float)b.get(s0));
+  ASSERT_EQ(-1.0, (simit_float)b.get(s1));
+}
  
 TEST(system, gemv_pass_element) {
   // Points

@@ -1,0 +1,20 @@
+element Point
+  a : float;
+end
+
+element Spring
+  b : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func dist(s : Spring, p : (Point * 2)) -> A : tensor[springs,springs](float)
+  A(s,s) = p(1).a - p(0).a;
+end
+
+export func main()
+  const z : vector[springs](float) = 0.0;
+  A = map dist to springs reduce +;
+  springs.b = A * (z + 1.0);
+end
