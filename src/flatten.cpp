@@ -310,9 +310,7 @@ class NormAndDotRewriter : public ir::IRRewriter {
         vector<Stmt> unrolledStmts;
         unrolledStmts.push_back(VarDecl::make(dot));
 
-//        Expr mult = Mul::make(Load::make(l, 0), Load::make(r, 0));
-        Expr mult = Mul::make(TensorRead::make(l, {0}),
-                              TensorRead::make(r, {0}));
+        Expr mult = Mul::make(Load::make(l, 0), Load::make(r, 0));
         unrolledStmts.push_back(AssignStmt::make(dot, mult));
 
         int size = (int)type->size();
