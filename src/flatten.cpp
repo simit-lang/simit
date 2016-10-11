@@ -315,8 +315,7 @@ class NormAndDotRewriter : public ir::IRRewriter {
         int size = (int)type->size();
         for (int i=1; i < size; ++i) {
           Expr mult = Mul::make(Load::make(l, i), Load::make(r, i));
-          unrolledStmts.push_back(AssignStmt::make(dot, mult,
-                                                   CompoundOperator::Add));
+          unrolledStmts.push_back(AssignStmt::make(dot, Add::make(dot, mult)));
         }
         unrolledStmts.push_back(AssignStmt::make(op->results[0], dot));
         stmt = Block::make(unrolledStmts);
