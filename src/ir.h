@@ -92,7 +92,8 @@ inline bool isa(Expr e) {
 
 template <typename E>
 inline const E* to(Expr e) {
-  iassert(isa<E>(e)) << "Wrong Expr type " << e << " of type " << e.type() << " expected to be " << typeid(E).name();
+  iassert(isa<E>(e)) << "Wrong Expr type " << e << " of type "
+                     << e.type() << " expected to be " << typeid(E).name();
   return static_cast<const E*>(e.ptr);
 }
 
