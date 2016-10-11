@@ -294,9 +294,38 @@ class NormAndDotRewriter : public ir::IRRewriter {
     else if (op->callee.getName() == "dot") {
       iassert(op->actuals.size() == 2);
       iassert(op->results.size() == 1);
+      iassert(op->actuals[0].type() == op->actuals[1].type());
 
-      auto dot = builder.innerProduct(op->actuals[0], op->actuals[1]);
-      stmt = AssignStmt::make(op->results[0], dot);
+      Expr l = op->actuals[0];
+      Expr r = op->actuals[1];
+
+      iassert(l.type().isTensor());
+      auto type = l.type().toTensor();
+
+      if (!type->hasSystemDimensions()) {
+        // Unroll dot
+        Var dot("dot", Float);
+
+        vector<Stmt> unrolledStmts;
+        unrolledStmts.push_back(VarDecl::make(dot));
+
+        Expr mult = Mul::make(Load::make(l, 0), Load::make(r, 0));
+        unrolledStmts.push_back(AssignStmt::make(dot, mult));
+
+        int size = (int)type->size();
+        for (int i=1; i < size; ++i) {
+          Expr mult = Mul::make(Load::make(l, i), Load::make(r, i));
+          unrolledStmts.push_back(AssignStmt::make(dot, mult,
+                                                   CompoundOperator::Add));
+        }
+        unrolledStmts.push_back(AssignStmt::make(op->results[0], dot));
+        stmt = Block::make(unrolledStmts);
+      }
+      else {
+        // Add an index expression to be lowered by later passes
+        Expr dot = builder.innerProduct(op->actuals[0], op->actuals[1]);
+        stmt = AssignStmt::make(op->results[0], dot);
+      }
     }
     else {
       stmt = op;
