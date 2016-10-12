@@ -282,18 +282,18 @@ int main(int argc, char *argv[])
 										 nodeRefs[locDom->nodelist(nidx)[4]], nodeRefs[locDom->nodelist(nidx)[5]],
 										 nodeRefs[locDom->nodelist(nidx)[6]], nodeRefs[locDom->nodelist(nidx)[7]]);
     	     elemRefs.push_back(elem);
-    	     e.set(elem,{locDom->e(nidx)});
-    	     p.set(elem,{locDom->p(nidx)});
-    	     q.set(elem,{locDom->q(nidx)});
-    	     ql.set(elem,{locDom->ql(nidx)});
-    	     qq.set(elem,{locDom->qq(nidx)});
-    	     v.set(elem,{locDom->v(nidx)});
-    	     volo.set(elem,{locDom->volo(nidx)});
-    	     delv.set(elem,{locDom->delv(nidx)});
-    	     vdov.set(elem,{locDom->vdov(nidx)});
-    	     arealg.set(elem,{locDom->arealg(nidx)});
-    	     ss.set(elem,{locDom->ss(nidx)});
-    	     elemMass.set(elem,{locDom->elemMass(nidx)});
+    	     e.set(elem,locDom->e(nidx));
+    	     p.set(elem,locDom->p(nidx));
+    	     q.set(elem,locDom->q(nidx));
+    	     ql.set(elem,locDom->ql(nidx));
+    	     qq.set(elem,locDom->qq(nidx));
+    	     v.set(elem,locDom->v(nidx));
+    	     volo.set(elem,locDom->volo(nidx));
+    	     delv.set(elem,locDom->delv(nidx));
+    	     vdov.set(elem,locDom->vdov(nidx));
+    	     arealg.set(elem,locDom->arealg(nidx));
+    	     ss.set(elem,locDom->ss(nidx));
+    	     elemMass.set(elem,locDom->elemMass(nidx));
     	     Int_t bcMask = locDom->elemBC(nidx) ;
     	     std::vector<int> maskxim(3,0);
     	     switch (bcMask & XI_M) {
