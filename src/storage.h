@@ -124,6 +124,9 @@ private:
 };
 std::ostream &operator<<(std::ostream&, const Storage&);
 
+/// Checks if a tensor variable is a diagonal tensor.
+bool isDiagonal(const TensorType* varType, Expr target);
+
 /// Adds storage descriptors for each tensor in `func` not already described.
 void updateStorage(const Func &func, Storage *storage, Environment* env);
 

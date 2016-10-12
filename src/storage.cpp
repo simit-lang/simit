@@ -355,7 +355,7 @@ private:
             tensorStorage = TensorStorage(TensorStorage::Dense);
           }
           else {
-            if (op->neighbors.empty()) {
+            if (isDiagonal(tensorType, op->target)) {
               tensorStorage = TensorStorage(TensorStorage::Diagonal);
             }
             else {
@@ -475,6 +475,15 @@ private:
     }
   }
 };
+
+bool isDiagonal(const TensorType* varType, Expr target) {
+  for (auto is : varType->getOuterDimensions()) {
+    if (is != target) {
+      return false;
+    }
+  }
+  return true;
+}
 
 void updateStorage(const Func& func, Storage* storage, Environment* env) {
   GetStorageVisitor(storage, env).get(func);
