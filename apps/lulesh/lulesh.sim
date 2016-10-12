@@ -255,7 +255,6 @@ func CalcFBHourglassForceForElems(determ:vector[elems](float),
     %   compute the hourglass modes
     var hgf:vector[8](vector[3](float));
     var coefficient:float;
-    var volume13:vector[3](float);
     var hourgam:matrix[4,8](float);
     var volinv= 1.0 / determ(e);
     var hourmod:vector[3](float);
@@ -272,7 +271,7 @@ func CalcFBHourglassForceForElems(determ:vector[elems](float),
 
     %   compute forces
     volume13=cbrt(determ(e));
-    coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13(0);
+    coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13;
     var nodeVel:vector[3](vector[8](float));
     for i in 0:8
         for j in 0:3
@@ -282,7 +281,7 @@ func CalcFBHourglassForceForElems(determ:vector[elems](float),
     CalcElemFBHourglassForce(nodeVel,hourgam,coefficient,hgf);
     for i in 0:8
        n(i).f = n(i).f + hgf(i);
-   end
+    end
 end
 
 func CalcHourglassControlForElems(inout determ:vector[elems](float), hgcoef:float)
