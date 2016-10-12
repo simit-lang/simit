@@ -59,25 +59,6 @@ float acos_f32(float x) {
   return (float)acos(d_x);
 }
 
-// cube root
-double cbrt_f64(double x) {
-  return cbrt(x);
-}
-
-float cbrt_f32(float x) {
-  double d_x = x;
-  return (float)cbrt(d_x);
-}
-
-double abs_f64(double x) {
-  return fabs(x);
-}
-
-float abs_f32(float x) {
-  double d_x = x;
-  return (float)fabs(d_x);
-}
-
 double max_f64(double a,double b) {
   return max(a,b);
 }
