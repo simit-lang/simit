@@ -40,10 +40,10 @@ int main(int argc, char **argv)
 	if (cg_open(PM.get(TPM::CGNSFileName).c_str(),CG_MODE_READ,&index_file)) cg_error_exit();
 	//  we know there is only one base (real working code would check!)
 	index_base=1;
-	//  we know there is only one zone (real working code would check!)
+	//  we know there is only two zones (real working code would check!)
 	index_zone=1;
-	//  get zone size (and name - although not needed here)
-	std::string zonename = "Zone 1";
+	//  get Pan zone size
+	std::string zonename = "Pan";
 	cg_zone_read(index_file,index_base,index_zone,(char *)zonename.c_str(),*isize);
 	//  lower range index
 	irmin[0]=1; irmin[1]=1; irmin[2]=1;
@@ -215,9 +215,9 @@ int main(int argc, char **argv)
 
 		// Iterate on thermal solving
 		solve_thermal.runSafe();
+		time+=dt(0);
 
 		// Compute the next timestep value
 		compute_dt.runSafe();
-		time+=dt(0);
 	}
 }

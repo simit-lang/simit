@@ -37,20 +37,6 @@ extern tolerance_coupling : vector[2](float);
 
 
 %%%%%%%%%%%%%%% Future Intrinsics Functions %%%%%%%%%%%%%%%%%%
-func abs(a:float)->r:float
-    if a<0.0
-        r=-a;
-    else
-        r=a;
-    end
-end
-func max(a:float,b:float)->r:float
-    if b>a
-        r=b;
-    else
-        r=a;
-    end
-end
 func eye(q:Quad)->I:matrix[quads,quads](float)
     I(q,q)=1.0;
 end
@@ -69,16 +55,6 @@ func printb(b:vector[quads](float))
         print b(q), "\n";
     end
     print "\n";
-end
-
-func printA(A : matrix[quads,quads](float))
-    print " A = \n";
-    for q in quads
-        for r in quads
-            print A(q,r), " ";
-        end
-        print "\n";
-    end
 end
 
 %%%%%%%%%%%%%%%% Thermal Solve %%%%%%%%%%%%%%%%%%%%%
@@ -109,21 +85,18 @@ export func solve_thermal()
 
     % assemble matrix A
     %var A : matrix[quads,quads](float);
-    A = map assemble_diffusion to faces reduce +;
-    b = b - A*quads.T;
+    var A = map assemble_diffusion to faces reduce +;
     %I = map eye to quads reduce +;
-    %A = A + I;
-    
-   % print A;
-  %  print quads.T;
-  %  print b;
- 
+    for q in quads
+        A(q,q) = A(q,q) + 1.0;
+    end
+    b = b - A*quads.T;
+
     % solve and find Tn+1
     solver = lu(A);
     TNN = lusolve<quads,quads>(solver, b);
     lufree(solver);
     quads.T=TNN+quads.T;
-    print quads.T;
     
 end
 
@@ -149,7 +122,6 @@ end
 export func compute_dt()
     % start by computing all delta_x and delta_y for each quad
     apply compute_dxy to quads;
-   % print quads.dxy;
     
     % dt = cfl / max( 2*K/(rho*cv*(max(dx²,dy²))) )
     coeff_dt = map compute_coeff to quads reduce +;
@@ -161,11 +133,9 @@ export func compute_dt()
     end
     dt(0) = cfl(0) / m;
 
-    print " dt = ", dt(0), "\n";
+    % print " dt = ", dt(0), "\n";
+
     % compute gamma to quads;
     quads.gamma=dt(0)/(quads.rho.*quads.cv);
-    print quads.gamma;
     apply compute_halfValues to faces;
-    %print faces.dxyhalf;
-    
 end
