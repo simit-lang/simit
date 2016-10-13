@@ -1,5 +1,6 @@
 #include "timers.h"
 
+#include "macros.h"
 #include "storage.h"
 #include "ir_builder.h"
 #include "ir_rewriter.h"
@@ -135,7 +136,7 @@ class InsertTimers : public IRRewriter {
     }
   private:
     int counter = 0;
-    Var timeStartVar = Var("simit_internal_time_var", Float);
+    Var timeStartVar = Var(INTERNAL_PREFIX("simit_internal_time_var"), Float);
     InsertTimers() {};
     InsertTimers(InsertTimers const&)    = delete;
     void operator=(InsertTimers const&)  = delete;
@@ -149,13 +150,13 @@ class InsertTimers : public IRRewriter {
     }
 
     void storeTimer(Stmt& stmt, Var& timeStartVar) {
-      Var clock("clock", Float);
+      Var clock(INTERNAL_PREFIX("clock"), Float);
       Stmt clockDecl = VarDecl::make(clock);
       Stmt clockStmt = CallStmt::make({clock}, intrinsics::clock(), {});
       Expr subtraction = Sub::make(clock, VarExpr::make(timeStartVar));
       Stmt store = CallStmt::make({}, intrinsics::storeTime(),
           {counter, subtraction});
-      stmt = Block::make({clockDecl, clockStmt, stmt, store});
+      stmt = Block::make({clockDecl, stmt, clockStmt, store});
       counter++;
     }
 };
