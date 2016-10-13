@@ -114,7 +114,8 @@ class InsertTimers : public IRRewriter {
       Stmt thenBody = rewrite(op->thenBody);
       Stmt elseBody = rewrite(op->elseBody);
       
-      stmt = IfThenElse::make(op->condition, thenBody, elseBody);
+      stmt = !elseBody.defined() ? IfThenElse::make(op->condition, thenBody) : 
+             IfThenElse::make(op->condition, thenBody, elseBody);
     }
     
     void visit(const ForRange *op) {
