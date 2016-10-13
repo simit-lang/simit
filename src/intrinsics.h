@@ -38,6 +38,8 @@ const Func& complexGetImag();
 const Func& norm();
 const Func& dot();
 const Func& det();
+const Func& det2();
+const Func& det4();
 const Func& inv();
 
 // Vector/Vector math

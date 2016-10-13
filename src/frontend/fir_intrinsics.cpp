@@ -63,9 +63,23 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
   const auto threeDim = std::make_shared<RangeIndexSet>();
   threeDim->range = 3;
 
+  const auto twoDim = std::make_shared<RangeIndexSet>();
+  twoDim->range = 2;
+
+  const auto fourDim = std::make_shared<RangeIndexSet>();
+  fourDim->range = 4;
+
   const auto threeByThreeTensorType = std::make_shared<NDTensorType>();
   threeByThreeTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
   threeByThreeTensorType->indexSets = {threeDim, threeDim};
+
+  const auto twoByTwoTensorType = std::make_shared<NDTensorType>();
+  twoByTwoTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  twoByTwoTensorType->indexSets = {twoDim, twoDim};
+ 
+  const auto fourByFourTensorType = std::make_shared<NDTensorType>();
+  fourByFourTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  fourByFourTensorType->indexSets = {fourDim, fourDim}; 
 
   const auto threeVectorType = std::make_shared<NDTensorType>();
   threeVectorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
@@ -176,6 +190,14 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                ir::intrinsics::det().getName(),
                {threeByThreeTensorType},
                {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic(&intrinsics,
+			   ir::intrinsics::det2().getName(),
+			   {twoByTwoTensorType},
+			   {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic(&intrinsics,
+			   ir::intrinsics::det4().getName(),
+			   {fourByFourTensorType},
+			   {makeTensorType(ScalarType::Type::FLOAT)});
   addIntrinsic(&intrinsics,
                ir::intrinsics::inv().getName(),
                {threeByThreeTensorType},

@@ -71,6 +71,46 @@ float det3_f32(float * a){
        + a[2] * (a[3]*a[7]-a[4]*a[6]);
 }
 
+double det2_f64(double * a){
+  return a[0] * a[3] - a[1] * a[2];
+}
+
+float det2_f32(float * a){ 
+  return a[0] * a[3] - a[1] * a[2];
+}
+
+double det4_f64(double * a){
+  double det0 = a[5] * (a[10]*a[15]-a[11]*a[14])
+	   - a[6] * (a[9]*a[15]-a[11]*a[13])
+	   + a[7] * (a[9]*a[14]-a[10]*a[13]);
+  double det1 = a[4] * (a[10]*a[15]-a[11]*a[14])
+	   - a[6] * (a[8]*a[15]-a[11]*a[12])
+	   + a[7] * (a[8]*a[14]-a[10]*a[12]);
+  double det2 = a[4] * (a[9]*a[15]-a[11]*a[13])
+	   - a[5] * (a[8]*a[15]-a[11]*a[12])
+	   + a[7] * (a[8]*a[13]-a[9]*a[12]);
+  double det3 = a[4] * (a[9]*a[14]-a[10]*a[13])
+	   - a[5] * (a[8]*a[14]-a[10]*a[12])
+	   + a[6] * (a[8]*a[13]-a[9]*a[12]);
+  return a[0]*det0 - a[1]*det1 + a[2]*det2 - a[3]*det3;
+}
+
+float det4_f32(float * a){
+  float det0 = a[5] * (a[10]*a[15]-a[11]*a[14])
+	   - a[6] * (a[9]*a[15]-a[11]*a[13])
+	   + a[7] * (a[9]*a[14]-a[10]*a[13]);
+  float det1 = a[4] * (a[10]*a[15]-a[11]*a[14])
+	   - a[6] * (a[8]*a[15]-a[11]*a[12])
+	   + a[7] * (a[8]*a[14]-a[10]*a[12]);
+  float det2 = a[4] * (a[9]*a[15]-a[11]*a[13])
+	   - a[5] * (a[8]*a[15]-a[11]*a[12])
+	   + a[7] * (a[8]*a[13]-a[9]*a[12]);
+  float det3 = a[4] * (a[9]*a[14]-a[10]*a[13])
+	   - a[5] * (a[8]*a[14]-a[10]*a[12])
+	   + a[6] * (a[8]*a[13]-a[9]*a[12]);
+  return a[0]*det0 - a[1]*det1 + a[2]*det2 - a[3]*det3;
+}
+
 void inv3_f64(double * a, double * inv){
   double cof00 = a[4]*a[8]-a[5]*a[7];
   double cof01 =-a[3]*a[8]+a[5]*a[6];

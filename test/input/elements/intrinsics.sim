@@ -71,16 +71,16 @@ func dodet(a : tensor[3,3](float)) -> (c : float)
   c = det(a);
 end
 
-%%% det
-%! dodet([4.0, 1.0; 3.0, 4.0]) == 12.0;
-func dodet(a : tensor[2,2](float)) -> (c : float)
-  c = det(a);
+%%% det2
+%! dodet2([4.0, 1.0; 3.0, 4.0]) == 13.0;
+func dodet2(a : tensor[2,2](float)) -> (c : float)
+  c = det2(a);
 end
 
-%%% det
-%! dodet([4.0, 1.0, 8.0, 2.0; 3.0, 4.0, 5.0, 1.0; 1.0, 7.0, 7.0, 3.0; 1.0, 4.0, 2.0, 1.0]) == 46.0;
-func dodet(a : tensor[4,4](float)) -> (c : float)
-  c = det(a);
+%%% det4
+%! dodet4([4.0, 1.0, 8.0, 2.0; 3.0, 4.0, 5.0, 1.0; 1.0, 7.0, 7.0, 3.0; 1.0, 4.0, 2.0, 1.0]) == 46.0;
+func dodet4(a : tensor[4,4](float)) -> (c : float)
+  c = det4(a);
 end
 %%% inv
 %! doinv([4.0, 1.0, 8.0; 3.0, 4.0, 5.0; 1.0, 7.0, 7.0]) == [-0.0761, 0.5326, -0.2935; -0.1739, 0.2174, 0.0435; 0.1848, -0.2935, 0.1413];

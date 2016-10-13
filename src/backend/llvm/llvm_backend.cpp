@@ -980,6 +980,16 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
     call = emitCall(fname, args, llvmFloatType());
   }
+  else if (callee == ir::intrinsics::det2()) {
+    iassert(args.size() == 1);
+	std::string fname = callStmt.callee.getName() + floatTypeName;
+	call = emitCall(fname, args, llvmFloatType());
+  }
+  else if (callee == ir::intrinsics::det4()) {
+    iassert(args.size() == 1);
+	std::string fname = callStmt.callee.getName() + floatTypeName;
+	call = emitCall(fname, args, llvmFloatType());
+  }
   else if (callee == ir::intrinsics::inv()) {
     iassert(args.size() == 1);
 
