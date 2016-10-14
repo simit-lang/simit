@@ -17,3 +17,15 @@ target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${simit})
 include_directories($ENV{CGNS_INCLUDE_DIR})
 find_library(cgns cgns "/usr/local/lib")
 target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${cgns})
+
+# SILO include files and library
+if (DEFINED ENV{VISIT})
+    if (NOT DEFINED ENV{SILO_INCLUDE_DIR} OR NOT DEFINED ENV{SILO_LIB_DIR})
+      message(FATAL_ERROR "Set the environment variables SILO_INCLUDE_DIR and SILO_LIB_DIR")
+    endif ()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVIZ_MESH")
+
+    include_directories($ENV{SILO_INCLUDE_DIR})
+    find_library(silo siloh5 $ENV{SILO_LIB_DIR})
+    target_link_libraries(${PROJECT_NAME} ${silo})
+endif ()

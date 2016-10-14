@@ -27,6 +27,10 @@
 		case str2int(NAME) : \
 		set(Parameter<int>(NAME),atoi(VALUE.c_str())); \
 		break;
+#define PM_READ_BOOL(NAME,VALUE) \
+		case str2int(NAME) : \
+		set(Parameter<bool>(NAME),atoi(VALUE.c_str())); \
+		break;
 #define PM_READ_STRING(NAME,VALUE) \
 		case str2int(NAME) : \
 		set(Parameter<std::string>(NAME),VALUE); \

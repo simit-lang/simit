@@ -104,8 +104,8 @@ end
 %%%%%%%%%%%%%%%%  Compute TimeStep %%%%%%%%%%%%%%%%%%%%
 
 func compute_dxy(inout q:Quad,p:(Point*4))
-    q.dxy(0)=max(abs(p(1).xy(0)-p(0).xy(0)),abs(p(3).xy(0)-p(2).xy(0)));
-    q.dxy(1)=max(abs(p(2).xy(1)-p(0).xy(1)),abs(p(3).xy(1)-p(1).xy(1)));
+    q.dxy(0)=max(abs(p(1).xy(0)-p(0).xy(0)),abs(p(2).xy(0)-p(3).xy(0)));
+    q.dxy(1)=max(abs(p(3).xy(1)-p(0).xy(1)),abs(p(2).xy(1)-p(1).xy(1)));
 end
 
 func compute_halfValues(inout f:Face,q:(Quad*2))

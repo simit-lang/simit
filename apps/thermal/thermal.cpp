@@ -13,6 +13,9 @@ using namespace simit;
 
 #define TPM ThermalParameterManager
 
+// thermal-viz
+void DumpToVisit(int iter, double time, Set *quads, Set *points);
+
 int main(int argc, char **argv)
 {
 
@@ -112,8 +115,8 @@ int main(int argc, char **argv)
 			for (int xdir=0; xdir<irmax[2]-1; ++xdir) {
 				ElementRef quad = quads.add(pointRefs[ydir*irmax[2]+xdir],
 											pointRefs[ydir*irmax[2]+xdir+1],
-											pointRefs[(ydir+1)*irmax[2]+xdir],
-											pointRefs[(ydir+1)*irmax[2]+xdir+1]);
+											pointRefs[(ydir+1)*irmax[2]+xdir+1],
+											pointRefs[(ydir+1)*irmax[2]+xdir]);
 				quadsRefs.push_back(quad);
 				T.set(quad,PM.get(TPM::T_init));
 				K.set(quad,PM.get(TPM::K));
@@ -152,7 +155,10 @@ int main(int argc, char **argv)
 			ElementRef bcu = bcup.add(quadsRefs[(irmax[1]-2)*(irmax[2]-1)+xdir]);
 			qwu.set(bcu,PM.get(TPM::qwu));
 			ElementRef bcb = bcbottom.add(quadsRefs[xdir]);
-			qwb.set(bcb,PM.get(TPM::qwb));
+			if ((xdir<irmax[2]/4) || (xdir>(irmax[2]-irmax[2]/4)))
+				qwb.set(bcb,PM.get(TPM::qwb)/2);
+			else
+				qwb.set(bcb,PM.get(TPM::qwb));
 		}
 	}
 
@@ -204,6 +210,8 @@ int main(int argc, char **argv)
 	// Time Loop
 	double time=0.0;
 	compute_dt.runSafe();
+	if (PM.get(TPM::dumpVisit))
+		DumpToVisit(iter(0), time, &quads, &points);
 
 	while ((time < PM.get(TPM::timeMax)) && (iter(0)<PM.get(TPM::iterMax))) {
 		iter(0)=iter(0)+1;
@@ -217,7 +225,12 @@ int main(int argc, char **argv)
 		solve_thermal.runSafe();
 		time+=dt(0);
 
+		if ((PM.get(TPM::dumpVisit)) && (iter(0)%(PM.get(TPM::dumpFrequency))==0))
+			DumpToVisit(iter(0), time, &quads, &points);
+
 		// Compute the next timestep value
 		compute_dt.runSafe();
 	}
+	if (PM.get(TPM::dumpVisit))
+		DumpToVisit(iter(0), time, &quads, &points);
 }
