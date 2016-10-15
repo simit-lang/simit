@@ -21,6 +21,8 @@ public:
 	static const Parameter<double> 			qwb;			// boundary neuman condition on the bottom
 	static const Parameter<bool>    		dumpVisit;
 	static const Parameter<std::string>    	CGNSFileName;	// Relative path to the CGNS File
+	static const Parameter<std::string>    	SimitFileName;	// Relative path to the Simit File
+	static const Parameter<std::string>    	PanFileName;	// Relative path to the Pan params file
 
 	ThermalParameterManager()	{
 		initialize();

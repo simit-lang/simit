@@ -29,11 +29,11 @@ extern bcright  : set{BoundCond}(quads);
 extern bcup     : set{BoundCond}(quads);
 extern bcbottom : set{BoundCond}(quads);
 
-extern iter : vector[2](int);
-extern iterMax_coupling : vector[2](int);
+%extern iter : vector[2](int);
+%extern iterMax_coupling : vector[2](int);
 extern dt : vector[2](float);
 extern cfl : vector[2](float);
-extern tolerance_coupling : vector[2](float);
+%extern tolerance_coupling : vector[2](float);
 
 
 %%%%%%%%%%%%%%% Future Intrinsics Functions %%%%%%%%%%%%%%%%%%
@@ -133,7 +133,7 @@ export func compute_dt()
     end
     dt(0) = cfl(0) / m;
 
-    % print " dt = ", dt(0), "\n";
+     print " dt = ", dt(0), "\n";
 
     % compute gamma to quads;
     quads.gamma=dt(0)/(quads.rho.*quads.cv);

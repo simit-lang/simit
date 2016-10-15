@@ -27,5 +27,5 @@ if (DEFINED ENV{VISIT})
 
     include_directories($ENV{SILO_INCLUDE_DIR})
     find_library(silo siloh5 $ENV{SILO_LIB_DIR})
-    target_link_libraries(${PROJECT_NAME} ${silo})
+    target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${silo})
 endif ()
