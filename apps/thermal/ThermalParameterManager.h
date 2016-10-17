@@ -23,6 +23,7 @@ public:
 	static const Parameter<std::string>    	CGNSFileName;	// Relative path to the CGNS File
 	static const Parameter<std::string>    	SimitFileName;	// Relative path to the Simit File
 	static const Parameter<std::string>    	PanFileName;	// Relative path to the Pan params file
+	static const Parameter<std::string>    	SteakFileName;	// Relative path to the Steak params file
 
 	ThermalParameterManager()	{
 		initialize();

@@ -23,13 +23,13 @@ static void DumpDomainToVisit(DBfile *db, int iter, double time, Set *quads, Set
 
 
 /**********************************************************************/
-void DumpToVisit(int iter, double time, Set *quads, Set *points)
+void DumpToVisit(std::string ZoneName,int iter, double time, Set *quads, Set *points)
 {
   char subdirName[32];
   char basename[32];
   DBfile *db;
 
-  sprintf(basename, "thermal_plot_c%d", iter);
+  sprintf(basename, "%s_plot_c%d", ZoneName.c_str(), iter);
   sprintf(subdirName, "data_%d", 0);
 
   db = (DBfile*)DBCreate(basename, DB_CLOBBER, DB_LOCAL, NULL, DB_HDF5X);

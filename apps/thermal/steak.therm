@@ -1,0 +1,3 @@
+cfl 1000
+T_init 200
+CGNSFileName ../pansteak5x5.cgns

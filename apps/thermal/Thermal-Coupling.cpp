@@ -3,22 +3,18 @@
 #include "mesh.h"
 #include <cmath>
 
-#include "cgnslib.h"
+#include "Thermal.h"
 
-#include "../thermal/ParameterManager.h"
-#include "../thermal/ParameterManagerMacros.h"
-#include "../thermal/ThermalParameterManager.h"
+#include "ParameterManager.h"
+#include "ParameterManagerMacros.h"
+#include "ThermalParameterManager.h"
 
 using namespace simit;
 
 #define TPM ThermalParameterManager
 
 // Thermal-viz
-void DumpToVisit(int iter, double time, Set *quadsPan, Set *pointsPan);
-// Thermal model
-int Thermal(std::string paramFile, std::string zoneName, simit::Tensor<double,2> *dt, simit::Tensor<double,2> *cflPan,
-		    Function *solve_thermal_Pan, Function *compute_dt_Pan,
-		    Set *quadsPan, Set *pointsPan, Set *facesPan, Set *bcleftPan, Set *bcrightPan, Set *bcupPan, Set *bcbottomPan );
+void DumpToVisit(std::string ZoneName,int iter, double time, Set *quadsPan, Set *pointsPan);
 
 int main(int argc, char **argv)
 {
@@ -30,50 +26,55 @@ int main(int argc, char **argv)
 	}
 	std::string thermfile = argv[1];
 
-
 	//2- Construct the parameter manager
 	TPM PM;
 	PM.readParameters(thermfile);
 
 	//3 - Read the Pan part
-	Set pointsPan;
-	Set quadsPan(pointsPan, pointsPan, pointsPan, pointsPan);
-	Set facesPan(quadsPan,quadsPan);
-	Set bcleftPan(quadsPan);
-	Set bcrightPan(quadsPan);
-	Set bcupPan(quadsPan);
-	Set bcbottomPan(quadsPan);
-	Function solve_thermal_Pan, compute_dt_Pan;
-	simit::Tensor<double,2> dtPan,cflPan;
-	Thermal(PM.get(TPM::PanFileName),"Pan",&dtPan,&cflPan,&solve_thermal_Pan,&compute_dt_Pan,
-		    &quadsPan,&pointsPan,&facesPan,&bcleftPan,&bcrightPan,&bcupPan,&bcbottomPan);
+	Thermal Pan = Thermal(PM.get(TPM::PanFileName),"Pan",1);
+
+	//4 - Read the Steak part
+	Thermal Steak = Thermal(PM.get(TPM::SteakFileName),"Steak",2);
 
 	// Time Loop
 	double time=0.0;
-	compute_dt_Pan.runSafe();
+	double dt=0.0;
+	Pan.compute_dt.runSafe();
+	Steak.compute_dt.runSafe();
+	dt=min(Steak.dt(0),Pan.dt(0));
+	Steak.dt(0)=dt;
+	Pan.dt(0)=dt;
 
 	int iter=0;
-	if (PM.get(TPM::dumpVisit))
-		DumpToVisit(iter, time, &quadsPan, &pointsPan);
-
+	if (PM.get(TPM::dumpVisit)) {
+		DumpToVisit("Pan",iter, time, Pan.quads, Pan.points);
+		DumpToVisit("Steak",iter, time, Steak.quads, Steak.points);
+	}
 	while ((time < PM.get(TPM::timeMax)) && (iter<PM.get(TPM::iterMax))) {
 		iter=iter+1;
 		std::cout << "----Iteration " << iter << " ----" << std::endl;
 
-		// To arrive just on time
-		if (time+dtPan(0) > PM.get(TPM::timeMax))
-			dtPan(0) = PM.get(TPM::timeMax) - time;
-
 		// Iterate on thermal solving
-		solve_thermal_Pan.runSafe();
-		time+=dtPan(0);
+		Pan.solve_thermal.runSafe();
+		Steak.solve_thermal.runSafe();
+		time+=dt;
 
-		if ((PM.get(TPM::dumpVisit)) && (iter%(PM.get(TPM::dumpFrequency))==0))
-			DumpToVisit(iter, time, &quadsPan, &pointsPan);
-
+		if ((PM.get(TPM::dumpVisit)) && (iter%(PM.get(TPM::dumpFrequency))==0)) {
+			DumpToVisit("Pan",iter, time, Pan.quads, Pan.points);
+			DumpToVisit("Steak",iter, time, Steak.quads, Steak.points);
+		}
 		// Compute the next timestep value
-		compute_dt_Pan.runSafe();
+		Pan.compute_dt.runSafe();
+		Steak.compute_dt.runSafe();
+		dt=min(Steak.dt(0),Pan.dt(0));
+		// To arrive just on time
+		if (time+dt > PM.get(TPM::timeMax))
+			dt = PM.get(TPM::timeMax) - time;
+		Steak.dt(0)=dt;
+		Pan.dt(0)=dt;
 	}
-	if (PM.get(TPM::dumpVisit))
-		DumpToVisit(iter, time, &quadsPan, &pointsPan);
+	if (PM.get(TPM::dumpVisit)) {
+		DumpToVisit("Pan",iter, time, Pan.quads, Pan.points);
+		DumpToVisit("Steak",iter, time, Steak.quads, Steak.points);
+	}
 }

@@ -133,7 +133,7 @@ export func compute_dt()
     end
     dt(0) = cfl(0) / m;
 
-     print " dt = ", dt(0), "\n";
+    % print " dt = ", dt(0), "\n";
 
     % compute gamma to quads;
     quads.gamma=dt(0)/(quads.rho.*quads.cv);

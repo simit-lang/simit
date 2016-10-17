@@ -2,6 +2,7 @@ iterMax 1000
 CGNSFileName ../pansteak5x5.cgns
 timeMax 4.5
 iterMax_coupling 3
-dumpVisit 0
+dumpVisit 1
 dumpFrequency 5
 PanFileName ../pan.therm
+SteakFileName ../steak.therm
