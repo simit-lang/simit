@@ -202,6 +202,14 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                ir::intrinsics::inv().getName(),
                {threeByThreeTensorType},
                {threeByThreeTensorType});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::inv2().getName(),
+               {twoByTwoTensorType},
+               {twoByTwoTensorType});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::inv4().getName(),
+               {fourByFourTensorType},
+               {fourByFourTensorType});
 
   // Local vector/vector
   addIntrinsic(&intrinsics,

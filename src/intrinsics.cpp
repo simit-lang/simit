@@ -321,6 +321,38 @@ const Func& inv() {
   return invVar;
 }
 
+static Func inv2Var;
+void inv2Init() {
+  inv2Var = Func("inv2",
+                {Var("m", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
+                {Var("r", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
+                Func::Intrinsic);
+}
+const Func& inv2() {
+  if (!inv2Var.defined()) {
+    inv2Init();
+  }
+  return inv2Var;
+}
+
+static Func inv4Var;
+void inv4Init() {
+  inv4Var = Func("inv4",
+                {Var("m", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
+                {Var("r", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
+                Func::Intrinsic);
+}
+const Func& inv4() {
+  if (!inv4Var.defined()) {
+    inv4Init();
+  }
+  return inv4Var;
+}
+
 static Func crossVar;
 void crossInit() {
   crossVar = Func("cross",
@@ -617,6 +649,8 @@ const std::map<std::string,Func> &byNames() {
 	det2Init();
 	det4Init();
     invInit();
+	inv2Init();
+	inv4Init();
     crossInit();
     solveInit();
     luInit();
@@ -658,6 +692,8 @@ const std::map<std::string,Func> &byNames() {
 					  {"det2",det2Var},
 					  {"det4",det4Var},
                       {"inv",invVar},
+					  {"inv2",inv2Var},
+					  {"inv4",inv4Var},
                       {"cross",crossVar},
 					  {"__solve",solveVar},
                       {"lu", luVar},
