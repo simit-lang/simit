@@ -5,8 +5,10 @@
 #include "ir_rewriter.h"
 #include "storage.h"
 #include "tensor_index.h"
+
 #include <vector>
 #include <map>
+#include <set>
 
 namespace simit {
 namespace ir {
@@ -22,7 +24,8 @@ protected:
 
   using IRRewriter::visit;
 
-  bool shouldInline(const CallStmt *op);
+  static bool shouldInline(const CallStmt *op);
+  static std::set<Var> getReferencedVars(const std::vector<Expr> &exprs);
 
   void visit(const CallStmt *op);
 };

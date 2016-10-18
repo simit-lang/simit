@@ -7,6 +7,7 @@
 #include "temps.h"
 #include "flatten.h"
 #include "intrinsics.h"
+#include "ir_builder.h"
 #include "ir_codegen.h"
 #include "ir_queries.h"
 #include "ir_transforms.h"
@@ -74,13 +75,38 @@ bool CallRewriter::shouldInline(const CallStmt *op) {
   return ReferencesSet().query(op->callee.getBody());
 }
 
-void CallRewriter::visit(const CallStmt *op) {
-  stmt = op->callee.getBody();
+std::set<Var> CallRewriter::getReferencedVars(const std::vector<Expr> &exprs) {
+  class CollectVars : public IRVisitor {
+    public:
+      CollectVars(std::set<Var> &vars) : vars(vars) {}
+  
+    private:
+      using IRVisitor::visit;
+  
+      void visit(const VarExpr *op) {
+        vars.insert(op->var);
+      }
 
-  if (!stmt.defined() || !shouldInline(op)) {
+      std::set<Var> &vars;
+  };
+
+  std::set<Var> referencedVars;
+  CollectVars collector(referencedVars);
+
+  for (auto expr : exprs) {
+    expr.accept(&collector);
+  }
+
+  return referencedVars;
+}
+
+void CallRewriter::visit(const CallStmt *op) {
+  if (!op->callee.getBody().defined() || !shouldInline(op)) {
     stmt = op;
     return;
   }
+
+  stmt = Scope::make(op->callee.getBody());
 
   // Replace callee parameters with arguments
   iassert(op->actuals.size() == op->callee.getArguments().size());
@@ -88,10 +114,28 @@ void CallRewriter::visit(const CallStmt *op) {
     stmt = replaceVarByExpr(stmt, op->callee.getArguments()[i], op->actuals[i]);
   }
 
+  IRBuilder builder;
+  static util::NameGenerator names;
+
+  const std::set<Var> referencedVars = getReferencedVars(op->actuals);
+
   // Replace callee result variables with assignment targets
   iassert(op->results.size() == op->callee.getResults().size());
   for (size_t i = 0; i < op->results.size(); ++i) {
-    stmt = replaceVar(stmt, op->callee.getResults()[i], op->results[i]);
+    if (util::contains(referencedVars, op->results[i])) {
+      const auto resName = op->callee.getResults()[i].getName();
+      const auto tmpName = names.getName(INTERNAL_PREFIX("inline_" + resName));
+
+      Var tmpRes(tmpName, op->results[i].getType());
+      stmt = replaceVar(stmt, op->callee.getResults()[i], tmpRes);
+
+      Stmt tmpDecl = VarDecl::make(tmpRes);
+      Expr copyTmp = builder.unaryElwiseExpr(IRBuilder::Copy, tmpRes);
+      Stmt assignRes = AssignStmt::make(op->results[i], copyTmp);
+      stmt = Block::make({tmpDecl, stmt, assignRes});
+    } else {
+      stmt = replaceVar(stmt, op->callee.getResults()[i], op->results[i]);
+    }
   }
     
   // Add comment
@@ -104,7 +148,7 @@ void CallRewriter::visit(const CallStmt *op) {
 }
 
 Func inlineCalls(Func func) {
-  CallRewriter rewriter(&func.getStorage(),&func.getEnvironment());
+  CallRewriter rewriter(&func.getStorage(), &func.getEnvironment());
   Stmt body = rewriter.rewrite(func.getBody());
 
   func = Func(func, body);
