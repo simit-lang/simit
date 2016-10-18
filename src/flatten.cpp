@@ -294,8 +294,13 @@ class NormAndDotRewriter : public ir::IRRewriter {
     else if (op->callee.getName() == "dot") {
       iassert(op->actuals.size() == 2);
       iassert(op->results.size() == 1);
+      iassert(op->actuals[0].type() == op->actuals[1].type());
 
-      auto dot = builder.innerProduct(op->actuals[0], op->actuals[1]);
+      Expr l = op->actuals[0];
+      Expr r = op->actuals[1];
+
+      // Add an index expression to be lowered by later passes
+      Expr dot = builder.innerProduct(l, r);
       stmt = AssignStmt::make(op->results[0], dot);
     }
     else {
