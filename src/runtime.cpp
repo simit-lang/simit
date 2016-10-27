@@ -137,7 +137,7 @@ float complexNorm_f32(float r, float i) {
   return sqrt(r*r+i*i);
 }
 
-void simitStoreTime(int i, double value) {
+void storeTime(int i, double value) {
   simit::ir::TimerStorage::getInstance().storeTime(i, value);
 }
 

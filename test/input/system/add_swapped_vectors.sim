@@ -1,0 +1,37 @@
+element Vertex
+  a : float;
+  b : float;
+end
+
+element Edge
+  e : float;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+extern F : set{Edge}(V,V);
+
+func f(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
+  A(v(0),v(0)) = e.e;
+  A(v(0),v(1)) = e.e;
+  A(v(1),v(0)) = e.e;
+  A(v(1),v(1)) = e.e;
+end
+
+func swap(a : vector[V](float), b : vector[V](float))
+    -> (c : vector[V](float), d : vector[V](float))
+  d = a;
+  c = b;
+end
+
+export func main()
+  B = map f to E reduce +;
+  C = map f to F reduce +;
+  A = B + C;
+
+  var a = V.b;
+  var b = V.a;
+  a, b = swap(a, b);
+
+  V.a = A * b;
+end

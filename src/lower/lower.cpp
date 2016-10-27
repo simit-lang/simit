@@ -77,7 +77,9 @@ void printTimedCallGraph(string headerText, Func func, ostream* os) {
   stringstream ss;
   simit::ir::IRPrinterCallGraph(ss).print(func);
   TimerStorage::getInstance().addSourceLines(ss);
-  *os << ss.rdbuf();
+  if (os) {
+    *os << ss.rdbuf();
+  }
 }
 
 static inline
@@ -159,6 +161,7 @@ Func lower(Func func, std::ostream* os, bool time) {
   func = rewriteCallGraph(func, lowerTensorAccesses);
   printCallGraph("Lower Tensor Reads and Writes", func, os);
 
+  // Insert timers
   if (time) {
     printTimedCallGraph("Insert Timers", func, os);
     func = rewriteCallGraph(func, insertTimers);
