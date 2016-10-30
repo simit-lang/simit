@@ -2291,7 +2291,7 @@ int main(int argc, char *argv[])
    gettimeofday(&end, NULL) ;
    elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
    double elapsed_timeG;
-   elapsed_timeG = elapsed_time;
+   elapsed_timeG = elapsed_time*1000;
 
    // Write out final viz file */
    if (opts.viz>0) {
