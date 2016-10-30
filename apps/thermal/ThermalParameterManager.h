@@ -7,7 +7,8 @@ class ThermalParameterManager:public ParameterManager4<int,double,bool,std::stri
 public:
 	static const Parameter<int>    			iterMax;		// Maximum iteration for the solver
 	static const Parameter<int>    			iterMax_coupling;		// Maximum iteration for the solver
-	static const Parameter<int>    			dumpFrequency;		// Maximum iteration for the solver
+	static const Parameter<int>    			dumpFrequency;
+	static const Parameter<int>    			coupling_direction;
 	static const Parameter<double> 			timeMax;		// Maximum simulation time
 	static const Parameter<double> 			cfl;			// CFL
 	static const Parameter<double> 			tolerance_coupling;

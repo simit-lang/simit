@@ -1,9 +1,10 @@
 #include "Thermal.h"
 
-Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
+Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zoneName, int index_zone)
 {
 	//1- Construct the parameter manager
 	PM.readParameters(paramFile);
+	PM.set(TPM::CGNSFileName,CGNSFileName);
 	std::cout << "---- " << zoneName << " PARAMETERS LIST : " << std::endl << PM;
 
 	//2- Load CGNS mesh data
@@ -19,10 +20,11 @@ Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
 	irmin[0]=1; irmin[1]=1; irmin[2]=1;
 	//  upper range index of vertices
 	irmax[0]=isize[0][0];irmax[1]=isize[0][1];irmax[2]=isize[0][2];
+	Xsize=irmax[2]; Ysize=irmax[1];Zsize=irmax[2];
 	//  read grid coordinates
-	double x[irmax[2]][irmax[1]][irmax[0]]; //[irmax[0]][irmax[1]][irmax[2]];
-	double y[irmax[2]][irmax[1]][irmax[0]]; //[irmax[0]][irmax[1]][irmax[2]];
-	double z[irmax[2]][irmax[1]][irmax[0]]; //[irmax[0]][irmax[1]][irmax[2]];
+	double x[irmax[2]][irmax[1]][irmax[0]];
+	double y[irmax[2]][irmax[1]][irmax[0]];
+	double z[irmax[2]][irmax[1]][irmax[0]];
 	fieldName="CoordinateX";
 	if (cg_coord_read(index_file,index_base,index_zone,(char *)fieldName.c_str(),RealDouble,irmin,irmax,x)) cg_error_exit();
 	fieldName="CoordinateY";
@@ -36,10 +38,10 @@ Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
 	points = new Set;
 	quads = new Set(*points,*points,*points,*points);
 	faces = new Set(*quads,*quads);
-	bcleft = new Set(*quads);
-	bcright = new Set(*quads);
-	bcup = new Set(*quads);
-	bcbottom = new Set(*quads);
+	bcleft = new Set(*quads,*quads,*quads);
+	bcright = new Set(*quads,*quads,*quads);
+	bcup = new Set(*quads,*quads,*quads);
+	bcbottom = new Set(*quads,*quads,*quads);
 	std::vector<ElementRef> pointRefs;
 	std::vector<ElementRef> quadsRefs;
 
@@ -60,16 +62,20 @@ Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
 	FieldRef<double> dxyhalf  = faces->addField<double>("dxyhalf");
 
 	// The fields of the boundary conditions sets
-	FieldRef<double> qwl  = bcleft->addField<double>("qw");
-	FieldRef<double> qwr  = bcright->addField<double>("qw");
-	FieldRef<double> qwu  = bcup->addField<double>("qw");
-	FieldRef<double> qwb  = bcbottom->addField<double>("qw");
+	FieldRef<double> qwinl  = bcleft->addField<double>("qwin");
+	FieldRef<double> qwoutl  = bcleft->addField<double>("qwout");
+	FieldRef<double> qwinr  = bcright->addField<double>("qwin");
+	FieldRef<double> qwoutr  = bcright->addField<double>("qwout");
+	FieldRef<double> qwinu  = bcup->addField<double>("qwin");
+	FieldRef<double> qwoutu  = bcup->addField<double>("qwout");
+	FieldRef<double> qwinb  = bcbottom->addField<double>("qwin");
+	FieldRef<double> qwoutb  = bcbottom->addField<double>("qwout");
 
 
 	// ONLY in 2D for now so zmax=1
 	for (int zdir=0; zdir<1; ++zdir) {
-		for (int ydir=0; ydir<irmax[1]; ++ydir) {
-			for (int xdir=0; xdir<irmax[2]; ++xdir) {
+		for (int ydir=0; ydir<Ysize; ++ydir) {
+			for (int xdir=0; xdir<Xsize; ++xdir) {
 				ElementRef point = points->add();
 				pointRefs.push_back(point);
 				xy.set(point, {x[xdir][ydir][zdir],y[xdir][ydir][zdir]});
@@ -77,12 +83,12 @@ Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
 		}
 	}
 	for (int zdir=0; zdir<1; ++zdir) {
-		for (int ydir=0; ydir<irmax[1]-1; ++ydir) {
-			for (int xdir=0; xdir<irmax[2]-1; ++xdir) {
-				ElementRef quad = quads->add(pointRefs[ydir*irmax[2]+xdir],
-						pointRefs[ydir*irmax[2]+xdir+1],
-						pointRefs[(ydir+1)*irmax[2]+xdir+1],
-						pointRefs[(ydir+1)*irmax[2]+xdir]);
+		for (int ydir=0; ydir<Ysize-1; ++ydir) {
+			for (int xdir=0; xdir<Xsize-1; ++xdir) {
+				ElementRef quad = quads->add(pointRefs[ydir*Xsize+xdir],
+											 pointRefs[ydir*Xsize+xdir+1],
+											 pointRefs[(ydir+1)*Xsize+xdir+1],
+											 pointRefs[(ydir+1)*Xsize+xdir]);
 				quadsRefs.push_back(quad);
 				T.set(quad,PM.get(TPM::T_init));
 				K.set(quad,PM.get(TPM::K));
@@ -92,38 +98,43 @@ Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
 		}
 	}
 	for (int zdir=0; zdir<1; ++zdir) {
-		for (int ydir=0; ydir<irmax[1]-1; ++ydir) {
-			for (int xdir=0; xdir<irmax[2]-2; ++xdir) {
-				ElementRef faceh = faces->add(quadsRefs[ydir*(irmax[2]-1)+xdir],
-						quadsRefs[ydir*(irmax[2]-1)+xdir+1]);
+		for (int ydir=0; ydir<Ysize-1; ++ydir) {
+			for (int xdir=0; xdir<Xsize-2; ++xdir) {
+				ElementRef faceh = faces->add(quadsRefs[ydir*(Xsize-1)+xdir],
+											  quadsRefs[ydir*(Xsize-1)+xdir+1]);
 				dir.set(faceh,0);
 			}
 		}
 	}
 	for (int zdir=0; zdir<1; ++zdir) {
-		for (int ydir=0; ydir<irmax[1]-2; ++ydir) {
-			for (int xdir=0; xdir<irmax[2]-1; ++xdir) {
-				ElementRef facev = faces->add(quadsRefs[ydir*(irmax[2]-1)+xdir],
-						quadsRefs[ydir*(irmax[2]-1)+xdir+irmax[2]-1]);
+		for (int ydir=0; ydir<Ysize-2; ++ydir) {
+			for (int xdir=0; xdir<Xsize-1; ++xdir) {
+				ElementRef facev = faces->add(quadsRefs[ydir*(Xsize-1)+xdir],
+											  quadsRefs[ydir*(Xsize-1)+xdir+Xsize-1]);
 				dir.set(facev,1);
 			}
 		}
 	}
 	for (int zdir=0; zdir<1; ++zdir) {
-		for (int ydir=0; ydir<irmax[1]-1; ++ydir) {
-			ElementRef bcl = bcleft->add(quadsRefs[ydir*(irmax[2]-1)]);
-			qwl.set(bcl,PM.get(TPM::qwl));
-			ElementRef bcr = bcright->add(quadsRefs[ydir*(irmax[2]-1)+irmax[2]-2]);
-			qwr.set(bcr,PM.get(TPM::qwr));
+		for (int ydir=0; ydir<Ysize-1; ++ydir) {
+			ElementRef bcl = bcleft->add(quadsRefs[ydir*(Xsize-1)],
+										 quadsRefs[ydir*(Xsize-1)+1],
+										 quadsRefs[ydir*(Xsize-1)+2]);
+			qwinl.set(bcl,PM.get(TPM::qwl));
+			ElementRef bcr = bcright->add(quadsRefs[ydir*(Xsize-1)+Xsize-2],
+										  quadsRefs[ydir*(Xsize-1)+Xsize-3],
+										  quadsRefs[ydir*(Xsize-1)+Xsize-4]);
+			qwinr.set(bcr,PM.get(TPM::qwr));
 		}
-		for (int xdir=0; xdir<irmax[2]-1; ++xdir) {
-			ElementRef bcu = bcup->add(quadsRefs[(irmax[1]-2)*(irmax[2]-1)+xdir]);
-			qwu.set(bcu,PM.get(TPM::qwu));
-			ElementRef bcb = bcbottom->add(quadsRefs[xdir]);
-			if ((xdir<irmax[2]/4) || (xdir>(irmax[2]-irmax[2]/4)))
-				qwb.set(bcb,PM.get(TPM::qwb)/2);
-			else
-				qwb.set(bcb,PM.get(TPM::qwb));
+		for (int xdir=0; xdir<Xsize-1; ++xdir) {
+			ElementRef bcu = bcup->add(quadsRefs[(Ysize-2)*(Xsize-1)+xdir],
+									   quadsRefs[(Ysize-3)*(Xsize-1)+xdir],
+									   quadsRefs[(Ysize-4)*(Xsize-1)+xdir]);
+			qwinu.set(bcu,PM.get(TPM::qwu));
+			ElementRef bcb = bcbottom->add(quadsRefs[xdir],
+										   quadsRefs[xdir+Xsize-1],
+										   quadsRefs[xdir+2*(Xsize-1)]);
+			qwinb.set(bcb,PM.get(TPM::qwb));
 		}
 	}
 
@@ -133,35 +144,52 @@ Thermal::Thermal(std::string paramFile, std::string zoneName, int index_zone)
 	program.loadFile(PM.get(TPM::SimitFileName));
 	dt(0)=0.0;						// dt timestep
 	cfl(0)=PM.get(TPM::cfl);		// cfl
+	coupling_direction(0)=PM.get(TPM::coupling_direction);
 
 	solve_thermal = program.compile("solve_thermal");
-	solve_thermal.bind("points", points);
-	solve_thermal.bind("quads", quads);
-	solve_thermal.bind("faces", faces);
-	solve_thermal.bind("bcleft", bcleft);
-	solve_thermal.bind("bcright", bcright);
-	solve_thermal.bind("bcup", bcup);
-	solve_thermal.bind("bcbottom", bcbottom);
-	solve_thermal.bind("dt", &dt);
-	solve_thermal.bind("cfl", &cfl);
-
-	solve_thermal.init();
+	bindSimitFunc(&solve_thermal);
 
 	compute_dt = program.compile("compute_dt");
-	compute_dt.bind("points", points);
-	compute_dt.bind("quads", quads);
-	compute_dt.bind("faces", faces);
-	compute_dt.bind("bcleft", bcleft);
-	compute_dt.bind("bcright", bcright);
-	compute_dt.bind("bcup", bcup);
-	compute_dt.bind("bcbottom", bcbottom);
-	compute_dt.bind("dt", &dt);
-	compute_dt.bind("cfl", &cfl);
+	bindSimitFunc(&compute_dt);
 
-	compute_dt.init();
+	flux_interface = program.compile("flux_interface");
+	bindSimitFunc(&flux_interface);
+
+	temperature_interface = program.compile("temperature_interface");
+	bindSimitFunc(&temperature_interface);
 }
 
 Thermal::~Thermal() {
 	// TODO Auto-generated destructor stub
+}
+
+void Thermal::bindSimitFunc(Function *simFunc){
+	simFunc->bind("points", points);
+	simFunc->bind("quads", quads);
+	simFunc->bind("faces", faces);
+	simFunc->bind("bcleft", bcleft);
+	simFunc->bind("bcright", bcright);
+	simFunc->bind("bcup", bcup);
+	simFunc->bind("bcbottom", bcbottom);
+	simFunc->bind("dt", &dt);
+	simFunc->bind("cfl", &cfl);
+	simFunc->bind("coupling_direction", &coupling_direction);
+
+	simFunc->init();
+}
+
+void Thermal::setBC(int direction,Set *InterfaceIN){
+	Set *InterfaceOUT;
+	switch (direction) {
+		case 0 : InterfaceOUT = bcleft;  	break;
+		case 1 : InterfaceOUT = bcright; 	break;
+		case 2 : InterfaceOUT = bcbottom;	break;
+		case 3 : InterfaceOUT = bcup; 		break;
+	}
+	FieldRef<double> qwin  = InterfaceOUT->getField<double>("qwin");
+	FieldRef<double> qwout = InterfaceIN->getField<double>("qwout");
+	for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
+		qwin.set((ElementRef)*bc.first,-qwout.get((ElementRef)*bc.second));
+	}
 }
 

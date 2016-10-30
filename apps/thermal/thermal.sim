@@ -18,23 +18,21 @@ element Face
 end
 
 element BoundCond
-  qw : float;
+  qwin : float;
+  qwout : float;
 end
 
 extern points   : set{Point};
 extern quads    : set{Quad}(points,points,points,points);
 extern faces    : set{Face}(quads,quads);
-extern bcleft   : set{BoundCond}(quads);
-extern bcright  : set{BoundCond}(quads);
-extern bcup     : set{BoundCond}(quads);
-extern bcbottom : set{BoundCond}(quads);
+extern bcleft   : set{BoundCond}(quads,quads,quads);
+extern bcright  : set{BoundCond}(quads,quads,quads);
+extern bcup     : set{BoundCond}(quads,quads,quads);
+extern bcbottom : set{BoundCond}(quads,quads,quads);
 
-%extern iter : vector[2](int);
-%extern iterMax_coupling : vector[2](int);
 extern dt : vector[2](float);
 extern cfl : vector[2](float);
-%extern tolerance_coupling : vector[2](float);
-
+extern coupling_direction : vector[2](int);
 
 %%%%%%%%%%%%%%% Future Intrinsics Functions %%%%%%%%%%%%%%%%%%
 func eye(q:Quad)->I:matrix[quads,quads](float)
@@ -59,9 +57,9 @@ end
 
 %%%%%%%%%%%%%%%% Thermal Solve %%%%%%%%%%%%%%%%%%%%%
 
-func boundary_conditions(dir:int,dt:float,bc:BoundCond,q:(Quad*1))->b:vector[quads](float)
+func boundary_conditions(dir:int,dt:float,bc:BoundCond,q:(Quad*3))->b:vector[quads](float)
     % dir : 0 if x , 1 if y
-    b(q(0))=(bc.qw*dt)/(q(0).rho*q(0).cv*q(0).dxy(dir));
+    b(q(0))=(bc.qwin*dt)/(q(0).rho*q(0).cv*q(0).dxy(dir));
 end
 
 func assemble_diffusion(f:Face,q:(Quad*2))->A:matrix[quads,quads](float)
@@ -122,6 +120,7 @@ end
 export func compute_dt()
     % start by computing all delta_x and delta_y for each quad
     apply compute_dxy to quads;
+    %print quads.dxy;
     
     % dt = cfl / max( 2*K/(rho*cv*(max(dx²,dy²))) )
     coeff_dt = map compute_coeff to quads reduce +;
@@ -138,4 +137,44 @@ export func compute_dt()
     % compute gamma to quads;
     quads.gamma=dt(0)/(quads.rho.*quads.cv);
     apply compute_halfValues to faces;
+end
+
+
+%%%%%%%%%%%%%% Determine Flux on interface %%%%%%%%%%%%%%%%%%%
+
+func flux_onBC(dir:int,inout bc:BoundCond,q:(Quad*3))
+    % Linear extrapolation
+    flux1 = (q(1).K+q(0).K)*(q(1).T-q(0).T)/(q(1).dxy(dir)+q(0).dxy(dir));
+    flux2 = (q(2).K+q(1).K)*(q(2).T-q(1).T)/(q(2).dxy(dir)+q(1).dxy(dir));
+    bc.qwout = flux1 - q(0).dxy(dir)*(flux2-flux1)/q(1).dxy(dir);
+end
+
+export func flux_interface()
+    if coupling_direction(0)==0
+        apply flux_onBC(0) to bcleft;
+    elif coupling_direction(0)==1
+        apply flux_onBC(0) to bcright;
+    elif coupling_direction(0)==2
+        apply flux_onBC(1) to bcbottom;
+    elif coupling_direction(0)==3
+        apply flux_onBC(1) to bcup;
+    end
+end
+
+func temperature_onBC(dir:int,way:float,inout bc:BoundCond,q:(Quad*3))
+    % Linear extrapolation
+    Tw = q(0).T - q(0).dxy(dir)*(q(1).T-q(0).T)/(q(1).dxy(dir)+q(0).dxy(dir));
+    bc.qwout = way*2.0*q(0).K*(q(0).T-Tw)/q(0).dxy(dir);
+end
+
+export func temperature_interface()
+    if coupling_direction(0)==0
+        apply temperature_onBC(0,1.0) to bcleft;
+    elif coupling_direction(0)==1
+        apply temperature_onBC(0,-1.0) to bcright;
+    elif coupling_direction(0)==2
+        apply temperature_onBC(1,1.0) to bcbottom;
+    elif coupling_direction(0)==3
+        apply temperature_onBC(1,-1.0) to bcup;
+    end
 end

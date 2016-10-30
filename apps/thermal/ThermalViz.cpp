@@ -19,11 +19,11 @@ using namespace simit;
 #endif
 
 // Function prototypes
-static void DumpDomainToVisit(DBfile *db, int iter, double time, Set *quads, Set *points);
+static void DumpDomainToVisit(DBfile *db, int iter, double time, int Xsize, int Ysize, Set *quads, Set *points);
 
 
 /**********************************************************************/
-void DumpToVisit(std::string ZoneName,int iter, double time, Set *quads, Set *points)
+void DumpToVisit(std::string ZoneName,int iter, double time, int Xsize, int Ysize, Set *quads, Set *points)
 {
   char subdirName[32];
   char basename[32];
@@ -35,7 +35,7 @@ void DumpToVisit(std::string ZoneName,int iter, double time, Set *quads, Set *po
   db = (DBfile*)DBCreate(basename, DB_CLOBBER, DB_LOCAL, NULL, DB_HDF5X);
 
   if (db) {
-     DumpDomainToVisit(db, iter, time, quads, points);
+     DumpDomainToVisit(db, iter, time, Xsize, Ysize, quads, points);
   }
   else {
      printf("Error writing out viz file \n");
@@ -47,7 +47,7 @@ void DumpToVisit(std::string ZoneName,int iter, double time, Set *quads, Set *po
 /**********************************************************************/
 
 static void
-DumpDomainToVisit(DBfile *db, int iter, double time, Set *quads, Set *points)
+DumpDomainToVisit(DBfile *db, int iter, double time, int Xsize, int Ysize, Set *quads, Set *points)
 {
    int ok = 0;
 
@@ -69,8 +69,8 @@ DumpDomainToVisit(DBfile *db, int iter, double time, Set *quads, Set *points)
       coords[1][ni] = float(xy.get(*point)(1)) ;
       ni++;
    }
-   dims[0]=sqrt(points->getSize());
-   dims[1]=sqrt(points->getSize());
+   dims[0]=Xsize;
+   dims[1]=Ysize;
 
    /* Write out the mesh connectivity in fully unstructured format */
    int shapetype[1] = {DB_ZONETYPE_QUAD};

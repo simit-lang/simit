@@ -14,7 +14,7 @@ using namespace simit;
 #define TPM ThermalParameterManager
 
 // Thermal-viz
-void DumpToVisit(std::string ZoneName,int iter, double time, Set *quadsPan, Set *pointsPan);
+void DumpToVisit(std::string ZoneName,int iter, double tim, int Xsize, int Ysize, Set *quadsPan, Set *pointsPan);
 
 int main(int argc, char **argv)
 {
@@ -31,12 +31,12 @@ int main(int argc, char **argv)
 	PM.readParameters(thermfile);
 
 	//3 - Read the Pan part
-	Thermal Pan = Thermal(PM.get(TPM::PanFileName),"Pan",1);
+	Thermal Pan = Thermal(PM.get(TPM::PanFileName),PM.get(TPM::CGNSFileName),"Pan",1);
 
 	//4 - Read the Steak part
-	Thermal Steak = Thermal(PM.get(TPM::SteakFileName),"Steak",2);
+	Thermal Steak = Thermal(PM.get(TPM::SteakFileName),PM.get(TPM::CGNSFileName),"Steak",2);
 
-	// Time Loop
+	// Compute first time step
 	double time=0.0;
 	double dt=0.0;
 	Pan.compute_dt.runSafe();
@@ -47,21 +47,30 @@ int main(int argc, char **argv)
 
 	int iter=0;
 	if (PM.get(TPM::dumpVisit)) {
-		DumpToVisit("Pan",iter, time, Pan.quads, Pan.points);
-		DumpToVisit("Steak",iter, time, Steak.quads, Steak.points);
+		DumpToVisit("Pan",iter, time, Pan.Xsize, Pan.Ysize, Pan.quads, Pan.points);
+		DumpToVisit("Steak",iter, time, Pan.Xsize, Pan.Ysize, Steak.quads, Steak.points);
 	}
+	// Time loop
 	while ((time < PM.get(TPM::timeMax)) && (iter<PM.get(TPM::iterMax))) {
 		iter=iter+1;
-		std::cout << "----Iteration " << iter << " ----" << std::endl;
+		std::cout << "---- Iteration " << iter << " ----" << std::endl;
+		std::cout << "  -- Time " << time << " -- dt " << dt << " --" << std::endl;
 
-		// Iterate on thermal solving
+		// Extrapolate Temperature on Steak and set Pan
+		Steak.temperature_interface.runSafe();
+		Pan.setBC(3,Steak.bcbottom);
+		// Thermal solving for the Pan
 		Pan.solve_thermal.runSafe();
+		// Extrapolate Temperature on Pan and set Steak
+		Pan.temperature_interface.runSafe();
+		Steak.setBC(2,Pan.bcup);
+		// Thermal solving for the Steak
 		Steak.solve_thermal.runSafe();
 		time+=dt;
 
 		if ((PM.get(TPM::dumpVisit)) && (iter%(PM.get(TPM::dumpFrequency))==0)) {
-			DumpToVisit("Pan",iter, time, Pan.quads, Pan.points);
-			DumpToVisit("Steak",iter, time, Steak.quads, Steak.points);
+			DumpToVisit("Pan",iter, time, Pan.Xsize, Pan.Ysize, Pan.quads, Pan.points);
+			DumpToVisit("Steak",iter, time, Pan.Xsize, Pan.Ysize, Steak.quads, Steak.points);
 		}
 		// Compute the next timestep value
 		Pan.compute_dt.runSafe();
@@ -74,7 +83,7 @@ int main(int argc, char **argv)
 		Pan.dt(0)=dt;
 	}
 	if (PM.get(TPM::dumpVisit)) {
-		DumpToVisit("Pan",iter, time, Pan.quads, Pan.points);
-		DumpToVisit("Steak",iter, time, Steak.quads, Steak.points);
+		DumpToVisit("Pan",iter, time, Pan.Xsize, Pan.Ysize, Pan.quads, Pan.points);
+		DumpToVisit("Steak",iter, time, Pan.Xsize, Pan.Ysize, Steak.quads, Steak.points);
 	}
 }
