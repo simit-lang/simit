@@ -8,7 +8,8 @@ iters=$3
 
 cd build
 
-for size in {5,10,15,30,45,50,70,90}
+#for size in {5,10,15,30,45,50,70,90}
+for size in {30..30}
  do
 	echo "Version : "$version" launchs : "$launchs" size : "$size" iters : "$iters
 	for i in $(eval echo "{1..$launchs}")

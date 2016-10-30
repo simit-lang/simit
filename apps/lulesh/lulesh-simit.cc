@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
 	   locDom->cycle()=cycle(0);
 	   locDom->time()=time(0);
 	   if (opts.viz>0) {
-		   // Put some physical quantitites back in locDom to dump with visit
+		   // Put some physical quantities back in locDom to dump with visit
 		   nidx = 0 ;
 		   for (Index_t plane=0; plane<edgeElems; ++plane) {
 			   for (Index_t row=0; row<edgeElems; ++row) {
@@ -505,7 +505,7 @@ int main(int argc, char *argv[])
    gettimeofday(&end, NULL) ;
    elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
    double elapsed_timeG;
-   elapsed_timeG = elapsed_time;
+   elapsed_timeG = elapsed_time*1000;
 
    // Put some physical quantitites back in locDom to verify results
    nidx = 0 ;

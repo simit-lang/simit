@@ -188,10 +188,10 @@ func InitStressTermsForElems(e:Elem)-> sig :vector[elems](vector[3](float))
 end
 
 func TestPositiveVolume(volume:vector[elems](float), e:Elem)-> result:int
-    if volume(e)<0.0
-        result=1;
-    else
+    if volume(e)>=0.0
         result=0;
+    else
+        result=1;
     end
 end
 
@@ -348,20 +348,20 @@ func LagrangeNodal(dt:float,hgcoef:float,u_cut:float)
     nodes.coord = nodes.coord + nodes.vel*dt;
 end
 
-func CalcElemVolume(nodeCoord:vector[8](vector[3](float)))->volume:float
+func CalcElemVolume(n:(Node*8))->volume:float
     const twelfth = 1.0 / 12.0 ;
-    d61 = nodeCoord(6)-nodeCoord(1);
-    d70 = nodeCoord(7)-nodeCoord(0);
-    d63 = nodeCoord(6)-nodeCoord(3);
-    d20 = nodeCoord(2)-nodeCoord(0);
-    d50 = nodeCoord(5)-nodeCoord(0);
-    d64 = nodeCoord(6)-nodeCoord(4);
-    d31 = nodeCoord(3)-nodeCoord(1);
-    d72 = nodeCoord(7)-nodeCoord(2);
-    d43 = nodeCoord(4)-nodeCoord(3);
-    d57 = nodeCoord(5)-nodeCoord(7);
-    d14 = nodeCoord(1)-nodeCoord(4);
-    d25 = nodeCoord(2)-nodeCoord(5);
+    d61 = n(6).coord-n(1).coord;
+    d70 = n(7).coord-n(0).coord;
+    d63 = n(6).coord-n(3).coord;
+    d20 = n(2).coord-n(0).coord;
+    d50 = n(5).coord-n(0).coord;
+    d64 = n(6).coord-n(4).coord;
+    d31 = n(3).coord-n(1).coord;
+    d72 = n(7).coord-n(2).coord;
+    d43 = n(4).coord-n(3).coord;
+    d57 = n(5).coord-n(7).coord;
+    d14 = n(1).coord-n(4).coord;
+    d25 = n(2).coord-n(5).coord;
 
     volume = twelfth*(dot(d31+d72,cross(d63,d20))+dot(d43+d57,cross(d64,d70))+dot(d14+d25,cross(d61,d50)));
 end
@@ -372,35 +372,31 @@ func AreaFace(X0:vector[3](float),X1:vector[3](float),X2:vector[3](float),X3:vec
     area= dot(f,f)*dot(g,g)-dot(f,g)*dot(g,f);
 end
 
-func CalcElemCharacteristicLength(nodeCoord:vector[8](vector[3](float)),volume:float)->charLength:float
-    charLength=AreaFace(nodeCoord(0),nodeCoord(1),nodeCoord(2),nodeCoord(3));
-    charLength=max(charLength,AreaFace(nodeCoord(4),nodeCoord(5),nodeCoord(6),nodeCoord(7)));
-    charLength=max(charLength,AreaFace(nodeCoord(0),nodeCoord(1),nodeCoord(5),nodeCoord(4)));
-    charLength=max(charLength,AreaFace(nodeCoord(1),nodeCoord(2),nodeCoord(6),nodeCoord(5)));
-    charLength=max(charLength,AreaFace(nodeCoord(2),nodeCoord(3),nodeCoord(7),nodeCoord(6)));
-    charLength=max(charLength,AreaFace(nodeCoord(3),nodeCoord(0),nodeCoord(4),nodeCoord(7)));
+func CalcElemCharacteristicLength(n:(Node*8),volume:float)->charLength:float
+    charLength=AreaFace(n(0).coord,n(1).coord,n(2).coord,n(3).coord);
+    charLength=max(charLength,AreaFace(n(4).coord,n(5).coord,n(6).coord,n(7).coord));
+    charLength=max(charLength,AreaFace(n(0).coord,n(1).coord,n(5).coord,n(4).coord));
+    charLength=max(charLength,AreaFace(n(1).coord,n(2).coord,n(6).coord,n(5).coord));
+    charLength=max(charLength,AreaFace(n(2).coord,n(3).coord,n(7).coord,n(6).coord));
+    charLength=max(charLength,AreaFace(n(3).coord,n(0).coord,n(4).coord,n(7).coord));
     charLength = 4.0 * volume / sqrt(charLength);
+end
+
+func ComputeCoordLocal(dt:float, inout n:Node)
+    n.coord_local = n.coord-0.5*dt*n.vel;
 end
 
 func CalcKinematicsForElems(dt:float, inout e:Elem, inout n:(Node*8))->vnew:vector[elems](float)
     % volume calculations
-    var nodeCoord:vector[8](vector[3](float));
-    
-    for i in 0:8
-        for j in 0:3
-            nodeCoord(i)(j) = n(i).coord(j);
-            n(i).coord_local(j) = n(i).coord(j)-0.5*dt*n(i).vel(j);
-        end
-    end
 
-    volume = CalcElemVolume(nodeCoord);
+    volume = CalcElemVolume(n);
     vnew(e) = volume / e.volo ;
     e.delv = vnew(e) - e.v ;
     if vnew(e) <= 0.0
         print "VolumeError3";
     end
     % set characteristic length
-    e.arealg = CalcElemCharacteristicLength(nodeCoord, volume);
+    e.arealg = CalcElemCharacteristicLength(n, volume);
 end
 
 func CalcLagrangeElements(inout e:Elem, inout n:(Node*8))
@@ -510,10 +506,7 @@ func CalcMonotonicQForElems(vnew:vector[elems](float),
     var qlin:float;
     var qquad:float;
     Id=[1.0,1.0,1.0]';
-    if e(0).vdov > 0.0 
-        qlin  = 0.0 ;
-        qquad = 0.0 ;
-    else 
+    if e(0).vdov <= 0.0 
         var delvx  = e(0).delvel .* e(0).delx ;
 
         if ( delvx(0) > 0.0 ) delvx(0) = 0.0 ; end
@@ -523,6 +516,9 @@ func CalcMonotonicQForElems(vnew:vector[elems](float),
         rho = e(0).elemMass / (e(0).volo * vnew(e(0))) ;
         qlin = -qlc_monoq * rho * (dot(delvx,Id-phi));
         qquad = qqc_monoq * rho * (dot(delvx.*delvx,Id-(phi.*phi)));
+    else
+        qlin  = 0.0 ;
+        qquad = 0.0 ;
     end
     e(0).qq = qquad ;
     e(0).ql = qlin  ;
@@ -731,6 +727,7 @@ func EvalEOSForElems(eosvmin:float, eosvmax:float, rho0:float, ss4o3:float,
 end
 
 func LagrangeElements(dt:float,qstop:float, monoq_limiter_mult:float, monoq_max_slope:float, qlc_monoq:float, qqc_monoq:float,eosvmin:float,eosvmax:float,v_cut:float,rho0:float,ss4o3:float,e_cut:float, p_cut:float, q_cut:float, emin:float, pmin:float)
+    map ComputeCoordLocal(dt) to nodes;
     var vnew = map CalcKinematicsForElems(dt) to elems; % vnew relative vol 
     B, detJ = map CalcElemShapeFunctionDerivatives(true) to elems reduce + ;
     % put velocity gradient quantities into their global arrays.
