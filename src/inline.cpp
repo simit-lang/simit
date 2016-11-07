@@ -343,8 +343,14 @@ void MapFunctionRewriter::visit(const UnnamedTupleRead *op) {
     int cardinality = tupleType->size;
 
     Expr endpoints = IndexRead::make(targetSet, IndexRead::Endpoints);
-    Expr indexExpr = Add::make(Mul::make(targetLoopVar, cardinality),
+    Expr indexExpr;
+    if (cardinality==1) {
+        indexExpr = Add::make(targetLoopVar, op->index);
+    }
+    else {
+    	indexExpr = Add::make(Mul::make(targetLoopVar, cardinality),
                                op->index);
+    }
     expr = Load::make(endpoints, indexExpr);
   }
   else {
@@ -361,8 +367,14 @@ void MapFunctionRewriter::visit(const NamedTupleRead *op) {
     int cardinality = tupleType->elements.size();
 
     Expr endpoints = IndexRead::make(targetSet, IndexRead::Endpoints);
-    Expr indexExpr = Add::make(Mul::make(targetLoopVar, cardinality),
+    Expr indexExpr;
+    if (cardinality==1) {
+        indexExpr = Add::make(targetLoopVar, (int)tupleType->elementIndex(op->elementName));
+    }
+    else {
+    	indexExpr = Add::make(Mul::make(targetLoopVar, cardinality),
                                (int)tupleType->elementIndex(op->elementName));
+    }
     expr = Load::make(endpoints, indexExpr);
   }
   else {
