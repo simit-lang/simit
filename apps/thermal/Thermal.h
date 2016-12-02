@@ -39,6 +39,9 @@ public:
 	simit::Tensor<double,2> dt;
 	simit::Tensor<double,2> cfl;
 	simit::Tensor<int,2> coupling_direction;
+	simit::Tensor<int,2> solver_type;
+	simit::Tensor<int,2> solver_itermax;
+	simit::Tensor<int,4> bc_types;
 
 	// Simit functions
 	Function solve_thermal;
@@ -48,7 +51,9 @@ public:
 	void bindSimitFunc(Function *simFunc);
 
 	// Set boundary conditions for coupling applications
-	void setBC(int direction, Set *bcIn);
+	void setBC_qw(Set *bcIn);
+	void setBC_Tw(Set *bcIn);
+	bool compareTw(Set *bcIn, double tolerance);
 };
 
 #endif /* APPS_THERMAL_THERMAL_H_ */

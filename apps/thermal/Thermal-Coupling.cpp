@@ -44,6 +44,12 @@ int main(int argc, char **argv)
 	dt=min(Steak.dt(0),Pan.dt(0));
 	Steak.dt(0)=dt;
 	Pan.dt(0)=dt;
+	int iterMax_coupling=PM.get(TPM::iterMax_coupling);
+
+	// Interface boundary condition : Dirichlet for the Pan - Neuman for the steak
+	Pan.bc_types(Pan.coupling_direction(0))=1;
+	// Initialize interface
+	Steak.temperature_interface.runSafe();
 
 	int iter=0;
 	if (PM.get(TPM::dumpVisit)) {
@@ -56,16 +62,25 @@ int main(int argc, char **argv)
 		std::cout << "---- Iteration " << iter << " ----" << std::endl;
 		std::cout << "  -- Time " << time << " -- dt " << dt << " --" << std::endl;
 
-		// Extrapolate Temperature on Steak and set Pan
-		Steak.temperature_interface.runSafe();
-		Pan.setBC(3,Steak.bcbottom);
-		// Thermal solving for the Pan
-		Pan.solve_thermal.runSafe();
-		// Extrapolate Temperature on Pan and set Steak
-		Pan.temperature_interface.runSafe();
-		Steak.setBC(2,Pan.bcup);
-		// Thermal solving for the Steak
-		Steak.solve_thermal.runSafe();
+		int iter_coupling=0;
+		bool converged = false;
+		// Strong coupling
+		while ((iter_coupling < iterMax_coupling) && !converged) {
+			// Extrapolate Temperature on Steak and set Pan
+			Pan.setBC_Tw(Steak.bcbottom);
+			// Thermal solving for the Pan
+			Pan.solve_thermal.runSafe();
+			// Extrapolate Temperature on Pan and set Steak
+			Pan.temperature_interface.runSafe();
+			Steak.setBC_qw(Pan.bcup);
+			// Thermal solving for the Steak
+			Steak.solve_thermal.runSafe();
+			Steak.temperature_interface.runSafe();
+			converged = Pan.compareTw(Steak.bcbottom,PM.get(TPM::tolerance_coupling));
+			iter_coupling++;
+		}
+		if (converged)
+			std::cout << " >>> Strong coupling converged in " << iter_coupling << " iterations" << std::endl;
 		time+=dt;
 
 		if ((PM.get(TPM::dumpVisit)) && (iter%(PM.get(TPM::dumpFrequency))==0)) {

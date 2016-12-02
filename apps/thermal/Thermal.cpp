@@ -70,7 +70,14 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zo
 	FieldRef<double> qwoutu  = bcup->addField<double>("qwout");
 	FieldRef<double> qwinb  = bcbottom->addField<double>("qwin");
 	FieldRef<double> qwoutb  = bcbottom->addField<double>("qwout");
-
+	FieldRef<double> Twinl  = bcleft->addField<double>("Twin");
+	FieldRef<double> Twoutl  = bcleft->addField<double>("Twout");
+	FieldRef<double> Twinr  = bcright->addField<double>("Twin");
+	FieldRef<double> Twoutr  = bcright->addField<double>("Twout");
+	FieldRef<double> Twinu  = bcup->addField<double>("Twin");
+	FieldRef<double> Twoutu  = bcup->addField<double>("Twout");
+	FieldRef<double> Twinb  = bcbottom->addField<double>("Twin");
+	FieldRef<double> Twoutb  = bcbottom->addField<double>("Twout");
 
 	// ONLY in 2D for now so zmax=1
 	for (int zdir=0; zdir<1; ++zdir) {
@@ -145,6 +152,9 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zo
 	dt(0)=0.0;						// dt timestep
 	cfl(0)=PM.get(TPM::cfl);		// cfl
 	coupling_direction(0)=PM.get(TPM::coupling_direction);
+	solver_type(0)=PM.get(TPM::solver_type);
+	solver_itermax(0)=PM.get(TPM::solver_itermax);
+	bc_types={0,0,0,0};
 
 	solve_thermal = program.compile("solve_thermal");
 	bindSimitFunc(&solve_thermal);
@@ -174,22 +184,66 @@ void Thermal::bindSimitFunc(Function *simFunc){
 	simFunc->bind("dt", &dt);
 	simFunc->bind("cfl", &cfl);
 	simFunc->bind("coupling_direction", &coupling_direction);
+	simFunc->bind("solver_type", &solver_type);
+	simFunc->bind("solver_itermax", &solver_itermax);
+	simFunc->bind("bc_types", &bc_types);
 
 	simFunc->init();
 }
 
-void Thermal::setBC(int direction,Set *InterfaceIN){
+void Thermal::setBC_qw(Set *InterfaceIN){
 	Set *InterfaceOUT;
-	switch (direction) {
+	switch (coupling_direction(0)) {
 		case 0 : InterfaceOUT = bcleft;  	break;
 		case 1 : InterfaceOUT = bcright; 	break;
 		case 2 : InterfaceOUT = bcbottom;	break;
 		case 3 : InterfaceOUT = bcup; 		break;
 	}
+//	double Tw;
 	FieldRef<double> qwin  = InterfaceOUT->getField<double>("qwin");
 	FieldRef<double> qwout = InterfaceIN->getField<double>("qwout");
 	for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
 		qwin.set((ElementRef)*bc.first,-qwout.get((ElementRef)*bc.second));
+//		Tw=InterfaceIN->getField<double>("Twout").get((ElementRef)*bc.second);
 	}
+//	std::cout << " TW " << Tw << std::endl;
+}
+
+void Thermal::setBC_Tw(Set *InterfaceIN){
+	Set *InterfaceOUT;
+	switch (coupling_direction(0)) {
+		case 0 : InterfaceOUT = bcleft;  	break;
+		case 1 : InterfaceOUT = bcright; 	break;
+		case 2 : InterfaceOUT = bcbottom;	break;
+		case 3 : InterfaceOUT = bcup; 		break;
+	}
+	FieldRef<double> Twin  = InterfaceOUT->getField<double>("Twin");
+	FieldRef<double> Twout = InterfaceIN->getField<double>("Twout");
+//	double Tw;
+	for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
+		Twin.set((ElementRef)*bc.first,Twout.get((ElementRef)*bc.second));
+//		Tw=Twout.get((ElementRef)*bc.second);
+	}
+//	std::cout << " TW " << Tw << std::endl;
+}
+
+bool Thermal::compareTw(Set *InterfaceIN, double tolerance){
+	Set *InterfaceOUT;
+	switch (coupling_direction(0)) {
+		case 0 : InterfaceOUT = bcleft;  	break;
+		case 1 : InterfaceOUT = bcright; 	break;
+		case 2 : InterfaceOUT = bcbottom;	break;
+		case 3 : InterfaceOUT = bcup; 		break;
+	}
+	FieldRef<double> Twin  = InterfaceOUT->getField<double>("Twin");
+	FieldRef<double> Twout = InterfaceIN->getField<double>("Twout");
+	bool converged=true;
+	for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
+		if (abs( Twin.get((ElementRef)*bc.first)-Twout.get((ElementRef)*bc.second) )/Twin.get((ElementRef)*bc.first) > tolerance) {
+			converged=false;
+			break;
+		}
+	}
+	return converged;
 }
 

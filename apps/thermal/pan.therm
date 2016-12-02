@@ -1,3 +1,4 @@
 cfl 1000
-T_init 500
+T_init 350
 coupling_direction 3
+qwb 5000

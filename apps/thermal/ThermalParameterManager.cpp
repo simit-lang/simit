@@ -10,6 +10,8 @@ PM_DEF ( int, iterMax, 100);
 PM_DEF ( int, iterMax_coupling, 30);
 PM_DEF ( int, dumpFrequency, 10);
 PM_DEF ( int, coupling_direction, 2);
+PM_DEF ( int, solver_type, 0);
+PM_DEF ( int, solver_itermax, 10000);
 PM_DEF ( double, timeMax, 10.0);
 PM_DEF ( double, cfl, 1.0e3);
 PM_DEF ( double, tolerance_coupling, 1.0e-5);
@@ -20,7 +22,7 @@ PM_DEF ( double, cv, 100.0);
 PM_DEF ( double, qwl, 0.0);
 PM_DEF ( double, qwr, 0.0);
 PM_DEF ( double, qwu, 0.0);
-PM_DEF ( double, qwb, 5000.0);
+PM_DEF ( double, qwb, 0.0);
 PM_DEF ( bool, dumpVisit, false);
 PM_DEF ( std::string, CGNSFileName, "../rectangular.cgns");
 PM_DEF ( std::string, SimitFileName, "../thermal.sim");
@@ -34,6 +36,8 @@ void ThermalParameterManager::initialize(void)
 	PM_INIT(iterMax_coupling);
 	PM_INIT(dumpFrequency);
 	PM_INIT(coupling_direction);
+	PM_INIT(solver_type);
+	PM_INIT(solver_itermax);
 	PM_INIT(timeMax);
 	PM_INIT(cfl);
 	PM_INIT(tolerance_coupling);
@@ -78,6 +82,8 @@ bool ThermalParameterManager::readParameters(std::string paramFileName)
 			PM_READ_INT("iterMax_coupling",paramValue)
 			PM_READ_INT("dumpFrequency",paramValue)
 			PM_READ_INT("coupling_direction",paramValue)
+			PM_READ_INT("solver_type",paramValue)
+			PM_READ_INT("solver_itermax",paramValue)
 			PM_READ_DOUBLE("timeMax",paramValue)
 			PM_READ_DOUBLE("cfl",paramValue)
 			PM_READ_DOUBLE("tolerance_coupling",paramValue)

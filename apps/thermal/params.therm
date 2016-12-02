@@ -1,7 +1,8 @@
-iterMax 1000
-CGNSFileName ../pansteak5x5.cgns
+iterMax 100
+CGNSFileName ../pansteak100x100.cgns
 timeMax 4.5
-iterMax_coupling 3
+iterMax_coupling 30
+tolerance_coupling 0.0015
 dumpVisit 1
 dumpFrequency 5
 PanFileName ../pan.therm
