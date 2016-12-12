@@ -22,6 +22,7 @@ public:
 	static const Parameter<double> 			qwr;			// boundary neuman condition on the right
 	static const Parameter<double> 			qwu;			// boundary neuman condition on the up
 	static const Parameter<double> 			qwb;			// boundary neuman condition on the bottom
+	static const Parameter<double>    			solver_tolerance;
 	static const Parameter<bool>    		dumpVisit;
 	static const Parameter<std::string>    	CGNSFileName;	// Relative path to the CGNS File
 	static const Parameter<std::string>    	SimitFileName;	// Relative path to the Simit File

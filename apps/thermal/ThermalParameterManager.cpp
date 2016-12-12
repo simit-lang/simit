@@ -23,6 +23,7 @@ PM_DEF ( double, qwl, 0.0);
 PM_DEF ( double, qwr, 0.0);
 PM_DEF ( double, qwu, 0.0);
 PM_DEF ( double, qwb, 0.0);
+PM_DEF ( double, solver_tolerance, 1.0e-8);
 PM_DEF ( bool, dumpVisit, false);
 PM_DEF ( std::string, CGNSFileName, "../rectangular.cgns");
 PM_DEF ( std::string, SimitFileName, "../thermal.sim");
@@ -49,6 +50,7 @@ void ThermalParameterManager::initialize(void)
 	PM_INIT(qwr);
 	PM_INIT(qwu);
 	PM_INIT(qwb);
+	PM_INIT(solver_tolerance);
 	PM_INIT(dumpVisit);
 	PM_INIT(CGNSFileName);
 	PM_INIT(SimitFileName);
@@ -95,6 +97,7 @@ bool ThermalParameterManager::readParameters(std::string paramFileName)
 			PM_READ_DOUBLE("qwr",paramValue)
 			PM_READ_DOUBLE("qwu",paramValue)
 			PM_READ_DOUBLE("qwb",paramValue)
+			PM_READ_DOUBLE("solver_tolerance",paramValue)
 			PM_READ_BOOL("dumpVisit",paramValue)
 			PM_READ_STRING("CGNSFileName",paramValue)
 			PM_READ_STRING("SimitFileName",paramValue)

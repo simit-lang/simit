@@ -38,10 +38,10 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zo
 	points = new Set;
 	quads = new Set(*points,*points,*points,*points);
 	faces = new Set(*quads,*quads);
-	bcleft = new Set(*quads,*quads,*quads);
-	bcright = new Set(*quads,*quads,*quads);
-	bcup = new Set(*quads,*quads,*quads);
-	bcbottom = new Set(*quads,*quads,*quads);
+	bcleft = new Set(*quads,*quads);//,*quads);
+	bcright = new Set(*quads,*quads);//,*quads);
+	bcup = new Set(*quads,*quads);//,*quads);
+	bcbottom = new Set(*quads,*quads);//,*quads);
 	std::vector<ElementRef> pointRefs;
 	std::vector<ElementRef> quadsRefs;
 
@@ -98,7 +98,10 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zo
 											 pointRefs[(ydir+1)*Xsize+xdir]);
 				quadsRefs.push_back(quad);
 				T.set(quad,PM.get(TPM::T_init));
-				K.set(quad,PM.get(TPM::K));
+				if (xdir<Xsize/2)
+					K.set(quad,PM.get(TPM::K));
+				else
+					K.set(quad,PM.get(TPM::K)*2);
 				rho.set(quad,PM.get(TPM::rho));
 				cv.set(quad,PM.get(TPM::cv));
 			}
@@ -125,22 +128,22 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zo
 	for (int zdir=0; zdir<1; ++zdir) {
 		for (int ydir=0; ydir<Ysize-1; ++ydir) {
 			ElementRef bcl = bcleft->add(quadsRefs[ydir*(Xsize-1)],
-										 quadsRefs[ydir*(Xsize-1)+1],
-										 quadsRefs[ydir*(Xsize-1)+2]);
+										 quadsRefs[ydir*(Xsize-1)+1]); //,
+//										 quadsRefs[ydir*(Xsize-1)+2]);
 			qwinl.set(bcl,PM.get(TPM::qwl));
 			ElementRef bcr = bcright->add(quadsRefs[ydir*(Xsize-1)+Xsize-2],
-										  quadsRefs[ydir*(Xsize-1)+Xsize-3],
-										  quadsRefs[ydir*(Xsize-1)+Xsize-4]);
+										  quadsRefs[ydir*(Xsize-1)+Xsize-3]); //,
+//										  quadsRefs[ydir*(Xsize-1)+Xsize-4]);
 			qwinr.set(bcr,PM.get(TPM::qwr));
 		}
 		for (int xdir=0; xdir<Xsize-1; ++xdir) {
 			ElementRef bcu = bcup->add(quadsRefs[(Ysize-2)*(Xsize-1)+xdir],
-									   quadsRefs[(Ysize-3)*(Xsize-1)+xdir],
-									   quadsRefs[(Ysize-4)*(Xsize-1)+xdir]);
+									   quadsRefs[(Ysize-3)*(Xsize-1)+xdir]); //,
+//									   quadsRefs[(Ysize-4)*(Xsize-1)+xdir]);
 			qwinu.set(bcu,PM.get(TPM::qwu));
 			ElementRef bcb = bcbottom->add(quadsRefs[xdir],
-										   quadsRefs[xdir+Xsize-1],
-										   quadsRefs[xdir+2*(Xsize-1)]);
+										   quadsRefs[xdir+Xsize-1]); //,
+//										   quadsRefs[xdir+2*(Xsize-1)]);
 			qwinb.set(bcb,PM.get(TPM::qwb));
 		}
 	}
@@ -154,6 +157,7 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName, std::string zo
 	coupling_direction(0)=PM.get(TPM::coupling_direction);
 	solver_type(0)=PM.get(TPM::solver_type);
 	solver_itermax(0)=PM.get(TPM::solver_itermax);
+	solver_tolerance(0)=PM.get(TPM::solver_tolerance);
 	bc_types={0,0,0,0};
 
 	solve_thermal = program.compile("solve_thermal");
@@ -186,6 +190,7 @@ void Thermal::bindSimitFunc(Function *simFunc){
 	simFunc->bind("coupling_direction", &coupling_direction);
 	simFunc->bind("solver_type", &solver_type);
 	simFunc->bind("solver_itermax", &solver_itermax);
+	simFunc->bind("solver_tolerance", &solver_tolerance);
 	simFunc->bind("bc_types", &bc_types);
 
 	simFunc->init();

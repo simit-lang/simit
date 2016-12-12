@@ -38,10 +38,11 @@ public:
 	// input/ouput parameters of the model
 	simit::Tensor<double,2> dt;
 	simit::Tensor<double,2> cfl;
-	simit::Tensor<int,2> coupling_direction;
-	simit::Tensor<int,2> solver_type;
-	simit::Tensor<int,2> solver_itermax;
-	simit::Tensor<int,4> bc_types;
+	simit::Tensor<int,2> 	coupling_direction;
+	simit::Tensor<int,2> 	solver_type;
+	simit::Tensor<int,2> 	solver_itermax;
+	simit::Tensor<double,2> solver_tolerance;
+	simit::Tensor<int,4> 	bc_types;
 
 	// Simit functions
 	Function solve_thermal;

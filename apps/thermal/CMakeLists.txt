@@ -15,7 +15,12 @@ target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${simit})
 
 # CGNS include files and library
 include_directories($ENV{CGNS_INCLUDE_DIR})
-find_library(cgns cgns "/usr/local/lib")
+if (NOT DEFINED ENV{CGNS_INCLUDE_DIR})
+    find_library(cgns cgns "/usr/local/lib")
+else ()
+    find_library(cgns cgns $ENV{CGNS_LIB_DIR})
+    include_directories($ENV{CGNS_LIB_DIR})
+endif ()    
 target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${cgns})
 
 # SILO include files and library

@@ -21,10 +21,12 @@ using namespace simit;
 // Function prototypes
 static void DumpDomainToVisit(DBfile *db, int iter, double time, int Xsize, int Ysize, Set *quads, Set *points);
 
+#endif
 
 /**********************************************************************/
 void DumpToVisit(std::string ZoneName,int iter, double time, int Xsize, int Ysize, Set *quads, Set *points)
 {
+#ifdef VIZ_MESH
   char subdirName[32];
   char basename[32];
   DBfile *db;
@@ -40,7 +42,6 @@ void DumpToVisit(std::string ZoneName,int iter, double time, int Xsize, int Ysiz
   else {
      printf("Error writing out viz file \n");
   }
-
 }
 
 
@@ -116,14 +117,10 @@ DumpDomainToVisit(DBfile *db, int iter, double time, int Xsize, int Ysize, Set *
    if (ok != 0) {
       printf("Error writing out viz file \n");
    }
-}
 
 #else
 
-void DumpToVisit()
-{
 	printf("Must enable -DVIZ_MESH at compile time to call DumpToVisit \n");
-}
 
 #endif
-
+}
