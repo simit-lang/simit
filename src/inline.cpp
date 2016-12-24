@@ -1,5 +1,6 @@
 #include "inline.h"
 
+#include <algorithm>
 #include <vector>
 #include <map>
 
@@ -481,6 +482,18 @@ static Stmt gatherEps(Expr target, int cardinality, Var lv, Var* eps) {
 
 static const string LOCS_POSTFIX = "_locs";
 
+static bool isHomogeneous(const std::vector<Expr*>& endpointSets) {
+  const auto end = *endpointSets[0];
+  
+  for (size_t i = 1; i < endpointSets.size(); ++i) {
+    if (*endpointSets[i] != end) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /// Emit code to gather the locations of the result vv matrices:
 /// ~~~~~~~~~~~~~~~
 ///   % Gather locs from As_index
@@ -494,8 +507,11 @@ static const string LOCS_POSTFIX = "_locs";
 ///   end
 /// ~~~~~~~~~~~~~~~
 /// (Locations for matrices with the same index are only computed once.)
-static Stmt gatherVVLocs(TensorIndex index, int cardinality, Var eps,
+static Stmt gatherVVLocs(TensorIndex index, const std::vector<Expr*> &endpoints,
+                         const std::vector<IndexSet> &dims, Var eps,
                          std::map<TensorIndex,Var>* indexToLocs) {
+  const int cardinality = endpoints.size();
+
   Type locsType = TensorType::make(ScalarType::Int,
                                    {IndexDomain(cardinality),
                                      IndexDomain(cardinality)});
@@ -515,29 +531,57 @@ static Stmt gatherVVLocs(TensorIndex index, int cardinality, Var eps,
                                 {Load::make(eps,i),Load::make(eps,j),ptr, idx});
   Stmt locsInit = Block::make({locStmt, TensorWrite::make(locs,{i,j}, locVar)});
 
-  Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
-  locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
-  return Block::make(locsDecl, locsInitLoop);
+  if (isHomogeneous(endpoints)) {
+    Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
+    locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
+    
+    return Block::make(locsDecl, locsInitLoop);
+  }
+ 
+  // Heterogeneous edge sets need to be handled separately from homogeneous 
+  // edge sets since heterogeneous edges contain endpoints that cannot be used 
+  // to index into a row or column of the result matrix.
+  // TODO: If all tuple elements that can be used to index into the result 
+  //       matrix are adjacent, emitting a loop might still be more efficient.
+  Stmt locsInits = locsDecl;
+  for (int ii = 0; ii < cardinality; ++ii) {
+    if (*endpoints[ii] != dims[0].getSet()) {
+      continue;
+    }
+
+    locsInits = Block::make(locsInits, AssignStmt::make(i, ii));
+    for (int jj = 0; jj < cardinality; ++jj) {
+      if (*endpoints[jj] != dims[1].getSet()) {
+        continue;
+      }
+
+      locsInits = Block::make({locsInits, AssignStmt::make(j, jj), locsInit});
+    }
+  }
+
+  return locsInits;
 }
 
-/// Emit code to gather the locations of the result vv matrices:
+/// Emit code to gather the locations of the result ve matrices:
 /// ~~~~~~~~~~~~~~~
 ///   for e in E
 ///     ...
 ///     % Gather locs from As_index
 ///     var .As_index_locs : tensor[0:2](int);
 ///     for i in 0:2
-///       for j in 0:2
-///         var .locVar : int;
-///         .locVar = __loc(.eps[i], e, As_index.coords, As_index.sinks);
-///         .As_index_locs(i) = .locVar;
-///       end
+///       var .locVar : int;
+///       .locVar = __loc(.eps[i], e, As_index.coords, As_index.sinks);
+///       .As_index_locs(i) = .locVar;
+///     end
 ///     ...
 ///   end
 /// ~~~~~~~~~~~~~~~
 /// (Locations for matrices with the same index are only computed once.)
-static Stmt gatherVELocs(TensorIndex index, int cardinality, Var eps, Var lv,
+static Stmt gatherVELocs(TensorIndex index, const std::vector<Expr*> &endpoints, 
+                         IndexSet vDim, Var eps, Var lv,
                          std::map<TensorIndex,Var>* indexToLocs) {
+  const int cardinality = endpoints.size();
+
   Type locsType = TensorType::make(ScalarType::Int, {IndexDomain(cardinality)});
   Var locs(INTERNAL_PREFIX(index.getName() + LOCS_POSTFIX), locsType);
   (*indexToLocs)[index] = locs;
@@ -554,13 +598,28 @@ static Stmt gatherVELocs(TensorIndex index, int cardinality, Var eps, Var lv,
                                 {Load::make(eps,i), lv, ptr, idx});
   Stmt locsInit = Block::make({locStmt, TensorWrite::make(locs,{i}, locVar)});
 
-//  Stmt locsInit = TensorWrite::make(locs, {i}, lv*cardinality+i);
-  Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
+  if (isHomogeneous(endpoints)) {
+    Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
 
-  return Block::make(locsDecl, locsInitLoop);
+    return Block::make(locsDecl, locsInitLoop);
+  }
+
+  // Heterogeneous edge sets need to be handled separately from homogeneous 
+  // edge sets since heterogeneous edges contain endpoints that cannot be used 
+  // to index into a row or column of the result matrix.
+  // TODO: If all tuple elements that can be used to index into the result 
+  //       matrix are adjacent, emitting a loop might still be more efficient.
+  Stmt locsInits = locsDecl;
+  for (int ii = 0; ii < cardinality; ++ii) {
+    if (*endpoints[ii] == vDim.getSet()) {
+      locsInits = Block::make({locsInits, AssignStmt::make(i, ii), locsInit});
+    }
+  }
+
+  return locsInits;
 }
 
-/// Emit code to gather the locations of the result vv matrices:
+/// Emit code to gather the locations of the result ev matrices:
 /// ~~~~~~~~~~~~~~~
 ///   for e in E
 ///     ...
@@ -573,20 +632,43 @@ static Stmt gatherVELocs(TensorIndex index, int cardinality, Var eps, Var lv,
 ///   end
 /// ~~~~~~~~~~~~~~~
 /// (Locations for matrices with the same index are only computed once.)
-static Stmt gatherEVLocs(TensorIndex index, int cardinality, Var eps, Var lv,
+static Stmt gatherEVLocs(TensorIndex index, const std::vector<Expr*> &endpoints, 
+                         IndexSet vDom, Var eps, Var lv,
                          std::map<TensorIndex,Var>* indexToLocs) {
+  const int cardinality = endpoints.size();
+
   Type locsType = TensorType::make(ScalarType::Int, {IndexDomain(cardinality)});
   Var locs(INTERNAL_PREFIX(index.getName() + LOCS_POSTFIX), locsType);
   (*indexToLocs)[index] = locs;
 
   Stmt locsDecl = VarDecl::make(locs);
 
-  Var i("i", Int);
+  if (isHomogeneous(endpoints)) {
+    Var i("i", Int);
 
-  Stmt locsInit = TensorWrite::make(locs, {i}, lv*cardinality+i);
-  Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
+    Stmt locsInit = TensorWrite::make(locs, {i}, lv*cardinality+i);
+    Stmt locsInitLoop = ForRange::make(i, 0, cardinality, locsInit);
 
-  return Block::make(locsDecl, locsInitLoop);
+    return Block::make(locsDecl, locsInitLoop);
+  }
+
+  const int nnzPerRow = std::count_if(endpoints.begin(), endpoints.end(), 
+      [vDom](const Expr *e) { return *e == vDom.getSet(); });
+  
+  // Heterogeneous edge sets need to be handled separately from homogeneous 
+  // edge sets since heterogeneous edges contain endpoints that cannot be used 
+  // to index into a row or column of the result matrix.
+  // TODO: If all tuple elements that can be used to index into the result 
+  //       matrix are adjacent, emitting a loop might still be more efficient.
+  Stmt locsInits = locsDecl;
+  for (int i = 0, j = 0; i < cardinality; ++i) {
+    if (*endpoints[i] == vDom.getSet()) {
+      Stmt locsInit = TensorWrite::make(locs, {i}, lv*nnzPerRow + (j++));
+      locsInits = Block::make(locsInits, locsInit);
+    }
+  }
+
+  return locsInits;
 }
 
 /// Inlines the mapped function with respect to the given loop variable over
@@ -612,7 +694,10 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
 
   Expr target = map->target;
   iassert(map->target.type().isSet());
-  int cardinality = map->target.type().toUnstructuredSet()->endpointSets.size();
+  
+  const auto& endpoints = map->target.type().toUnstructuredSet()->endpointSets;
+  const int cardinality = endpoints.size();
+
   // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
     iassert(ivs.size() == 0);
@@ -650,15 +735,17 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
         Stmt gatherLocs;
         if (dims[0] != target && dims[1] != target) {
           // vv matrix
-          gatherLocs = gatherVVLocs(index, cardinality, eps, &indexToLocs);
+          gatherLocs = gatherVVLocs(index, endpoints, dims, eps, &indexToLocs);
         }
         else if (dims[0] != target && dims[1] == target) {
           // ve matrix
-          gatherLocs = gatherVELocs(index, cardinality, eps, lv, &indexToLocs);
+          gatherLocs = gatherVELocs(index, endpoints, dims[0], eps, lv, 
+                                    &indexToLocs);
         }
         else if (dims[0] == target && dims[1] != target) {
           // ev matrix
-          gatherLocs = gatherEVLocs(index, cardinality, eps, lv, &indexToLocs);
+          gatherLocs = gatherEVLocs(index, endpoints, dims[1], eps, lv, 
+                                    &indexToLocs);
         }
         else {
           unreachable;

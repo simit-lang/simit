@@ -207,27 +207,37 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         case Link::ev: {
           const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
 
-          int cardinality = edgeSet.getCardinality();
+          const int cardinality = edgeSet.getCardinality();
           iassert(cardinality > 0) << "not an edge set" << edgeSet.getName();
+
+          const simit::Set& vertexSet =
+              *builder->getBinding(link->getVertexSet());
+
+          int nnzPerRow = 0;
+          for (size_t i=0; i<(size_t)edgeSet.getCardinality(); ++i) {
+            nnzPerRow += (&vertexSet == edgeSet.getEndpointSet(i));
+          }
 
           // TODO: Replace rest of this case with this when we want to support a
           //       mix of segmented and set endpoint indices.
           // pi = new SetEndpointPathIndex(edgeSet);
 
           size_t n   = edgeSet.getSize();
-          size_t nnz = edgeSet.getSize() * cardinality;
+          size_t nnz = edgeSet.getSize() * nnzPerRow;
 
           uint32_t* ptr = (uint32_t*)malloc((n+1)*sizeof(uint32_t));
           uint32_t* idx = (uint32_t*)malloc(nnz*sizeof(uint32_t));
 
           for (size_t i=0; i<=n; ++i) {
-            ptr[i] = i*cardinality;
+            ptr[i] = i*nnzPerRow;
           }
 
           for (auto e : edgeSet) {
-            for (int i=0; i<cardinality; ++i) {
-              int ep = edgeSet.getEndpoint(e,i).getIdent();
-              idx[e.getIdent()*cardinality + i] = ep;
+            for (int i=0, j=0; i<cardinality; ++i) {
+              if (&vertexSet == edgeSet.getEndpointSet(i)) {
+                int ep = edgeSet.getEndpoint(e,i).getIdent();
+                idx[e.getIdent()*nnzPerRow + (j++)] = ep;
+              }
             }
           }
 
@@ -252,9 +262,12 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           // populate neighbor lists
           for (auto &e : edgeSet) {
             iassert(e.getIdent() >= 0);
+            int i = 0;
             for (auto &ep : edgeSet.getEndpoints(e)) {
               iassert(ep.getIdent() >= 0);
-              pathNeighbors.at(ep.getIdent()).push_back(e.getIdent());
+              if (&vertexSet == edgeSet.getEndpointSet(i++)) {
+                pathNeighbors.at(ep.getIdent()).push_back(e.getIdent());
+              }
             }
           }
           pi = pack(pathNeighbors);

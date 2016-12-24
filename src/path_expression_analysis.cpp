@@ -82,11 +82,11 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
         // Assemblies produce veu, ve and eu matrices
         if (v.getSet() != e.getSet() && u.getSet() != e.getSet()) {
           // veu (including v == u)
-          pe::PathExpression ve = Link::make(u, e, Link::ve);
-          pe::PathExpression ev = Link::make(e, v, Link::ev);
+          pe::PathExpression ve = Link::make(v, e, Link::ve);
+          pe::PathExpression ev = Link::make(e, u, Link::ev);
 
-          PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
-                                             ve(u,e), ev(e,v));
+          PathExpression vev = pe::And::make({v,u}, {{QuantifiedVar::Exist,e}},
+                                             ve(v,e), ev(e,u));
           addPathExpression(var, vev);
         }
         else if (v.getSet() == e.getSet()) {
