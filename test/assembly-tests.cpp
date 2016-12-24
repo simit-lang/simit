@@ -291,6 +291,141 @@ TEST(assembly, matrix_vv) {
   ASSERT_EQ(2, (int)b(v2));
 }
 
+TEST(assembly, matrix_ve_heterogeneous) {
+  Set V0;
+  FieldRef<int> b0 = V0.addField<int>("b");
+  std::vector<ElementRef> v0;
+  v0.reserve(4);
+  for (int i = 0; i < 4; ++i) {
+    v0[i] = V0.add();
+  }
+
+  Set V1;
+  FieldRef<int> b1 = V1.addField<int>("b");
+  std::vector<ElementRef> v1;
+  v1.reserve(9);
+  for (int i = 0; i < 9; ++i) {
+    v1[i] = V1.add();
+  }
+
+  Set E(V1,V1,V0,V1,V1);
+  FieldRef<int> a = E.addField<int>("a");
+  ElementRef e0 = E.add(v1[0],v1[1],v0[0],v1[3],v1[4]);
+  ElementRef e1 = E.add(v1[1],v1[2],v0[1],v1[4],v1[5]);
+  ElementRef e2 = E.add(v1[3],v1[4],v0[2],v1[6],v1[7]);
+  ElementRef e3 = E.add(v1[4],v1[5],v0[3],v1[7],v1[8]);
+  a(e0) = 1;
+  a(e1) = 2;
+  a(e2) = 3;
+  a(e3) = 4;
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V0", &V0);
+  func.bind("V1", &V1);
+  func.bind("E", &E);
+  func.runSafe();
+
+  for (int i = 0; i < 4; ++i) {
+    ASSERT_EQ(i + 1, (int)b0(v0[i]));
+  }
+  
+  const std::vector<int> b1Expected = {1, 4, 4, 6, 20, 16, 9, 24, 16};
+  for (int i = 0; i < 9; ++i) {
+    ASSERT_EQ(b1Expected[i], (int)b1(v1[i]));
+  }
+}
+
+TEST(assembly, matrix_ev_heterogeneous) {
+  Set V0;
+  FieldRef<int> a0 = V0.addField<int>("a");
+  std::vector<ElementRef> v0;
+  v0.reserve(4);
+  for (int i = 0; i < 4; ++i) {
+    v0[i] = V0.add();
+    a0(v0[i]) = i + 1;
+  }
+
+  Set V1;
+  FieldRef<int> a1 = V1.addField<int>("a");
+  std::vector<ElementRef> v1;
+  v1.reserve(9);
+  for (int i = 0; i < 9; ++i) {
+    v1[i] = V1.add();
+    a1(v1[i]) = i + 1;
+  }
+
+  Set E(V1,V1,V0,V1,V1);
+  FieldRef<int> b0 = E.addField<int>("b0");
+  FieldRef<int> b1 = E.addField<int>("b1");
+  ElementRef e0 = E.add(v1[0],v1[1],v0[0],v1[3],v1[4]);
+  ElementRef e1 = E.add(v1[1],v1[2],v0[1],v1[4],v1[5]);
+  ElementRef e2 = E.add(v1[3],v1[4],v0[2],v1[6],v1[7]);
+  ElementRef e3 = E.add(v1[4],v1[5],v0[3],v1[7],v1[8]);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V0", &V0);
+  func.bind("V1", &V1);
+  func.bind("E", &E);
+  func.runSafe();
+
+  ASSERT_EQ(1, (int)b0(e0));
+  ASSERT_EQ(2, (int)b0(e1));
+  ASSERT_EQ(3, (int)b0(e2));
+  ASSERT_EQ(4, (int)b0(e3));
+  
+  ASSERT_EQ(37, (int)b1(e0));
+  ASSERT_EQ(47, (int)b1(e1));
+  ASSERT_EQ(67, (int)b1(e2));
+  ASSERT_EQ(77, (int)b1(e3));
+}
+
+TEST(assembly, matrix_vv_heterogeneous) {
+  Set V0;
+  FieldRef<int> a0 = V0.addField<int>("a");
+  FieldRef<int> b0 = V0.addField<int>("b");
+  std::vector<ElementRef> v0;
+  v0.reserve(4);
+  for (int i = 0; i < 4; ++i) {
+    v0[i] = V0.add();
+    a0(v0[i]) = i + 1;
+  }
+
+  Set V1;
+  FieldRef<int> a1 = V1.addField<int>("a");
+  FieldRef<int> b1 = V1.addField<int>("b");
+  std::vector<ElementRef> v1;
+  v1.reserve(9);
+  for (int i = 0; i < 9; ++i) {
+    v1[i] = V1.add();
+    a1(v1[i]) = i + 1;
+  }
+
+  Set E(V1,V1,V0,V1,V1);
+  E.add(v1[0],v1[1],v0[0],v1[3],v1[4]);
+  E.add(v1[1],v1[2],v0[1],v1[4],v1[5]);
+  E.add(v1[3],v1[4],v0[2],v1[6],v1[7]);
+  E.add(v1[4],v1[5],v0[3],v1[7],v1[8]);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V0", &V0);
+  func.bind("V1", &V1);
+  func.bind("E", &E);
+  func.runSafe();
+
+  const std::vector<int> b0Expected = {37, 47, 67, 77};
+  for (int i = 0; i < 4; ++i) {
+    ASSERT_EQ(b0Expected[i], (int)b0(v0[i]));
+  }
+  
+  const std::vector<int> b1Expected = {1, 4, 4, 6, 20, 16, 9, 24, 16};
+  for (int i = 0; i < 9; ++i) {
+    ASSERT_EQ(b1Expected[i], (int)b1(v1[i]));
+  }
+}
+
 TEST(assembly, blocked) {
   Set V;
   ElementRef v0 = V.add();

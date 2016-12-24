@@ -1,0 +1,34 @@
+element Vertex
+  a : int;
+end
+
+element Edge
+  b0 : int;
+  b1 : int;
+end
+
+extern V0 : set{Vertex};
+extern V1 : set{Vertex};
+extern E : set{Edge}(V1,V1,V0,V1,V1);
+
+func f(e : Edge, 
+       v : (v1 : Vertex, v2 : Vertex, v0 : Vertex, v3 : Vertex, v4 : Vertex)) 
+    -> Ae : matrix[E,V0](int)
+  Ae(e,v.v0) = 1;
+end
+
+func g(e : Edge, 
+       v : (v1 : Vertex, v2 : Vertex, v0 : Vertex, v3 : Vertex, v4 : Vertex)) 
+    -> Ae : matrix[E,V1](int)
+  Ae(e,v.v1) = 1;
+  Ae(e,v.v2) = 2;
+  Ae(e,v.v3) = 3;
+  Ae(e,v.v4) = 4;
+end
+
+export func main()
+  A0 = map f to E reduce +;
+  A1 = map g to E reduce +;
+  E.b0 = A0 * V0.a;
+  E.b1 = A1 * V1.a;
+end
