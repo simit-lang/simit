@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 	PM.readParameters(thermfile);
 
 	//3 - Read the Pan part
-	Thermal Pan = Thermal(PM.get(TPM::PanFileName),"../pansteak2x2.cgns","../pansteak5x5.cgns","Pan",1);
+	Thermal Pan = Thermal(PM.get(TPM::PanFileName),PM.get(TPM::CGNSFileName_0),PM.get(TPM::CGNSFileName_1),"Pan",1);
 
 
 	// Compute first time step

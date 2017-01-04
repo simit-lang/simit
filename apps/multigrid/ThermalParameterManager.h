@@ -11,6 +11,7 @@ public:
 	static const Parameter<int>    			coupling_direction;
 	static const Parameter<int>    			solver_type;
 	static const Parameter<int>    			solver_itermax;
+	static const Parameter<int>    			smoother_iter;
 	static const Parameter<double> 			timeMax;		// Maximum simulation time
 	static const Parameter<double> 			cfl;			// CFL
 	static const Parameter<double> 			tolerance_coupling;
@@ -24,7 +25,8 @@ public:
 	static const Parameter<double> 			qwb;			// boundary neuman condition on the bottom
 	static const Parameter<double>    			solver_tolerance;
 	static const Parameter<bool>    		dumpVisit;
-	static const Parameter<std::string>    	CGNSFileName;	// Relative path to the CGNS File
+	static const Parameter<std::string>    	CGNSFileName_0;	// Relative path to the CGNS File
+	static const Parameter<std::string>    	CGNSFileName_1;	// Relative path to the CGNS File
 	static const Parameter<std::string>    	SimitFileName;	// Relative path to the Simit File
 	static const Parameter<std::string>    	PanFileName;	// Relative path to the Pan params file
 	static const Parameter<std::string>    	SteakFileName;	// Relative path to the Steak params file

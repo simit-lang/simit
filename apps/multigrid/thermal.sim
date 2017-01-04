@@ -53,6 +53,7 @@ extern coupling_direction : vector[2](int);
 extern solver_type : vector[2](int);
 extern solver_itermax : vector[2](int);
 extern solver_tolerance : vector[2](float);
+extern smoother_iter : vector[2](int);
 extern bc_types : vector[4](int);   % vector of boundary conditions types : left, right, bottom, up
 
 %%%%%%%%%%%%%%% Future Intrinsics Functions %%%%%%%%%%%%%%%%%%
@@ -99,26 +100,53 @@ end
 
 %%%%%%%%%%%%%% Solvers %%%%%%%%%%%%%%%%%%%
 
-% Preconditionners
-func assemble_jacobi<Q>(A:matrix[Q,Q](float),q:Quad)->D:matrix[Q,Q](float)
-    D(q,q)=1.0/A(q,q);
+% intrinsic lusolve
+func intrLU<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float))
+    solver = lu(A);
+    x = lusolve<Q,Q>(solver, b);
+    lufree(solver);
 end
 
-func MG<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float))
+% Jacobi
+func jacobi(A:matrix[quads_MG1,quads_MG1](float),b:vector[quads_MG1](float),
+            inout x:vector[quads_MG1](float),max_iter:int,trace:bool)
+%    D = map assemble_jacobi(A) to quads_MG1 reduce +;
+    var D = map eye() to quads_MG1 ;
+    for q in quads_MG1
+        D(q,q) = 1.0 / A(q,q);
+    end
+    var R:matrix[quads_MG1,quads_MG1](float);
+    R=A;
+    for q in quads_MG1
+        R(q,q) = 0.0;
+    end
+    var iter=0;
+    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    var r=A*x-b;
+    var n=r'*r;
+    while (iter < max_iter) and (n > tol)
+       iter = iter + 1;
+       x = D*(b - R*x);
+       r = A*x -b;
+       n = r'*r;
+    end
+    if trace
+        print " Jacobi Iters : ",iter," \n";
+    end
 end
 
 % Conjugate gradient
-func conjgrad<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float))
+func conjgrad<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float),tolerance:float,trace:bool)
     var r=b-A*x;
     var p=r;
     var iter = 0;
     var rsold = r'*r;
-    r0=sqrt(rsold);
-    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    tol = tolerance*tolerance*b'*b;
+    %    print "tolerance ", tol,"\n";
+    %tol = 0.000001;
     while (rsold > tol) and (iter < solver_itermax(0))
         iter = iter + 1;
         Ap = A * p;
-        %println(sqrt(rsold)/r0);
         alpha = rsold / (Ap'*p);
         x = x + alpha*p;
         % to avoid numeric error propagation
@@ -131,22 +159,28 @@ func conjgrad<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float
         p = r + (rsnew/rsold)*p;
         rsold = rsnew;
     end
-    print " conjGrad Iters : ",iter," \n";
+    if trace
+        print " conjGrad Iters : ",iter," \n";
+    end
+end
+
+% Preconditionners
+func assemble_jacobi<Q>(A:matrix[Q,Q](float),q:Quad)->D:matrix[Q,Q](float)
+    D(q,q)=1.0/A(q,q);
 end
 
 % Preconditioned Conjugate gradient
-func pre_conjgrad<Q>(M:matrix[Q,Q](float),A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float))
+func pre_conjgrad<Q>(M:matrix[Q,Q](float),A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float),
+                     tolerance:float,trace:bool)
     var r=b-A*x;
     var z=M*r;
     var p=z;
     var iter = 0;
     var rsold = z'*r;
-    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    tol = tolerance*tolerance*b'*b;
     var n = r'*r;
-    r0=sqrt(n);
-    while ((n > tol) and (rsold > tol)) and (iter < solver_itermax(0))
+    while (n > tol) and (iter < solver_itermax(0))
         iter = iter + 1;
-        %println sqrt(n)/r0;
         Ap = A * p;
         alpha = rsold / (Ap'*p);
         x = x + alpha*p;
@@ -162,38 +196,93 @@ func pre_conjgrad<Q>(M:matrix[Q,Q](float),A:matrix[Q,Q](float),b:vector[Q](float
         rsold = rsnew;
         n = r'*r;
     end
-    print " pre_conjGrad Iters : ",iter," \n";
+    if trace
+        print " pre_conjGrad Iters : ",iter," \n";
+    end
 end
 
-% intrinsic lusolve
-func intrLU<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float))
-    solver = lu(A);
-    x = lusolve<Q,Q>(solver, b);
-    lufree(solver);
+func MG_iter(A_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+             A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+             inout x_1:vector[quads_MG1](float),
+             Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    % FMG 
+    %var x_0:vector[quads_MG0](float);
+    %var x_0=Reduc*x_1;
+    %bb_0=Reduc*b_1;
+    %conjgrad(A_0,b_0,x_0,false);
+    %x_1=Interp*x_0;
+    %x_1=0.0;
+    jacobi(A_1,b_1,x_1,smoother_iter(0),false);
+    r_0 = Reduc*(b_1 - A_1*x_1);
+    var e_0:vector[quads_MG0](float);
+    %var Diag = map eye() to quads_MG0 ;
+    %for q in quads_MG0
+    %    Diag(q,q) = 1.0 / A_0(q,q);
+    %end
+    conjgrad(A_0,r_0,e_0,0.001,false);
+    %pre_conjgrad(Diag,A_0,r_0,e_0,sqrt(solver_tolerance(0)),false);
+    x_1 = x_1 + Interp*e_0;
+    jacobi(A_1,b_1,x_1,smoother_iter(0),false);
 end
 
-% Jacobi
-func jacobi(A:matrix[quads_MG1,quads_MG1](float),b:vector[quads_MG1](float),inout x:vector[quads_MG1](float),max_iter:int)
-    var D = map eye() to quads_MG1 ;
-    for q in quads_MG1
-        D(q,q) = 1.0 / A(q,q);
+func MG(A_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+        A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+        inout x_1:vector[quads_MG1](float),
+        Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    var r_1=b_1-A_1*x_1;
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    var iter = 0;
+    var n = r_1'*r_1;
+    var x_0:vector[quads_MG0](float);
+    %var x_0=Reduc*x_1;
+    %bb_0=Reduc*b_1;
+    %conjgrad(A_0,b_0,x_0,false);
+    %x_1=Interp*x_0;
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        MG_iter(A_1,b_1,A_0,b_0,x_1,Interp,Reduc);
+        r_1=b_1-A_1*x_1;
+        n = r_1'*r_1;
     end
-    var R:matrix[quads_MG1,quads_MG1](float);
-    R=A;
-    var iter=0;
-    for q in quads_MG1
-        R(q,q) = 0.0;
-    end
-%    D = map assemble_jacobi(A) to quads_MG1 reduce +;
-    while (iter < max_iter) and (norm(A*x-b) > solver_tolerance(0))
-       x = D*(b - R*x);
-       iter = iter + 1;
-       %print norm(A*x-b),"\n";
-    end
-    print " Jacobi Iters : ",iter," \n";
+    print " MG Iters : ",iter," \n";
 end
 
-
+% Preconditioned MG Conjugate gradient
+func pre_conjgradMG(A_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+                    A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+                    inout x:vector[quads_MG1](float),
+                    Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    var r_1=b_1-A_1*x;
+    var r_0:vector[quads_MG0](float);
+    %var r_0=b_0-A_0*(Reduc*x);
+    var z:vector[quads_MG1](float);
+    MG_iter(A_1,r_1,A_0,r_0,z,Interp,Reduc);
+    var p=z;
+    var iter = 0;
+    var rsold = z'*r_1;
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    var n = r_1'*r_1;
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        Ap = A_1 * p;
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+       % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r_1 = r_1 - alpha*Ap;    
+        else
+            r_1 = b_1 - A_1*x;
+        end
+        %r_0 = b_0 - A_0*(Reduc*x);
+        z=0.0;
+        MG_iter(A_1,r_1,A_0,r_0,z,Interp,Reduc);
+        rsnew = z'*r_1;
+        p = z + (rsnew/rsold)*p;
+        rsold = rsnew;
+        n = r_1'*r_1;
+    end
+    print " pre_conjGrad MG Iters : ",iter," \n";
+end
 
 %%%%%%%%%%%%%%%% Thermal Solve %%%%%%%%%%%%%%%%%%%%%
 
@@ -225,23 +314,8 @@ func assemble_diffusion<Q>(f:Face,q:(Quad*2))->D:matrix[Q,Q](float)
 end
 
 func assemble_Interpolation(l:Link,q:(l0:Quad,l1_0:Quad,
-                                              l1_1:Quad,l1_2:Quad,l1_3:Quad,l1_4:Quad,
-                                              l1_5:Quad,l1_6:Quad,l1_7:Quad,l1_8:Quad))
-                        ->In:matrix[quads_MG0,quads_MG1](float)
-    In(q.l0,q.l1_0) = 1.0;
-    In(q.l0,q.l1_1) = 1.0/2.0;
-    In(q.l0,q.l1_2) = 1.0/2.0;
-    In(q.l0,q.l1_3) = 1.0/2.0;
-    In(q.l0,q.l1_4) = 1.0/2.0;
-    In(q.l0,q.l1_5) = 1.0/4.0;
-    In(q.l0,q.l1_6) = 1.0/4.0;
-    In(q.l0,q.l1_7) = 1.0/4.0;
-    In(q.l0,q.l1_8) = 1.0/4.0;
-end
-
-func assemble_Reduction(l:Link,q:(l0:Quad,l1_0:Quad,
-                                   l1_1:Quad,l1_2:Quad,l1_3:Quad,l1_4:Quad,
-                                   l1_5:Quad,l1_6:Quad,l1_7:Quad,l1_8:Quad))
+                                      l1_1:Quad,l1_2:Quad,l1_3:Quad,l1_4:Quad,
+                                      l1_5:Quad,l1_6:Quad,l1_7:Quad,l1_8:Quad))
                         ->In:matrix[quads_MG1,quads_MG0](float)
     In(q.l1_0,q.l0) = 1.0;
     In(q.l1_1,q.l0) = 1.0/2.0;
@@ -252,6 +326,21 @@ func assemble_Reduction(l:Link,q:(l0:Quad,l1_0:Quad,
     In(q.l1_6,q.l0) = 1.0/4.0;
     In(q.l1_7,q.l0) = 1.0/4.0;
     In(q.l1_8,q.l0) = 1.0/4.0;
+end
+
+func assemble_Reduction(l:Link,q:(l0:Quad,l1_0:Quad,
+                                  l1_1:Quad,l1_2:Quad,l1_3:Quad,l1_4:Quad,
+                                  l1_5:Quad,l1_6:Quad,l1_7:Quad,l1_8:Quad))
+                        ->In:matrix[quads_MG0,quads_MG1](float)
+    In(q.l0,q.l1_0) = 1.0/4.0;
+    In(q.l0,q.l1_1) = 1.0/8.0;
+    In(q.l0,q.l1_2) = 1.0/8.0;
+    In(q.l0,q.l1_3) = 1.0/8.0;
+    In(q.l0,q.l1_4) = 1.0/8.0;
+    In(q.l0,q.l1_5) = 1.0/16.0;
+    In(q.l0,q.l1_6) = 1.0/16.0;
+    In(q.l0,q.l1_7) = 1.0/16.0;
+    In(q.l0,q.l1_8) = 1.0/16.0;
 end
 
 export func solve_thermal()
@@ -301,30 +390,30 @@ export func solve_thermal()
     % solve and find Tn+1
     var TNN:vector[quads_MG1](float);
     TNN = 0.0;
-     if solver_type(0)==0
-        conjgrad(A_1,b_1,TNN);
+    %if solver_type(0)==4 or solver_type(0)==5
+        Interp = (map assemble_Interpolation to links reduce +);
+        %Reduc = (0.25*Interp)';
+        Reduc  = (map assemble_Reduction to links reduce +);
+    %end
+    %A_0 = Reduc*A_1*Interp;
+    if solver_type(0)==0
+        conjgrad(A_1,b_1,TNN,solver_tolerance(0),true);
     elif solver_type(0)==1
         intrLU(A_1,b_1,TNN);
     elif solver_type(0)==2
-        jacobi(A_1,b_1,TNN,solver_itermax(0));
+        jacobi(A_1,b_1,TNN,solver_itermax(0),true);
     elif solver_type(0)==3
         var Diag = map eye() to quads_MG1 ;
         for q in quads_MG1
             Diag(q,q) = 1.0 / A_1(q,q);
         end
-         pre_conjgrad(Diag,A_1,b_1,TNN);
-     elif solver_type(0)==4
-        jacobi(A_1,b_1,TNN,2);
-        r=b_1-A_1*TNN;
-        Interp = (map assemble_Interpolation to links reduce +);
-        %println Interp;
-        %printMatrix(Interp);
-        %Reduc = (map assemble_Reduction to links reduce +);
-        %Reduc = 0.25*Interp';
-        %print Reduc;
+        pre_conjgrad(Diag,A_1,b_1,TNN,solver_tolerance(0),true);
+    elif solver_type(0)==4
+        pre_conjgradMG(A_1,b_1,A_0,b_0,TNN,Interp,Reduc);
+    elif solver_type(0)==5
+        MG(A_1,b_1,A_0,b_0,TNN,Interp,Reduc);
     end
-     quads_MG1.T=TNN+quads_MG1.T;
-    
+    quads_MG1.T=TNN+quads_MG1.T;
 end
 
 
@@ -365,12 +454,9 @@ export func compute_dt()
     % compute gamma to quads_MG1;
     quads_MG0.gamma=dt(0)/(quads_MG0.rho.*quads_MG0.cv);
     quads_MG1.gamma=dt(0)/(quads_MG1.rho.*quads_MG1.cv);
-   
     apply compute_halfValues to faces_MG0;
     apply compute_halfValues to faces_MG1;
-
 end
-
 
 %%%%%%%%%%%%%% Determine Flux on interface %%%%%%%%%%%%%%%%%%%
 

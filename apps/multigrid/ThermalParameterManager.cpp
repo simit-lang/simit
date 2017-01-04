@@ -12,6 +12,7 @@ PM_DEF ( int, dumpFrequency, 10);
 PM_DEF ( int, coupling_direction, 2);
 PM_DEF ( int, solver_type, 0);
 PM_DEF ( int, solver_itermax, 10000);
+PM_DEF ( int, smoother_iter, 10);
 PM_DEF ( double, timeMax, 10.0);
 PM_DEF ( double, cfl, 1.0e3);
 PM_DEF ( double, tolerance_coupling, 1.0e-5);
@@ -25,7 +26,8 @@ PM_DEF ( double, qwu, 0.0);
 PM_DEF ( double, qwb, 0.0);
 PM_DEF ( double, solver_tolerance, 1.0e-8);
 PM_DEF ( bool, dumpVisit, false);
-PM_DEF ( std::string, CGNSFileName, "../rectangular.cgns");
+PM_DEF ( std::string, CGNSFileName_0, "../rectangular.cgns");
+PM_DEF ( std::string, CGNSFileName_1, "../rectangular.cgns");
 PM_DEF ( std::string, SimitFileName, "../thermal.sim");
 PM_DEF ( std::string, PanFileName, "../pan.therm");
 PM_DEF ( std::string, SteakFileName, "../steak.therm");
@@ -39,6 +41,7 @@ void ThermalParameterManager::initialize(void)
 	PM_INIT(coupling_direction);
 	PM_INIT(solver_type);
 	PM_INIT(solver_itermax);
+	PM_INIT(smoother_iter);
 	PM_INIT(timeMax);
 	PM_INIT(cfl);
 	PM_INIT(tolerance_coupling);
@@ -52,7 +55,8 @@ void ThermalParameterManager::initialize(void)
 	PM_INIT(qwb);
 	PM_INIT(solver_tolerance);
 	PM_INIT(dumpVisit);
-	PM_INIT(CGNSFileName);
+	PM_INIT(CGNSFileName_0);
+	PM_INIT(CGNSFileName_1);
 	PM_INIT(SimitFileName);
 	PM_INIT(PanFileName);
 	PM_INIT(SteakFileName);
@@ -86,6 +90,7 @@ bool ThermalParameterManager::readParameters(std::string paramFileName)
 			PM_READ_INT("coupling_direction",paramValue)
 			PM_READ_INT("solver_type",paramValue)
 			PM_READ_INT("solver_itermax",paramValue)
+			PM_READ_INT("smoother_iter",paramValue)
 			PM_READ_DOUBLE("timeMax",paramValue)
 			PM_READ_DOUBLE("cfl",paramValue)
 			PM_READ_DOUBLE("tolerance_coupling",paramValue)
@@ -99,7 +104,8 @@ bool ThermalParameterManager::readParameters(std::string paramFileName)
 			PM_READ_DOUBLE("qwb",paramValue)
 			PM_READ_DOUBLE("solver_tolerance",paramValue)
 			PM_READ_BOOL("dumpVisit",paramValue)
-			PM_READ_STRING("CGNSFileName",paramValue)
+			PM_READ_STRING("CGNSFileName_0",paramValue)
+			PM_READ_STRING("CGNSFileName_1",paramValue)
 			PM_READ_STRING("SimitFileName",paramValue)
 			PM_READ_STRING("PanFileName",paramValue)
 			PM_READ_STRING("SteakFileName",paramValue)

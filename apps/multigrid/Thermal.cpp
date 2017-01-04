@@ -4,7 +4,8 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0, std::string
 {
 	//1- Construct the parameter manager
 	PM.readParameters(paramFile);
-	PM.set(TPM::CGNSFileName,CGNSFileName_L1);
+	PM.set(TPM::CGNSFileName_1,CGNSFileName_L1);
+	PM.set(TPM::CGNSFileName_0,CGNSFileName_L0);
 	std::string filenames[2];
 	filenames[0]=CGNSFileName_L0;
 	filenames[1]=CGNSFileName_L1;
@@ -225,7 +226,7 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0, std::string
 			for (int xdir=0; xdir<Xsize[0]-1; ++xdir) {
 //				int n = 2*(ydir*(Xsize[0]-1)+xdir)+ydir*(Xsize[1]-1);
 				int n = (2*ydir+1)*(Xsize[1]-1)+2*xdir+1;
-								std::cout << n << std::endl;
+//								std::cout << n << std::endl;
 				ElementRef link = links->add(quadsRefs_MG[0][ydir*(Xsize[0]-1)+xdir],
 											 quadsRefs_MG[1][n],
 											 quadsRefs_MG[1][n-Xsize[1]+1],
@@ -236,8 +237,8 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0, std::string
 											 quadsRefs_MG[1][n-Xsize[1]+2],
 											 quadsRefs_MG[1][n+Xsize[1]-2],
 											 quadsRefs_MG[1][n+Xsize[1]]);
-				std::cout << n << " " << n-Xsize[1]+1 << " " << n-1 << " " << n+1 << " " << n+Xsize[1]-1 << std::endl;
-				std::cout << n-Xsize[1] << " " << n-Xsize[1]+2 << " " << n+Xsize[1]-2 << " " << n+Xsize[1] << std::endl;
+//				std::cout << n << " " << n-Xsize[1]+1 << " " << n-1 << " " << n+1 << " " << n+Xsize[1]-1 << std::endl;
+//				std::cout << n-Xsize[1] << " " << n-Xsize[1]+2 << " " << n+Xsize[1]-2 << " " << n+Xsize[1] << std::endl;
 				linksRefs.push_back(link);
 			}
 		}
@@ -253,6 +254,7 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0, std::string
 	solver_type(0)=PM.get(TPM::solver_type);
 	solver_itermax(0)=PM.get(TPM::solver_itermax);
 	solver_tolerance(0)=PM.get(TPM::solver_tolerance);
+	smoother_iter(0)=PM.get(TPM::smoother_iter);
 	bc_types={0,0,0,0};
 
 	solve_thermal = program.compile("solve_thermal");
@@ -293,6 +295,7 @@ void Thermal::bindSimitFunc(Function *simFunc){
 	simFunc->bind("solver_type", &solver_type);
 	simFunc->bind("solver_itermax", &solver_itermax);
 	simFunc->bind("solver_tolerance", &solver_tolerance);
+	simFunc->bind("smoother_iter", &smoother_iter);
 	simFunc->bind("bc_types", &bc_types);
 	simFunc->bind("links", links);
 	simFunc->init();
