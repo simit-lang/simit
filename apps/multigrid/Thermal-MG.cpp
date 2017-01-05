@@ -2,6 +2,8 @@
 #include "program.h"
 #include "mesh.h"
 #include <cmath>
+#include <time.h>
+#include <sys/time.h>
 
 #include "Thermal.h"
 
@@ -50,6 +52,8 @@ int main(int argc, char **argv)
 //		DumpToVisit("Pan_L1",iter, time, Pan_L1.Xsize, Pan_L1.Ysize, Pan_L1.quads, Pan_L1.points);
 	}
 	// Time loop
+	timeval start;
+	gettimeofday(&start, NULL) ;
 	while ((time < PM.get(TPM::timeMax)) && (iter<PM.get(TPM::iterMax))) {
 		iter=iter+1;
 		std::cout << "---- Iteration " << iter << " ----" << std::endl;
@@ -88,6 +92,11 @@ int main(int argc, char **argv)
 			dt = PM.get(TPM::timeMax) - time;
 		Pan.dt(0)=dt;
 	}
+	timeval end;
+	gettimeofday(&end, NULL) ;
+	double elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
+	elapsed_time = elapsed_time*1000;
+	printf("\nElapsed time         = %10.2f (ms)\n", elapsed_time);
 	if (PM.get(TPM::dumpVisit)) {
 //		DumpToVisit("Pan_L0",iter, time, Pan_L0.Xsize, Pan_L0.Ysize, Pan_L0.quads, Pan_L0.points);
 //		DumpToVisit("Pan_L1",iter, time, Pan_L1.Xsize, Pan_L1.Ysize, Pan_L1.quads, Pan_L1.points);

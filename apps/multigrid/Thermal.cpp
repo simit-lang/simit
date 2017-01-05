@@ -197,11 +197,17 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0, std::string
 				ElementRef bcl = bcleft_MG[i]->add(quadsRefs_MG[i][ydir*(Xsize[i]-1)],
 						quadsRefs_MG[i][ydir*(Xsize[i]-1)+1]); //,
 				//										 quadsRefs[ydir*(Xsize[i]-1)+2]);
-				qwinl_MG[i].set(bcl,PM.get(TPM::qwl));
 				ElementRef bcr = bcright_MG[i]->add(quadsRefs_MG[i][ydir*(Xsize[i]-1)+Xsize[i]-2],
 						quadsRefs_MG[i][ydir*(Xsize[i]-1)+Xsize[i]-3]); //,
 						//										  quadsRefs[ydir*(Xsize[i]-1)+Xsize[i]-4]);
-				qwinr_MG[i].set(bcr,PM.get(TPM::qwr));
+				if ((ydir<Ysize[i]/4) || (3*ydir>Ysize[i]/4)) {
+					qwinr_MG[i].set(bcr,PM.get(TPM::qwr)*2);
+					qwinl_MG[i].set(bcl,PM.get(TPM::qwl));
+				}
+				else {
+					qwinr_MG[i].set(bcr,PM.get(TPM::qwr));
+					qwinl_MG[i].set(bcl,PM.get(TPM::qwl)*2);
+				}
 			}
 			for (int xdir=0; xdir<Xsize[i]-1; ++xdir) {
 				ElementRef bcu = bcup_MG[i]->add(quadsRefs_MG[i][(Ysize[i]-2)*(Xsize[i]-1)+xdir],
@@ -211,7 +217,14 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0, std::string
 				ElementRef bcb = bcbottom_MG[i]->add(quadsRefs_MG[i][xdir],
 						quadsRefs_MG[i][xdir+Xsize[i]-1]); //,
 						//										   quadsRefs[xdir+2*(Xsize[i]-1)]);
-				qwinb_MG[i].set(bcb,PM.get(TPM::qwb));
+				if ((xdir<Xsize[i]/4) || (3*xdir>Xsize[i]/4)) {
+					qwinb_MG[i].set(bcb,PM.get(TPM::qwb));
+					qwinu_MG[i].set(bcu,PM.get(TPM::qwu)*2);
+				}
+				else {
+					qwinb_MG[i].set(bcb,PM.get(TPM::qwb)*2);
+					qwinu_MG[i].set(bcu,PM.get(TPM::qwu));
+				}
 			}
 		}
 	}
