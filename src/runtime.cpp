@@ -612,3 +612,33 @@ extern "C" void dcross(int an, double* a, int bn, double* b, int cn, double* c) 
   return cross(an, a, bn, b, cn, c);
 }
 
+template <typename Float>
+int triangularSolve(int An,  int Am,  int* Arowptr, int* Acolidx,
+			     int Ann, int Amm, Float* Avals,
+				 int nb, Float *bvals, int nx, Float *xvals) {
+#ifdef EIGEN
+  auto A = csr2eigen<Float,Eigen::ColMajor>(An, Am, Arowptr, Acolidx,
+                                            Ann, Amm, Avals);
+  auto b = dense2eigen(nb, bvals);
+  auto x = Eigen::Matrix<Float,Eigen::Dynamic,1>(nx);
+  x = TriangularView<SparseMatrix<Float,ColMajor>,Lower>(A).solve(b);
+  for (int i=0; i<nx; ++i) {
+    xvals[i] = x(i);
+  }
+#else
+  SOLVER_ERROR;
+#endif
+  return 0;
+}
+extern "C" int striangularSolve(int An,  int Am,  int* Arowptr, int* Acolidx,
+                   int Ann, int Amm, float* Avals,
+				   int nb, float *bvals, int nx, float *xvals) {
+  return triangularSolve(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, nb, bvals, nx, xvals);
+}
+extern "C" int dtriangularSolve(int An,  int Am,  int* Arowptr, int* Acolidx,
+                   int Ann, int Amm, double* Avals,
+				   int nb, double *bvals, int nx, double *xvals) {
+  return triangularSolve(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, nb, bvals, nx, xvals);
+}
+
+

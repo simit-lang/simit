@@ -61,6 +61,7 @@ const Func& chol();
 const Func& cholfree();
 const Func& lltsolve();
 const Func& lltmatsolve();
+const Func& triangularSolve();
 
 // String manipulation
 const Func& strcmp();

@@ -1,0 +1,21 @@
+element Vertex
+  b : float;
+  x : float;
+end
+
+element Edge
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func asm(e : Edge, v : (Vertex*2)) -> (A : matrix[V,V](float))
+  A(v(0),v(0)) = 2.0;
+  A(v(1),v(1)) = 2.0;
+  A(v(1),v(0)) = 1.0;
+end
+
+export func main()
+  A = map asm to E reduce +;
+  V.x = triangularSolve(A,V.b);
+end

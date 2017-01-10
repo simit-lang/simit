@@ -281,6 +281,11 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                {opaqueType, nmMatrixType},
                {kmMatrixType},
                {N, M, K});
+  addIntrinsic(&intrinsics,
+               ir::intrinsics::triangularSolve().getName(),
+               {nmMatrixType, nVectorType},
+               {mVectorType},
+               {N, M});
 
   // Complex numbers
   addScalarIntrinsic(&intrinsics,
