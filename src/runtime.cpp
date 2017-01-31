@@ -59,6 +59,26 @@ float acos_f32(float x) {
   return (float)acos(d_x);
 }
 
+double max_f64(double a,double b) {
+  return max(a,b);
+}
+
+float max_f32(float a, float b) {
+  double d_a = a;
+  double d_b = b;
+  return (float)max(d_a,d_b);
+}
+
+double min_f64(double a,double b) {
+  return min(a,b);
+}
+
+float min_f32(float a, float b) {
+  double d_a = a;
+  double d_b = b;
+  return (float)min(d_a,d_b);
+}
+
 double det3_f64(double * a){
   return a[0] * (a[4]*a[8]-a[5]*a[7])
        - a[1] * (a[3]*a[8]-a[5]*a[6])
@@ -591,4 +611,5 @@ extern "C" void scross(int an, float* a, int bn, float* b, int cn, float* c) {
 extern "C" void dcross(int an, double* a, int bn, double* b, int cn, double* c) {
   return cross(an, a, bn, b, cn, c);
 }
+
 

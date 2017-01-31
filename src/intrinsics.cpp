@@ -120,6 +120,62 @@ const Func& sqrt() {
   return sqrtVar;
 }
 
+static Func cbrtVar;
+void cbrtInit() {
+  cbrtVar = Func("cbrt",
+                 {Var("x", Float)},
+                 {Var("r", Float)},
+                 Func::Intrinsic);
+}
+const Func& cbrt() {
+  if (!cbrtVar.defined()) {
+    cbrtInit();
+  }
+  return cbrtVar;
+}
+
+static Func absVar;
+void absInit() {
+  absVar = Func("abs",
+                 {Var("x", Float)},
+                 {Var("r", Float)},
+                 Func::Intrinsic);
+}
+const Func& abs() {
+  if (!absVar.defined()) {
+    absInit();
+  }
+  return absVar;
+}
+
+static Func maxVar;
+void maxInit() {
+  maxVar = Func("max",
+                {Var("a", Float), Var("b", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& max() {
+  if (!maxVar.defined()) {
+    maxInit();
+  }
+  return maxVar;
+}
+
+static Func minVar;
+void minInit() {
+  minVar = Func("min",
+                {Var("a", Float), Var("b", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& min() {
+  if (!minVar.defined()) {
+    minInit();
+  }
+  return minVar;
+}
+
 static Func logVar;
 void logInit() {
   logVar = Func("log",
@@ -635,6 +691,10 @@ const std::map<std::string,Func> &byNames() {
     acosInit();
     atan2Init();
     sqrtInit();
+    cbrtInit();
+    absInit();
+    maxInit();
+    minInit();
     logInit();
     expInit();
     powInit();
@@ -678,6 +738,10 @@ const std::map<std::string,Func> &byNames() {
                       {"acos",acosVar},
                       {"atan2",atan2Var},
                       {"sqrt",sqrtVar},
+                      {"cbrt",cbrtVar},
+                      {"abs",absVar},
+                      {"max",maxVar},
+                      {"min",minVar},
                       {"log",logVar},
                       {"exp",expVar},
                       {"pow",powVar},
