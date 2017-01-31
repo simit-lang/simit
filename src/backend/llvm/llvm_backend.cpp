@@ -980,6 +980,16 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
     call = emitCall(fname, args, llvmFloatType());
   }
+  else if (callee == ir::intrinsics::det2()) {
+    iassert(args.size() == 1);
+	std::string fname = callStmt.callee.getName() + floatTypeName;
+	call = emitCall(fname, args, llvmFloatType());
+  }
+  else if (callee == ir::intrinsics::det4()) {
+    iassert(args.size() == 1);
+	std::string fname = callStmt.callee.getName() + floatTypeName;
+	call = emitCall(fname, args, llvmFloatType());
+  }
   else if (callee == ir::intrinsics::inv()) {
     iassert(args.size() == 1);
 
@@ -990,6 +1000,26 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
     call = emitCall(fname, args);
   }
+  else if (callee == ir::intrinsics::inv2()) {
+	iassert(args.size() == 1);
+
+    Var result = callStmt.results[0];
+    llvm::Value *llvmResult = symtable.get(result);
+    args.push_back(llvmResult);
+
+    std::string fname = callStmt.callee.getName() + floatTypeName;
+    call = emitCall(fname, args);
+  }
+  else if (callee == ir::intrinsics::inv4()) {
+	iassert(args.size() == 1);
+
+    Var result = callStmt.results[0];
+    llvm::Value *llvmResult = symtable.get(result);
+    args.push_back(llvmResult);
+
+    std::string fname = callStmt.callee.getName() + floatTypeName;
+    call = emitCall(fname, args);
+  } 
   else if (callStmt.callee == ir::intrinsics::solve()) {
     std::string fname = "cMatSolve" + floatTypeName;
     call = emitCall(fname, args);
