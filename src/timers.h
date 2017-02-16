@@ -55,12 +55,20 @@ public:
     return timerCount[index];
   }
 
+  inline void deleteIndex(int index) {
+	timedLines.erase(timedLines.begin()+index);
+	timerSums.erase(timerSums.begin()+index);
+	timerCount.erase(timerCount.begin()+index);
+  }
+
   inline double getTotalTime() {
-    double sum = 0;
-    for(auto const &time : timerSums) {
-      sum += time;
+    if (totalTime==-1) {
+    	totalTime = 0;
+    	for(auto const &time : timerSums) {
+    		totalTime += time;
+    	}
     }
-    return sum;
+    return totalTime;
   }
 
   inline double getTimingPercentage(int index) {
@@ -72,8 +80,9 @@ public:
     std::vector<std::string> timedLines;
     std::vector<double> timerSums;
     std::vector<unsigned long long int> timerCount;
+    double totalTime;
 
-    TimerStorage() {};
+    TimerStorage() {totalTime=-1;};
     TimerStorage(TimerStorage const&)    = delete;
     void operator=(TimerStorage const&)  = delete;
 };

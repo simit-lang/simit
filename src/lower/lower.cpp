@@ -10,6 +10,7 @@
 #include "lower_prints.h"
 #include "lower_string_ops.h"
 #include "lower_stencil_assemblies.h"
+#include "lower_unroll.h"
 
 #include "inline.h"
 #include "storage.h"
@@ -102,7 +103,7 @@ Func lower(Func func, std::ostream* os, bool time) {
 
   // Inline function calls
   func = rewriteCallGraph(func, inlineCalls);
-  printCallGraph("Inline Fuction Calls", func, os);
+  printCallGraph("Inline Function Calls", func, os);
 
   // Flatten index expressions and insert temporaries
   func = rewriteCallGraph(func, (Func(*)(Func))flattenIndexExpressions);
@@ -167,6 +168,14 @@ Func lower(Func func, std::ostream* os, bool time) {
     func = rewriteCallGraph(func, insertTimers);
     printCallGraph("Insert Timers", func, os);
   }
+
+  // Unroll Loops
+  func = rewriteCallGraph(func, lowerUnroll);
+  printCallGraph("Loops Unrolling", func, os);
+  func = rewriteCallGraph(func, lowerUnroll);
+  printCallGraph("Loops Unrolling", func, os);
+  func = rewriteCallGraph(func, lowerUnroll);
+  printCallGraph("Loops Unrolling", func, os);
 
   // Lower to GPU Kernels
 #if GPU

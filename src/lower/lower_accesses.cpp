@@ -18,7 +18,12 @@ namespace ir {
 
 // lowerTensorAccesses
 static Expr createLengthComputation(const IndexSet &indexSet) {
-  return Length::make(indexSet);
+  if (indexSet.getKind()==IndexSet::Range) {
+	  int len = indexSet.getSize();
+  	  return Literal::make(len);
+  }
+  else
+	  return Length::make(indexSet);
 }
 
 static Expr createLengthComputation(const IndexDomain &dimensions) {
@@ -232,9 +237,9 @@ private:
     if (blockType.toTensor()->getDimensions().size() > 0) {
       blockSize = createLengthComputation(
           blockType.toTensor()->getDimensions());
+      index = Mul::make(index, blockSize);
     }
-    index = Mul::make(index, blockSize);
-        
+
     iassert(index.defined());
     return index;
   }

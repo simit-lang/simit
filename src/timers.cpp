@@ -43,6 +43,7 @@ void printTimes() {
           printf("\t %s\n",line.substr(x, LINE_LIMIT).c_str());
         }
       }
+      TimerStorage::getInstance().deleteIndex(index);
     } else {
       if (line.length() < LINE_LIMIT) {
         line.append(LINE_LIMIT - line.length(), ' ');
@@ -56,8 +57,8 @@ void printTimes() {
     }
   }
 
-  printf("Total Time: %f (seconds)\n",
-         simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0);
+  printf("Total Time: %f (seconds), %f\n",
+         simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0,percentageSum);
 }
 
 // Singleton
@@ -94,7 +95,7 @@ class InsertTimers : public IRRewriter {
     }
     
     void visit(const CallStmt *op) {
-      if (op->callee.getKind() == Func::Intrinsic) { 
+      if (op->callee.getKind() != Func::Internal) {
         Var timeStartVar = initTimer(util::toString(*op),stmt);
         stmt = Block::make(stmt,op);
         storeTimer(stmt, timeStartVar);
