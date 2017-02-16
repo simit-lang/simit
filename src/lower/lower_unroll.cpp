@@ -13,7 +13,7 @@ public :
   LowerUnroll() {};
 
 private :
-  const int unrollMax=4;
+  const size_t unrollMax = 4;
 
   void visit(const For *op) {
     IRRewriter::visit(op);
