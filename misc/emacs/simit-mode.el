@@ -25,12 +25,12 @@ For detail, see `comment-dwim'."
         . font-lock-function-name-face)
         ( ,(regexp-opt
         '("const" "extern" "proc" "func" "map" "to" "with" "reduce" "while" "if"
-          "elif" "else" "end" "return" "struct")
+          "elif" "else" "end" "return" "struct" "var" "element" "export" "inout" "and" "or")
         'words) . font-lock-keyword-face)
         ( ,(regexp-opt '("") 'words) . font-lock-constant-face)
         ( ,(regexp-opt '() 'words) . font-lock-builtin-face)
         ( ,(regexp-opt
-        '("int" "float" "Tensor")
+        '("int" "float" "bool" "Tensor" "vector" "matrix" "set")
         'words) . font-lock-type-face) ) )
 
 ;; syntax table
