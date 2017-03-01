@@ -372,11 +372,10 @@ private:
           storage->add(var, tensorStorage);
         }
         else if (isScalar(type)) {
-            TensorStorage tensorStorage;
-            const TensorType* tensorType = type.toTensor();
-            tensorStorage = TensorStorage(TensorStorage::Dense);
-            iassert(tensorStorage.getKind() != TensorStorage::Undefined);
-            storage->add(var, tensorStorage);
+          TensorStorage tensorStorage;
+          tensorStorage = TensorStorage(TensorStorage::Dense);
+          iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+          storage->add(var, tensorStorage);
         }
       }
     }

@@ -601,7 +601,5 @@ extern "C" void scbrt(float x, float* r) {
   return cbrt(x,r);
 }
 extern "C" void dcbrt(double x, double* r) {
-	return cbrt(x,r);
+  return cbrt(x,r);
 }
-
-
