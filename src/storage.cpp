@@ -371,6 +371,12 @@ private:
           iassert(tensorStorage.getKind() != TensorStorage::Undefined);
           storage->add(var, tensorStorage);
         }
+        else if (isScalar(type)) {
+          TensorStorage tensorStorage;
+          tensorStorage = TensorStorage(TensorStorage::Dense);
+          iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+          storage->add(var, tensorStorage);
+        }
       }
     }
   }

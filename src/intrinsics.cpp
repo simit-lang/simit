@@ -120,6 +120,20 @@ const Func& sqrt() {
   return sqrtVar;
 }
 
+static Func cbrtVar;
+void cbrtInit() {
+  cbrtVar = Func("cbrt",
+                 {Var("x", Float)},
+                 {Var("r", Float)},
+                 Func::External);
+}
+const Func& cbrt() {
+  if (!cbrtVar.defined()) {
+    cbrtInit();
+  }
+  return cbrtVar;
+}
+
 static Func logVar;
 void logInit() {
   logVar = Func("log",
@@ -635,6 +649,7 @@ const std::map<std::string,Func> &byNames() {
     acosInit();
     atan2Init();
     sqrtInit();
+    cbrtInit();
     logInit();
     expInit();
     powInit();
@@ -678,6 +693,7 @@ const std::map<std::string,Func> &byNames() {
                       {"acos",acosVar},
                       {"atan2",atan2Var},
                       {"sqrt",sqrtVar},
+                      {"cbrt",cbrtVar},
                       {"log",logVar},
                       {"exp",expVar},
                       {"pow",powVar},
