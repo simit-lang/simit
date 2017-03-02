@@ -312,7 +312,6 @@ func CalcFBHourglassForceForElems(gamma:matrix[4,8](float),determ:vector[elems](
     %   compute the hourglass modes
     var hgf:vector[8](vector[3](float));
     var coefficient:float;
-    var volume13:vector[3](float);
     var hourgam:matrix[4,8](float);
     var d1:vector[8](vector[3](float));
     var volinv= 1.0 / determ(e);
@@ -331,9 +330,9 @@ func CalcFBHourglassForceForElems(gamma:matrix[4,8](float),determ:vector[elems](
 %    print "\n";
     %   compute forces
     var hack:vector[3](float);
+    var volume13:vector[3](float);
     hack(0) = determ(e);
-    volume13=cbrt(hack);
-    %%  TODOm change cbrt and add it to intrinsics
+    volume13=cbrt3(hack);
     coefficient = - hgcoef * 0.01 * e.ss * e.elemMass / volume13(0);
  %   print "Coef ", coefficient,"\n";
     var nodeVel:vector[3](vector[8](float));

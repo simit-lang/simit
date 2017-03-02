@@ -123,10 +123,8 @@ const Func& sqrt() {
 static Func cbrtVar;
 void cbrtInit() {
   cbrtVar = Func("cbrt",
-                 {Var("x", TensorType::make(ScalarType::Float,
-                         {IndexDomain(3)}))},
-                 {Var("r", TensorType::make(ScalarType::Float,
-                         {IndexDomain(3)}))},
+                 {Var("x", Float)},
+                 {Var("r", Float)},
                  Func::External);
 }
 const Func& cbrt() {
@@ -134,6 +132,22 @@ const Func& cbrt() {
     cbrtInit();
   }
   return cbrtVar;
+}
+
+static Func cbrt3Var;
+void cbrt3Init() {
+  cbrt3Var = Func("cbrt3",
+                 {Var("x", TensorType::make(ScalarType::Float,
+                         {IndexDomain(3)}))},
+                 {Var("r", TensorType::make(ScalarType::Float,
+                         {IndexDomain(3)}))},
+                 Func::External);
+}
+const Func& cbrt3() {
+  if (!cbrt3Var.defined()) {
+    cbrt3Init();
+  }
+  return cbrt3Var;
 }
 
 static Func logVar;
@@ -651,7 +665,8 @@ const std::map<std::string,Func> &byNames() {
     acosInit();
     atan2Init();
     sqrtInit();
-    cbrtInit();
+    cbrtInit();    
+    cbrt3Init();
     logInit();
     expInit();
     powInit();
@@ -696,6 +711,7 @@ const std::map<std::string,Func> &byNames() {
                       {"atan2",atan2Var},
                       {"sqrt",sqrtVar},
                       {"cbrt",cbrtVar},
+                      {"cbrt3",cbrt3Var},
                       {"log",logVar},
                       {"exp",expVar},
                       {"pow",powVar},
