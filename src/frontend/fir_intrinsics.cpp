@@ -192,7 +192,6 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                      ir::intrinsics::pow().getName(),
                      {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
-
   addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::clock().getName(),
                      {}, {ScalarType::Type::FLOAT});

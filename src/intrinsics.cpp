@@ -706,11 +706,11 @@ const std::map<std::string,Func> &byNames() {
     normInit();
     dotInit();
     detInit();
-	det2Init();
-	det4Init();
+    det2Init();
+    det4Init();
     invInit();
-	inv2Init();
-	inv4Init();
+    inv2Init();
+    inv4Init();
     crossInit();
     solveInit();
     luInit();
@@ -753,13 +753,13 @@ const std::map<std::string,Func> &byNames() {
                       {"norm",normVar},
                       {"dot",dotVar},
                       {"det",detVar},
-					  {"det2",det2Var},
-					  {"det4",det4Var},
+                      {"det2",det2Var},
+                      {"det4",det4Var},
                       {"inv",invVar},
-					  {"inv2",inv2Var},
-					  {"inv4",inv4Var},
+                      {"inv2",inv2Var},
+                      {"inv4",inv4Var},
                       {"cross",crossVar},
-					  {"__solve",solveVar},
+                      {"__solve",solveVar},
                       {"lu", luVar},
                       {"lufree", lufreeVar},
                       {"lusolve", lusolveVar},
