@@ -207,10 +207,6 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                {threeByThreeTensorType},
                {makeTensorType(ScalarType::Type::FLOAT)});
   addIntrinsic(&intrinsics,
-               ir::intrinsics::cbrt3().getName(),
-               {threeVectorType},
-               {threeVectorType});
-  addIntrinsic(&intrinsics,
                ir::intrinsics::det2().getName(),
                {twoByTwoTensorType},
                {makeTensorType(ScalarType::Type::FLOAT)});

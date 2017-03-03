@@ -19,7 +19,7 @@ syn keyword simitRepeat       for in while do
 syn keyword simitStorageClass const extern var
 syn keyword simitFunc         apply map to reduce print println
 
-syn keyword simitBuiltins      mod sin cos tan asin acos atan2 sqrt cbrt cbrt3 log exp pow  
+syn keyword simitBuiltins      mod sin cos tan asin acos atan2 sqrt cbrt log exp pow  
 syn keyword simitBuiltins      clock storeTime
 syn keyword simitBuiltins      norm dot det det2 det4 inv inv2 inv4 cross lu lufree lusolve lumatsolve chol cholfree lltsolve lltmatsolve
 syn keyword simitBuiltins      createComplex createNorm complexGetReal complexGetImag complexConj

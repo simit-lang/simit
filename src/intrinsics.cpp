@@ -134,22 +134,6 @@ const Func& cbrt() {
   return cbrtVar;
 }
 
-static Func cbrt3Var;
-void cbrt3Init() {
-  cbrt3Var = Func("cbrt3",
-                 {Var("x", TensorType::make(ScalarType::Float,
-                         {IndexDomain(3)}))},
-                 {Var("r", TensorType::make(ScalarType::Float,
-                         {IndexDomain(3)}))},
-                 Func::External);
-}
-const Func& cbrt3() {
-  if (!cbrt3Var.defined()) {
-    cbrt3Init();
-  }
-  return cbrt3Var;
-}
-
 static Func absVar;
 void absInit() {
   absVar = Func("abs",
@@ -708,7 +692,6 @@ const std::map<std::string,Func> &byNames() {
     atan2Init();
     sqrtInit();
     cbrtInit();    
-    cbrt3Init();
     absInit();
     maxInit();
     minInit();
@@ -756,7 +739,6 @@ const std::map<std::string,Func> &byNames() {
                       {"atan2",atan2Var},
                       {"sqrt",sqrtVar},
                       {"cbrt",cbrtVar},
-                      {"cbrt3",cbrt3Var},
                       {"abs",absVar},
                       {"max",maxVar},
                       {"min",minVar},

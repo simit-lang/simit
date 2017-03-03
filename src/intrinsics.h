@@ -22,7 +22,6 @@ const Func& acos();
 const Func& atan2();
 const Func& sqrt();
 const Func& cbrt();
-const Func& cbrt3();
 const Func& abs();
 const Func& max();
 const Func& min();
