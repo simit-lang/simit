@@ -421,6 +421,17 @@ protected:
   virtual FIRNode::Ptr cloneNode();
 };
 
+struct IVarType : public Type {
+  typedef std::shared_ptr<IVarType> Ptr;
+  virtual void accept(FIRVisitor * visitor) {
+    visitor->visit(self<IVarType>());
+  }
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode();
+};
+
 struct IdentDecl : public FIRNode {
   Identifier::Ptr name;
   Type::Ptr       type;
@@ -584,6 +595,20 @@ struct ConstDecl : public VarDecl {
 
 protected:
   virtual FIRNode::Ptr cloneNode(); 
+};
+
+struct IVarDecl : public Stmt {
+  Identifier::Ptr name;
+
+  typedef std::shared_ptr<IVarDecl> Ptr;
+
+  virtual void accept(FIRVisitor *visitor) {
+    visitor->visit(self<IVarDecl>());
+  }
+protected:
+  virtual void copy(FIRNode::Ptr);
+
+  virtual FIRNode::Ptr cloneNode();
 };
 
 struct WhileStmt : public Stmt {

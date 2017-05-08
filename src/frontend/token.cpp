@@ -58,6 +58,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'var'";
     case Token::Type::CONST:
       return "'const'";
+    case Token::Type::IVAR:
+      return "'ivar'";
     case Token::Type::EXTERN:
       return "'extern'";
     case Token::Type::EXPORT:

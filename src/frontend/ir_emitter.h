@@ -45,6 +45,7 @@ private:
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
+  virtual void visit(IVarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(DoWhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
@@ -166,6 +167,11 @@ private:
 
   internal::ProgramContext *ctx;
   SetExprMap                setExprs;
+
+private:
+  bool insideIndexExprAssignStmt = false;
+  bool insideAssignStmtRhs = false;
+  std::unordered_map<std::string, ir::IndexVar> indexVarMap;
 };
 
 }

@@ -41,7 +41,7 @@ public:
   /// Apply the operator element-wise to the l and r.  Generally this requires
   /// the types of each operand to be identical, but as a special case iff there
   /// are two operands an one of them is a scalar, then the operator is applied
-  /// to the combinatio of that scalar and each element in the other operand.
+  /// to the combination of that scalar and each element in the other operand.
   Expr binaryElwiseExpr(Expr l, BinaryOperator op, Expr r);
 
   Expr innerProduct(Expr l, Expr r);
@@ -59,6 +59,9 @@ public:
   /// Create a temporary variable
   Var temporary(Type type, std::string name=INTERNAL_PREFIX("tmp"));
 
+  Expr unaryTensorElwiseExpr(UnaryOperator op, Expr e);
+
+  Expr binaryTensorElwiseExpr(Expr l, BinaryOperator op, Expr r);
 
 private:
   util::NameGenerator names;

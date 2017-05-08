@@ -9,6 +9,23 @@
 namespace simit {
 namespace fir {
 
+static const int INDEX_VAR_TYPE = -1;
+
+static std::pair<bool, std::string> isIVarExpr(ReadParam::Ptr param, internal::ProgramContext *ctx) {
+  if (isa<ExprParam>(param)) {
+    Expr::Ptr e = to<ExprParam>(param)->expr;
+    if (isa<VarExpr>(e)) {
+      const std::string& ident = to<VarExpr>(e)->ident;
+      const internal::Symbol& sym = ctx->getSymbol(ident);
+      ir::Var var = sym.getVar();
+      if ((int) var.getType().kind() == INDEX_VAR_TYPE) {
+        return {true, ident};
+      }
+    }
+  }
+  return {false, ""};
+}
+
 void IREmitter::visit(StmtBlock::Ptr stmtBlock) {
   for (auto stmt : stmtBlock->stmts) {
     stmt->accept(this);
@@ -231,6 +248,12 @@ void IREmitter::visit(ConstDecl::Ptr decl) {
   addVarOrConst(decl, true);
 }
 
+void IREmitter::visit(IVarDecl::Ptr decl) {
+  const auto var = ir::Var(decl->name->ident, ir::Type(ir::Type::Kind(INDEX_VAR_TYPE)));
+  const auto access = internal::Symbol::None;
+  addSymbol(var.getName(), var, access);
+}
+
 void IREmitter::visit(WhileStmt::Ptr stmt) {
   addWhileOrDoWhile(stmt);
 }
@@ -357,13 +380,44 @@ void IREmitter::visit(ExprStmt::Ptr stmt) {
 }
 
 void IREmitter::visit(AssignStmt::Ptr stmt) {
+  struct HasIndexExpr : public FIRVisitor {
+    bool value;
+    internal::ProgramContext *ctx;
+    HasIndexExpr(internal::ProgramContext *ctx) : ctx(ctx), value(false) {}
+
+    virtual void visit(TensorReadExpr::Ptr tensor) {
+      for (auto param : tensor->indices) {
+        if (isIVarExpr(param, ctx).first) {
+          value = true;
+          break;
+        }
+      }
+    }
+  } hasIndexExpr(ctx);
+
+  stmt->accept(&hasIndexExpr);
+
+  indexVarMap.clear();
+  insideAssignStmtRhs = false;
+  insideIndexExprAssignStmt = hasIndexExpr.value;
+
   std::vector<ir::Expr> targets;
   for (auto lhs : stmt->lhs) {
     const ir::Expr target = emitExpr(lhs);
     targets.push_back(target);
   }
 
-  const ir::Expr expr = emitExpr(stmt->expr);
+  insideAssignStmtRhs = true;
+
+  ir::Expr expr = emitExpr(stmt->expr);
+
+  // If all indices are reduced, force an empty index tensor to rhs
+  if (hasIndexExpr.value && !ir::isa<ir::IndexedTensor>(targets[0])) {
+    expr = ir::IndexExpr::make({}, expr);
+  }
+
+  insideIndexExprAssignStmt = false;
+
   addAssign(targets, expr);
 }
 
@@ -489,13 +543,15 @@ void IREmitter::visit(NotExpr::Ptr expr) {
 void IREmitter::visit(AddExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Add, rhs);
+  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Add, rhs) :
+                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Add, rhs);
 }
 
 void IREmitter::visit(SubExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Sub, rhs);
+  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Sub, rhs) :
+                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Sub, rhs);
 }
 
 void IREmitter::visit(MulExpr::Ptr expr) {
@@ -538,7 +594,8 @@ void IREmitter::visit(MulExpr::Ptr expr) {
 void IREmitter::visit(DivExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
+  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Div, rhs) :
+                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
 }
 
 void IREmitter::visit(LeftDivExpr::Ptr expr) {
@@ -571,20 +628,23 @@ void IREmitter::visit(LeftDivExpr::Ptr expr) {
 void IREmitter::visit(ElwiseMulExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Mul, rhs);
+  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Mul, rhs) :
+                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Mul, rhs);
 }
 
 void IREmitter::visit(ElwiseDivExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
+  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Div, rhs) :
+                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
 }
 
 void IREmitter::visit(NegExpr::Ptr expr) {
   const ir::Expr operand = emitExpr(expr->operand);
   iassert(!ir::isa<ir::Literal>(operand));
   retExpr = !expr->negate ? operand : 
-            ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand);
+            (insideIndexExprAssignStmt ? ctx->getBuilder()->unaryTensorElwiseExpr(ir::IRBuilder::Neg, operand):
+                                         ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand));
 }
 
 void IREmitter::visit(ExpExpr::Ptr expr) {
@@ -649,6 +709,48 @@ void IREmitter::visit(CallExpr::Ptr expr) {
 void IREmitter::visit(TensorReadExpr::Ptr expr) {
   const ir::Expr tensor = emitExpr(expr->tensor);
   const auto tensorType = tensor.type().toTensor();
+
+  bool containsIVar = false;
+  for (auto param : expr->indices) {
+    if (isIVarExpr(param, ctx).first) {
+      containsIVar = true;
+      break;
+    }
+  }
+
+  if (containsIVar) {
+    std::vector<ir::IndexVar> indices;
+    std::vector<ir::IndexVar> freeVars;
+    std::vector<ir::IndexDomain> dimensions = tensor.type().toTensor()->getDimensions();
+    unsigned i = 0;
+    for (auto param : expr->indices) {
+      auto p = isIVarExpr(param, ctx);
+      if (p.first) {
+        const std::string& ident = p.second;
+        auto it = indexVarMap.find(ident);
+        if (it != indexVarMap.end()) {
+          indices.push_back(it->second);
+        } else {
+          if (insideAssignStmtRhs) {
+            ir::IndexVar iv(ident, dimensions[i], ir::ReductionOperator::Sum);
+            indexVarMap[ident] = iv;
+            indices.push_back(iv);
+          } else {
+            ir::IndexVar iv(ident, dimensions[i]);
+            indexVarMap[ident] = iv;
+            indices.push_back(iv);
+          }
+        }
+        freeVars.push_back(indices.back());
+      } else {
+        indices.push_back(ir::IndexVar(INTERNAL_PREFIX("tmpfixed") + std::to_string(i), dimensions[i], new ir::Expr(emitExpr(param))));
+      }
+      ++i;
+    }
+
+    retExpr = ir::IndexedTensor::make(tensor, indices);
+    return;
+  }
 
   std::vector<ir::Expr> indices;
   bool containsSlices = false;
@@ -1188,6 +1290,18 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       const ir::Stmt tensorWrite = ir::TensorWrite::make(
           tensorRead->tensor, tensorRead->indices, expr);
       ctx->addStatement(tensorWrite);
+    } else if (ir::isa<ir::IndexedTensor>(lhs[0])) { // move lhs indexedTensor to rhs indexExpr
+      const ir::IndexedTensor* indexTensor = ir::to<ir::IndexedTensor>(lhs[0]);
+
+      ir::Var var = ir::to<ir::VarExpr>(indexTensor->tensor)->var;
+      ir::Expr result = ir::IndexExpr::make(indexTensor->indexVars, expr);
+
+      const std::string& varName = var.getName();
+      if (!ctx->hasSymbol(varName)) {
+        var = ir::Var(varName, result.type());
+        addSymbol(varName, var, internal::Symbol::Read);
+      }
+      ctx->addStatement(ir::AssignStmt::make(var, result));
     } else {
       ir::Var var = ir::to<ir::VarExpr>(lhs[0])->var;
       const std::string varName = var.getName();

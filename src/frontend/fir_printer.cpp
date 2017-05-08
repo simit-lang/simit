@@ -165,6 +165,10 @@ void FIRPrinter::visit(OpaqueType::Ptr ident) {
   oss << "opaque";
 }
 
+void FIRPrinter::visit(IVarType::Ptr type) {
+  oss << "ivar";
+}
+
 void FIRPrinter::visit(Identifier::Ptr ident) {
   oss << ident->ident;
 }
@@ -294,6 +298,13 @@ void FIRPrinter::visit(VarDecl::Ptr decl) {
 
 void FIRPrinter::visit(ConstDecl::Ptr decl) {
   printVarOrConstDecl(decl, true);
+}
+
+void FIRPrinter::visit(IVarDecl::Ptr decl) {
+  printIndent();
+  oss << ("ivar ");
+  decl->name->accept(this);
+  oss << ";";
 }
 
 void FIRPrinter::visit(WhileStmt::Ptr stmt) {

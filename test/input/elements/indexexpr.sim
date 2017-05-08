@@ -1,0 +1,149 @@
+%%% indexexpr-identity
+%! f([1.0, 2.0; 3.0, 4.0]) == [1.0, 2.0; 3.0, 4.0];
+func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  b(i,j) = a(i,j);
+end
+
+%%% indexexpr-transpose
+%! f([1.0, 2.0; 3.0, 4.0]) == [1.0, 3.0; 2.0, 4.0];
+func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  b(j,i) = a(i,j);
+end
+
+%%% indexexpr-diag
+%! f([1.0, 2.0; 3.0, 4.0]) == [1.0, 0.0; 0.0, 4.0];
+func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+  ivar i;
+  b(i,i) = a(i,i);
+end
+
+%%% %%% indexexpr-free
+%%% %! f([1.0, 2.0; 3.0, 4.0]) == [1.0, 1.0; 4.0, 4.0];
+%%% func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+%%%   ivar i;
+%%%   ivar j;
+%%%   b(i,j) = a(i,i);
+%%% end
+
+%%% indexexpr-reduce
+%! f([1.0, 2.0; 3.0, 4.0]) == [3.0, 7.0];
+func f(a : tensor[2,2](float)) -> (b : tensor[2](float))
+  ivar i;
+  ivar j;
+  b(i) = a(i, j);
+end
+
+%%% %%% indexexpr-reduce-to-scalar
+%%% %! f([1.0, 2.0; 3.0, 4.0]) == [10.0];
+%%% func f(a : tensor[2,2](float)) -> (b : float)
+%%%   ivar i;
+%%%   ivar j;
+%%%   b = a(i, j);
+%%% end
+
+
+%%% %%% indexexpr-diag-reduce
+%%% %! f([1.0, 2.0; 3.0, 4.0]) == [3.0, 0.0; 0.0, 7.0];
+%%% func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+%%%   ivar i;
+%%%   b(i,i) = a(i,j);
+%%% end
+
+%%% %%% indexexpr-fixed-expr-1
+%%% %! f([1.0, 2.0; 3.0, 4.0]) == [3.0, 0.0; 7.0, 0.0];
+%%% func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+%%%   ivar i;
+%%%   ivar j;
+%%%   b(i, 0) = a(i, j);
+%%% end
+
+%%% indexexpr-fixed-expr-2
+%! f([1.0, 2.0; 3.0, 4.0]) == [1.0, 0.0; 0.0, 3.0];
+func f(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  b(i, i) = a(i, 0);
+end
+
+%%% indexexpr-basic-arithmetic
+%! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0]) == [6.0, 8.0; 10.0, 12.0];
+func f(a : tensor[2,2](float), b : tensor[2,2](float)) -> (c : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  c(i, j) = a(i, j) + b(i, j);
+end
+
+%%% indexexpr-basic-arithmetic-mul
+%! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0]) == [5.0, 12.0; 21.0, 32.0];
+func f(a : tensor[2,2](float), b : tensor[2,2](float)) -> (c : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  c(i, j) = a(i, j) .* b(i, j);
+end
+
+%%% indexexpr-gemv
+%! f([1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0], [10.0, 11.0, 12.0]) == [68.0, 167.0, 266.0];
+func f(a : tensor[3,3](float), b : tensor[3](float)') -> (c : tensor[3](float)')
+  ivar i;
+  ivar j;
+  c(i) = a(i, j) .* b(j);
+end
+
+%%% indexexpr-gemm
+%! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0]) == [19.0, 22.0; 43.0, 50.0];
+func f(a : tensor[2,2](float), b : tensor[2,2](float)) -> (c : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  ivar k;
+  c(i, j) = a(i, k) .* b(k, j);
+end
+
+%%% indexexpr-fma1
+%! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0], [9.0, 10.0; 11.0, 12.0]) == [54.0, 80.0; 110.0, 144.0];
+func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -> (d : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  d(i, j) = (a(i, j) + b(i, j)) .* c(i, j);
+end
+
+%%% indexexpr-fma2
+%! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0], [9.0, 10.0; 11.0, 12.0]) == [142.0, 156.0; 222.0, 244.0];
+func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -> (d : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  ivar k;
+  d(i, j) = (a(i, k) + b(i, k)) .* c(k, j);
+  % same as d = (a + b) * c
+end
+
+%%% %%% indexexpr-fma3
+%%% %! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0], [9.0, 10.0; 11.0, 12.0]) == [134.0, 191.0; 185.0, 254.0];
+%%% func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -> (d : tensor[2,2](float))
+%%%   ivar i;
+%%%   ivar j;
+%%%   ivar k;  
+%%%   d(k, i) = (a(i, k) + b(j, i)) .* c(k, j);
+%%% end
+
+%%% %%% indexexpr-fma4
+%%% %! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0], [9.0, 10.0; 11.0, 12.0]) == [33.0, 39.0; 39.0, 45.0];
+%%% func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -> (d : tensor[2,2](float))
+%%%   ivar i;
+%%%   ivar j;
+%%%   ivar k;  
+%%%   d(j, i) = (a(i, k) + b(j, i)) .* c(k, j);
+%%% end
+
+%%% indexexpr-indexVar-scope
+%! f([1.0, 2.0; 3.0, 4.0], [5.0, 6.0; 7.0, 8.0], [9.0, 10.0; 11.0, 12.0]) == [15.0, 18.0; 21.0, 24.0];
+func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -> (d : tensor[2,2](float))
+  ivar i;
+  ivar j;
+  d(i, j) = a(i, j) + b(i, j);
+  d(i, j) = d(i, j) + c(i, j);  
+end
+
