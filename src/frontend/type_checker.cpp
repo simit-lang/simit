@@ -1251,7 +1251,8 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     }
     return false;
   };
-  const bool hasIndexExpr = std::any_of(expr->indices.begin(), expr->indices.end(), checkIndexExpr);
+  const bool hasIndexExpr =
+      std::any_of(expr->indices.begin(), expr->indices.end(), checkIndexExpr);
 
   this->hasIndexExpr = this->hasIndexExpr || hasIndexExpr;
 
@@ -1261,7 +1262,8 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     return;
   }
 
-  if (hasIndexExpr && !std::all_of(expr->indices.begin(), expr->indices.end(), checkSlice)) {
+  if (hasIndexExpr &&
+      !std::all_of(expr->indices.begin(), expr->indices.end(), checkSlice)) {
     reportError("Cannot mix index expression and slice: ", expr);
     retType = ExprType(lhsType.access);
     return;
@@ -1311,8 +1313,9 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     const IndexSet::Ptr indexSet = dimensions[i][0];
 
     // Check that index is of right type.
-    if (isa<RangeIndexSet>(indexSet) || (isa<GenericIndexSet>(indexSet) &&
-        to<GenericIndexSet>(indexSet)->type == GenericIndexSet::Type::RANGE)) {
+    if (isa<RangeIndexSet>(indexSet) ||
+        (isa<GenericIndexSet>(indexSet) &&
+         to<GenericIndexSet>(indexSet)->type == GenericIndexSet::Type::RANGE)) {
       if (!indexType.isScalarInt()) {
         std::stringstream errMsg;
         errMsg << "expected an integral index but got an index of type "

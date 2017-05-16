@@ -82,7 +82,7 @@ end
 func f(a : tensor[2,2](float), b : tensor[2,2](float)) -> (c : tensor[2,2](float))
   ivar i;
   ivar j;
-  c(i, j) = a(i, j) .* b(i, j);
+  c(i, j) = a(i, j) * b(i, j);
 end
 
 %%% indexexpr-gemv
@@ -90,7 +90,7 @@ end
 func f(a : tensor[3,3](float), b : tensor[3](float)') -> (c : tensor[3](float)')
   ivar i;
   ivar j;
-  c(i) = a(i, j) .* b(j);
+  c(i) = a(i, j) * b(j);
 end
 
 %%% indexexpr-gemm
@@ -99,7 +99,7 @@ func f(a : tensor[2,2](float), b : tensor[2,2](float)) -> (c : tensor[2,2](float
   ivar i;
   ivar j;
   ivar k;
-  c(i, j) = a(i, k) .* b(k, j);
+  c(i, j) = a(i, k) * b(k, j);
 end
 
 %%% indexexpr-fma1
@@ -107,7 +107,7 @@ end
 func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -> (d : tensor[2,2](float))
   ivar i;
   ivar j;
-  d(i, j) = (a(i, j) + b(i, j)) .* c(i, j);
+  d(i, j) = (a(i, j) + b(i, j)) * c(i, j);
 end
 
 %%% indexexpr-fma2
@@ -116,7 +116,7 @@ func f(a : tensor[2,2](float), b : tensor[2,2](float), c : tensor[2,2](float)) -
   ivar i;
   ivar j;
   ivar k;
-  d(i, j) = (a(i, k) + b(i, k)) .* c(k, j);
+  d(i, j) = (a(i, k) + b(i, k)) * c(k, j);
   % same as d = (a + b) * c
 end
 
@@ -126,7 +126,7 @@ end
 %%%   ivar i;
 %%%   ivar j;
 %%%   ivar k;  
-%%%   d(k, i) = (a(i, k) + b(j, i)) .* c(k, j);
+%%%   d(k, i) = (a(i, k) + b(j, i)) * c(k, j);
 %%% end
 
 %%% %%% indexexpr-fma4
@@ -135,7 +135,7 @@ end
 %%%   ivar i;
 %%%   ivar j;
 %%%   ivar k;  
-%%%   d(j, i) = (a(i, k) + b(j, i)) .* c(k, j);
+%%%   d(j, i) = (a(i, k) + b(j, i)) * c(k, j);
 %%% end
 
 %%% indexexpr-indexVar-scope

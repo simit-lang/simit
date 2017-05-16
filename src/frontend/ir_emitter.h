@@ -169,9 +169,19 @@ private:
   SetExprMap                setExprs;
 
 private:
+  struct VarHash {
+    size_t operator()(const ir::Var& var) const {
+      return (size_t) var.ptr;
+    }
+  };
+
   bool insideIndexExprAssignStmt = false;
   bool insideAssignStmtRhs = false;
+
+  std::unordered_set<ir::Var, VarHash> indexVars;
   std::unordered_map<std::string, ir::IndexVar> indexVarMap;
+  std::pair<bool, std::string> isIVarExpr(ReadParam::Ptr param,
+                                          internal::ProgramContext *ctx);
 };
 
 }

@@ -9,23 +9,6 @@
 namespace simit {
 namespace fir {
 
-static const int INDEX_VAR_TYPE = -1;
-
-static std::pair<bool, std::string> isIVarExpr(ReadParam::Ptr param, internal::ProgramContext *ctx) {
-  if (isa<ExprParam>(param)) {
-    Expr::Ptr e = to<ExprParam>(param)->expr;
-    if (isa<VarExpr>(e)) {
-      const std::string& ident = to<VarExpr>(e)->ident;
-      const internal::Symbol& sym = ctx->getSymbol(ident);
-      ir::Var var = sym.getVar();
-      if ((int) var.getType().kind() == INDEX_VAR_TYPE) {
-        return {true, ident};
-      }
-    }
-  }
-  return {false, ""};
-}
-
 void IREmitter::visit(StmtBlock::Ptr stmtBlock) {
   for (auto stmt : stmtBlock->stmts) {
     stmt->accept(this);
@@ -249,8 +232,9 @@ void IREmitter::visit(ConstDecl::Ptr decl) {
 }
 
 void IREmitter::visit(IVarDecl::Ptr decl) {
-  const auto var = ir::Var(decl->name->ident, ir::Type(ir::Type::Kind(INDEX_VAR_TYPE)));
+  const auto var = ir::Var(decl->name->ident, ir::Type());
   const auto access = internal::Symbol::None;
+  indexVars.insert(var);
   addSymbol(var.getName(), var, access);
 }
 
@@ -382,18 +366,20 @@ void IREmitter::visit(ExprStmt::Ptr stmt) {
 void IREmitter::visit(AssignStmt::Ptr stmt) {
   struct HasIndexExpr : public FIRVisitor {
     bool value;
+    IREmitter* irEmitter;
     internal::ProgramContext *ctx;
-    HasIndexExpr(internal::ProgramContext *ctx) : ctx(ctx), value(false) {}
+    HasIndexExpr(IREmitter* irEmitter, internal::ProgramContext *ctx) :
+      ctx(ctx), irEmitter(irEmitter), value(false) {}
 
     virtual void visit(TensorReadExpr::Ptr tensor) {
       for (auto param : tensor->indices) {
-        if (isIVarExpr(param, ctx).first) {
+        if (irEmitter->isIVarExpr(param, ctx).first) {
           value = true;
           break;
         }
       }
     }
-  } hasIndexExpr(ctx);
+  } hasIndexExpr(this, ctx);
 
   stmt->accept(&hasIndexExpr);
 
@@ -543,15 +529,17 @@ void IREmitter::visit(NotExpr::Ptr expr) {
 void IREmitter::visit(AddExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Add, rhs) :
-                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Add, rhs);
+  retExpr = insideIndexExprAssignStmt ?
+        ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Add, rhs):
+        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Add, rhs);
 }
 
 void IREmitter::visit(SubExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Sub, rhs) :
-                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Sub, rhs);
+  retExpr = insideIndexExprAssignStmt ?
+        ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Sub, rhs):
+        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Sub, rhs);
 }
 
 void IREmitter::visit(MulExpr::Ptr expr) {
@@ -563,6 +551,11 @@ void IREmitter::visit(MulExpr::Ptr expr) {
   const auto rtype = rhs.type().toTensor();
   const auto ldimensions = ltype->getDimensions();
   const auto rdimensions = rtype->getDimensions();
+
+  if (insideIndexExprAssignStmt) {
+    retExpr = builder->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Mul, rhs);
+    return;
+  }
 
   iassert(ltype->order() <= 2 && rtype->order() <= 2);
   if (ltype->order() == 0 || rtype->order() == 0) {
@@ -594,8 +587,9 @@ void IREmitter::visit(MulExpr::Ptr expr) {
 void IREmitter::visit(DivExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Div, rhs) :
-                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
+  retExpr = insideIndexExprAssignStmt ?
+        ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Div, rhs):
+        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
 }
 
 void IREmitter::visit(LeftDivExpr::Ptr expr) {
@@ -628,23 +622,25 @@ void IREmitter::visit(LeftDivExpr::Ptr expr) {
 void IREmitter::visit(ElwiseMulExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Mul, rhs) :
-                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Mul, rhs);
+  retExpr = insideIndexExprAssignStmt ?
+        ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Mul, rhs):
+        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Mul, rhs);
 }
 
 void IREmitter::visit(ElwiseDivExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
-  retExpr = insideIndexExprAssignStmt ? ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Div, rhs) :
-                                        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
+  retExpr = insideIndexExprAssignStmt ?
+        ctx->getBuilder()->binaryTensorElwiseExpr(lhs, ir::IRBuilder::Div, rhs):
+        ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
 }
 
 void IREmitter::visit(NegExpr::Ptr expr) {
   const ir::Expr operand = emitExpr(expr->operand);
   iassert(!ir::isa<ir::Literal>(operand));
-  retExpr = !expr->negate ? operand : 
-            (insideIndexExprAssignStmt ? ctx->getBuilder()->unaryTensorElwiseExpr(ir::IRBuilder::Neg, operand):
-                                         ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand));
+  retExpr = !expr->negate ? operand : (insideIndexExprAssignStmt ?
+          ctx->getBuilder()->unaryTensorElwiseExpr(ir::IRBuilder::Neg, operand):
+          ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand));
 }
 
 void IREmitter::visit(ExpExpr::Ptr expr) {
@@ -721,7 +717,8 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
   if (containsIVar) {
     std::vector<ir::IndexVar> indices;
     std::vector<ir::IndexVar> freeVars;
-    std::vector<ir::IndexDomain> dimensions = tensor.type().toTensor()->getDimensions();
+    std::vector<ir::IndexDomain> dimensions =
+        tensor.type().toTensor()->getDimensions();
     unsigned i = 0;
     for (auto param : expr->indices) {
       auto p = isIVarExpr(param, ctx);
@@ -743,7 +740,9 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
         }
         freeVars.push_back(indices.back());
       } else {
-        indices.push_back(ir::IndexVar(INTERNAL_PREFIX("tmpfixed") + std::to_string(i), dimensions[i], new ir::Expr(emitExpr(param))));
+        indices.push_back(ir::IndexVar(
+                            INTERNAL_PREFIX("tmpfixed") + std::to_string(i),
+                            dimensions[i], new ir::Expr(emitExpr(param))));
       }
       ++i;
     }
@@ -1290,7 +1289,8 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       const ir::Stmt tensorWrite = ir::TensorWrite::make(
           tensorRead->tensor, tensorRead->indices, expr);
       ctx->addStatement(tensorWrite);
-    } else if (ir::isa<ir::IndexedTensor>(lhs[0])) { // move lhs indexedTensor to rhs indexExpr
+    } else if (ir::isa<ir::IndexedTensor>(lhs[0])) {
+      // move lhs indexedTensor to rhs indexExpr
       const ir::IndexedTensor* indexTensor = ir::to<ir::IndexedTensor>(lhs[0]);
 
       ir::Var var = ir::to<ir::VarExpr>(indexTensor->tensor)->var;
@@ -1342,6 +1342,22 @@ ir::Stmt IREmitter::getCallStmts() {
   
   calls.clear();
   return callStmts;
+}
+
+std::pair<bool, std::string>
+IREmitter::isIVarExpr(ReadParam::Ptr param, internal::ProgramContext *ctx) {
+  if (isa<ExprParam>(param)) {
+    Expr::Ptr e = to<ExprParam>(param)->expr;
+    if (isa<VarExpr>(e)) {
+      const std::string& ident = to<VarExpr>(e)->ident;
+      const internal::Symbol& sym = ctx->getSymbol(ident);
+      ir::Var var = sym.getVar();
+      if (indexVars.count(var)) {
+        return {true, ident};
+      }
+    }
+  }
+  return {false, ""};
 }
 
 }
