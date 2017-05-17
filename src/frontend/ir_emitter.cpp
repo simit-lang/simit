@@ -365,11 +365,11 @@ void IREmitter::visit(ExprStmt::Ptr stmt) {
 
 void IREmitter::visit(AssignStmt::Ptr stmt) {
   struct HasIndexExpr : public FIRVisitor {
-    bool value;
+    bool value = false;
     IREmitter* irEmitter;
     internal::ProgramContext *ctx;
     HasIndexExpr(IREmitter* irEmitter, internal::ProgramContext *ctx) :
-      ctx(ctx), irEmitter(irEmitter), value(false) {}
+      irEmitter(irEmitter), ctx(ctx) {}
 
     virtual void visit(TensorReadExpr::Ptr tensor) {
       for (auto param : tensor->indices) {
