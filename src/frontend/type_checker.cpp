@@ -316,6 +316,17 @@ void TypeChecker::visit(ConstDecl::Ptr decl) {
   typeCheckVarOrConstDecl(decl, true);
 }
 
+void TypeChecker::visit(IVarDecl::Ptr decl) {
+  const std::string& varName = decl->name->ident;
+  Type::Ptr varType = std::make_shared<IVarType>();
+
+  if (env.hasSymbol(varName, Environment::Scope::CurrentOnly)) {
+    reportRedefinition("variable or constant", varName, decl);
+  }
+
+  env.addSymbol(varName, varType, Access::NONE);
+}
+
 void TypeChecker::visit(WhileStmt::Ptr stmt) {
   const ExprType condType = inferType(stmt->cond);
  
@@ -414,6 +425,8 @@ void TypeChecker::visit(ExprStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(AssignStmt::Ptr stmt) {
+  allowIndexExpr = true;
+
   const ExprType exprType = inferType(stmt->expr);
 
   retTypeChecked = exprType.defined;
@@ -499,6 +512,9 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
       }
     }
   }
+
+  allowIndexExpr = false;
+  hasIndexExpr = false;
 }
 
 void TypeChecker::visit(ExprParam::Ptr expr) {
@@ -692,6 +708,10 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
   const ExprType rhsType = inferType(expr->rhs);
   retTypeChecked = lhsType.defined && rhsType.defined;
   
+  if (hasIndexExpr) {
+    reportError("Index expression is not allowed in this operation", expr);
+  }
+
   // Check that operands of division operation are numeric tensors.
   if (lhsType.defined && !lhsType.isNumericTensor()) {
     std::stringstream errMsg;
@@ -754,6 +774,10 @@ void TypeChecker::visit(LeftDivExpr::Ptr expr) {
   const ExprType rhsType = inferType(expr->rhs);
   retTypeChecked = lhsType.defined && rhsType.defined;
 
+  if (hasIndexExpr) {
+    reportError("Index expression is not allowed in this operation", expr);
+  }
+
   // Check that operands of solve operation are numeric tensors.
   if (lhsType.defined && !lhsType.isNumericTensor()) {
     std::stringstream errMsg;
@@ -808,7 +832,7 @@ void TypeChecker::visit(LeftDivExpr::Ptr expr) {
            << "vector but got an operand of type " << toString(lhsType);
     reportError(errMsg.str(), expr->lhs);
   }
-  
+
   if (!retTypeChecked) {
     return;
   }
@@ -1216,7 +1240,47 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     return;
   }
 
+  // Check if expr is index expresssion
+  auto checkIndexExpr = [&](const ReadParam::Ptr& idx) {
+    if (isa<ExprParam>(idx)) {
+      const Expr::Ptr indexExpr = to<ExprParam>(idx)->expr;
+      const ExprType indexType = inferType(indexExpr);
+      if (indexType.defined && indexType.isIndexVar()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const bool hasIndexExpr =
+      std::any_of(expr->indices.begin(), expr->indices.end(), checkIndexExpr);
+
+  this->hasIndexExpr = this->hasIndexExpr || hasIndexExpr;
+
+  if (hasIndexExpr && !allowIndexExpr) {
+    reportError("Index expression is not allowed in non-assignment", expr);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  if (hasIndexExpr &&
+      !std::all_of(expr->indices.begin(), expr->indices.end(), checkSlice)) {
+    reportError("Cannot mix index expression and slice: ", expr);
+    retType = ExprType(lhsType.access);
+    return;
+  }
+
+  // Catch invalid nested indexexpr, for example A(i, B(j, k))
+  bool previousAllowIndexExpr = allowIndexExpr;
+  allowIndexExpr = false;
+  for (auto& idx : expr->indices) {
+    if (isa<ExprParam>(idx)) {
+      inferType(to<ExprParam>(idx)->expr);
+    }
+  }
+  allowIndexExpr = previousAllowIndexExpr;
+
   TensorDimensions retDimensions;
+
   for (unsigned i = 0; i < numIndices; ++i) {
     const ReadParam::Ptr index = expr->indices[i];
 
@@ -1231,7 +1295,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     if (!indexType.defined) {
       continue;
     }
-    
+
     // Check that index is a single value.
     if (indexType.isVoid()) {
       reportError("must pass a non-void value as index" , index);
@@ -1242,14 +1306,19 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       continue;
     }
 
+    if (indexType.isIndexVar()) {
+      continue;
+    }
+
     const IndexSet::Ptr indexSet = dimensions[i][0];
 
     // Check that index is of right type.
-    if (isa<RangeIndexSet>(indexSet) || (isa<GenericIndexSet>(indexSet) && 
-        to<GenericIndexSet>(indexSet)->type == GenericIndexSet::Type::RANGE)) {
+    if (isa<RangeIndexSet>(indexSet) ||
+        (isa<GenericIndexSet>(indexSet) &&
+         to<GenericIndexSet>(indexSet)->type == GenericIndexSet::Type::RANGE)) {
       if (!indexType.isScalarInt()) {
         std::stringstream errMsg;
-        errMsg << "expected an integral index but got an index of type " 
+        errMsg << "expected an integral index but got an index of type "
                << toString(indexType);
         reportError(errMsg.str(), index);
       }
@@ -1266,7 +1335,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       }
 
       const auto elemType = to<ElementType>(indexType.type[0]);
-      const auto elemSource = elemType->source; 
+      const auto elemSource = elemType->source;
       const auto elemName = elemType->ident;
 
       const auto domainElem = env.getSetDefinition(setIndexSet)->element;
@@ -1274,7 +1343,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
       if (!domainElemName.empty() && domainElemName != elemName) {
         std::stringstream errMsg;
-        errMsg << "expected an element of type " << toString(domainElem) 
+        errMsg << "expected an element of type " << toString(domainElem)
                << " as index but got an element of type '" << elemName << "'";
         reportError(errMsg.str(), index);
         continue;
@@ -1282,8 +1351,8 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
       if (elemSource && !env.compareIndexSets(setIndexSet, elemSource)) {
         std::stringstream errMsg;
-        errMsg << "expected an element of set '" << domainName 
-               << "' as index but got an element inferred to be of set '" 
+        errMsg << "expected an element of set '" << domainName
+               << "' as index but got an element inferred to be of set '"
                << elemSource->setName << "'";
         reportError(errMsg.str(), index);
       }

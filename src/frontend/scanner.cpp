@@ -53,6 +53,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "xor") return Token::Type::XOR;
   if (token == "true") return Token::Type::TRUE;
   if (token == "false") return Token::Type::FALSE;
+  if (token == "ivar") return Token::Type::IVAR;
  
   // If string does not correspond to a keyword, assume it is an identifier.
   return Token::Type::IDENT;

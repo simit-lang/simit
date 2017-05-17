@@ -195,6 +195,7 @@ SIM_TEST(elements, tensorrw);
 SIM_TEST(elements, springs);
 SIM_TEST(elements, fem);
 SIM_TEST(elements, fem_tensor);
+SIM_TEST(elements, indexexpr);
 
 SIM_TEST_SUITE(declarations, false)
 SIM_TEST(declarations, function_headers);
@@ -218,3 +219,4 @@ SIM_TEST(illegal, statements);
 SIM_TEST(illegal, expressions);
 SIM_TEST(illegal, declarations);
 SIM_TEST(illegal, accesses);
+SIM_TEST(illegal, indexexpr);

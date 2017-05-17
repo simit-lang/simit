@@ -49,6 +49,7 @@ private:
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
+  virtual void visit(IVarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
   virtual void visit(IndexSetDomain::Ptr);
@@ -172,6 +173,10 @@ private:
 
       bool isOpaque() const {
         return isa<OpaqueType>(type[0]);
+      }
+
+      bool isIndexVar() const {
+        return isSingleValue() && isa<IVarType>(type[0]);
       }
 
       bool isNumericTensor() const;
@@ -402,6 +407,10 @@ private:
   Environment env;
   
   std::vector<ParseError> *errors;
+
+private:
+  bool     allowIndexExpr = false;
+  bool     hasIndexExpr = false;
 };
 
 }

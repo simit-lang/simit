@@ -117,6 +117,11 @@ void FIRRewriter::visit(VarDecl::Ptr decl) {
   node = decl;
 }
 
+void FIRRewriter::visit(IVarDecl::Ptr decl) {
+  decl->name = rewrite<Identifier>(decl->name);
+  node = decl;
+}
+
 void FIRRewriter::visit(WhileStmt::Ptr stmt) {
   stmt->cond = rewrite<Expr>(stmt->cond);
   stmt->body = rewrite<StmtBlock>(stmt->body);

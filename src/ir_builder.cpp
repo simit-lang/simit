@@ -233,4 +233,42 @@ Var IRBuilder::temporary(Type type, std::string name) {
   return Var(names.getName(name), type);
 }
 
+Expr IRBuilder::unaryTensorElwiseExpr(UnaryOperator op, Expr e) {
+  Expr val;
+  switch (op) {
+    case Copy:
+      val = e;
+      break;
+    case Neg:
+      val = Neg::make(e);
+      break;
+    default:
+      unreachable;
+      break;
+  }
+  return val;
+}
+
+Expr IRBuilder::binaryTensorElwiseExpr(Expr l, BinaryOperator op, Expr r) {
+  Expr val;
+  switch (op) {
+    case Add:
+      val = Add::make(l, r);
+      break;
+    case Sub:
+      val = Sub::make(l, r);
+      break;
+    case Mul:
+      val = Mul::make(l, r);
+      break;
+    case Div:
+      val = Div::make(l, r);
+      break;
+    default:
+      unreachable;
+      break;
+  }
+  return val;
+}
+
 }} // namespace simit::internal

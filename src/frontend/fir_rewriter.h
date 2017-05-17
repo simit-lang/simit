@@ -27,12 +27,14 @@ struct FIRRewriter : public FIRVisitor {
   virtual void visit(ScalarType::Ptr op) { node = op; }
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(OpaqueType::Ptr op) { node = op; }
+  virtual void visit(IVarType::Ptr op) { node = op; }
   virtual void visit(Identifier::Ptr op) { node = op; }
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(GenericParam::Ptr op) { node = op; }
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
+  virtual void visit(IVarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
   virtual void visit(IndexSetDomain::Ptr);

@@ -1,0 +1,63 @@
+%%% bad-indexexpr-1
+export func main()
+  ivar i;
+  i = 1;
+end
+
+%%% bad-indexexpr-2
+export func main()
+  ivar i;
+  j = i;
+end
+
+%%% bad-indexexpr-3
+export func main()
+  ivar i;
+  b = 1;
+  b = i + i;
+end
+
+%%% bad-indexexpr-4
+export func main()
+  ivar i;
+  A = [1, 2];
+  if A(i) == 1
+    b = 1;
+  end
+end
+
+%%% bad-indexexpr-5
+export func main()
+  ivar i;
+  ivar j;
+  var B : tensor[2,2](int);
+  var C : tensor[2,2](int);
+  d =  B(C(i, j),0);
+end
+
+%%% bad-indexexpr-mix-indexvar-slice
+export func main()
+  var A : tensor[2,2](int);
+  ivar i;
+  A(:, i) = A(:, i);
+end
+
+%%% bad-indexexpr-symbol-clash
+export func main()
+  var i : int;
+  ivar i;
+end
+
+%%% bad-indexexpr-invalid-operation
+export func main()
+  var A : tensor[2,2](int)
+  ivar i;
+  A(i, i) = A(i,i) / A(i,i);
+end
+
+%%% bad-indexexpr-ivar-argument
+export func main()
+  ivar i;
+  cos(i);
+end
+

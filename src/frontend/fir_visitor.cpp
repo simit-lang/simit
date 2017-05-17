@@ -128,6 +128,10 @@ void FIRVisitor::visit(ConstDecl::Ptr decl) {
   visit(to<VarDecl>(decl));
 }
 
+void FIRVisitor::visit(IVarDecl::Ptr decl) {
+  decl->name->accept(this);
+}
+
 void FIRVisitor::visit(WhileStmt::Ptr stmt) {
   stmt->cond->accept(this);
   stmt->body->accept(this);
