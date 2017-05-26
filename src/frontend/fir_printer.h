@@ -30,6 +30,7 @@ protected:
   virtual void visit(ScalarType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(OpaqueType::Ptr);
+  virtual void visit(IVarType::Ptr);
   virtual void visit(Identifier::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(FieldDecl::Ptr);
@@ -40,6 +41,7 @@ protected:
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
+  virtual void visit(IVarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(DoWhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);

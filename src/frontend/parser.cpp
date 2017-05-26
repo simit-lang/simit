@@ -338,7 +338,7 @@ fir::StmtBlock::Ptr Parser::parseStmtBlock() {
   }
 }
 
-// stmt: var_decl | const_decl | if_stmt | while_stmt | do_while_stmt 
+// stmt: var_decl | const_decl | ivar_decl | if_stmt | while_stmt | do_while_stmt
 //     | for_stmt | print_stmt | apply_stmt | expr_or_assign_stmt
 fir::Stmt::Ptr Parser::parseStmt() {
   switch (peek().type) {
@@ -346,6 +346,8 @@ fir::Stmt::Ptr Parser::parseStmt() {
       return parseVarDecl();
     case Token::Type::CONST:
       return parseConstDecl();
+    case Token::Type::IVAR:
+      return parseIVarDecl();
     case Token::Type::IF:
       return parseIfStmt();
     case Token::Type::WHILE:
@@ -423,6 +425,26 @@ fir::ConstDecl::Ptr Parser::parseConstDecl() {
     consume(Token::Type::SEMICOL);
 
     return fir::ConstDecl::Ptr();
+  }
+}
+
+// ivar_decl: 'ivar' ident;
+fir::IVarDecl::Ptr Parser::parseIVarDecl() {
+  try {
+    auto ivarDecl = std::make_shared<fir::IVarDecl>();
+
+    const Token ivarToken = consume(Token::Type::IVAR);
+    ivarDecl->setBeginLoc(ivarToken);
+
+    ivarDecl->name = parseIdent();
+
+    decls.insert(ivarDecl->name->ident, IdentType::OTHER);
+    return ivarDecl;
+  } catch (const SyntaxError &) {
+    skipTo({Token::Type::SEMICOL});
+    consume(Token::Type::SEMICOL);
+
+    return fir::IVarDecl::Ptr();
   }
 }
 

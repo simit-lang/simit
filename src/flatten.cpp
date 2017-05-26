@@ -40,6 +40,9 @@ bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
 // Check for permutation without repetition
 bool isPermutation(const std::vector<IndexVar> &as, 
                    const std::vector<IndexVar> &bs) {
+  if (as.size() == 0 || bs.size() == 0) {
+    return as.size() == 0 && bs.size() == 0;
+  }
   return std::is_permutation(as.begin(), as.end(), bs.begin()) &&
          std::is_permutation(bs.begin(), bs.end(), as.begin());
 }

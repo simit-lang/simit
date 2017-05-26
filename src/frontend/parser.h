@@ -48,6 +48,7 @@ private:
   fir::Stmt::Ptr                      parseStmt();
   fir::VarDecl::Ptr                   parseVarDecl();
   fir::ConstDecl::Ptr                 parseConstDecl();
+  fir::IVarDecl::Ptr                  parseIVarDecl();
   fir::IdentDecl::Ptr                 parseIdentDecl();
   fir::IdentDecl::Ptr                 parseTensorDecl();
   fir::WhileStmt::Ptr                 parseWhileStmt();

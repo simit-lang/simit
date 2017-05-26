@@ -87,7 +87,8 @@ struct Token {
     NOT,
     XOR,
     TRUE,
-    FALSE
+    FALSE,
+    IVAR
   };
 
   Type        type;

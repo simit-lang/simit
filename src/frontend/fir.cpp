@@ -293,6 +293,17 @@ FIRNode::Ptr OpaqueType::cloneNode() {
   return node;
 }
 
+void IVarType::copy(FIRNode::Ptr node) {
+  const auto ivarType = to<IVarType>(node);
+  Type::copy(ivarType);
+}
+
+FIRNode::Ptr IVarType::cloneNode() {
+  const auto node = std::make_shared<IVarType>();
+  node->copy(shared_from_this());
+  return node;
+}
+
 void IdentDecl::copy(FIRNode::Ptr node) {
   const auto identDecl = to<IdentDecl>(node);
   FIRNode::copy(identDecl);
@@ -404,6 +415,18 @@ FIRNode::Ptr VarDecl::cloneNode() {
 
 FIRNode::Ptr ConstDecl::cloneNode() {
   const auto node = std::make_shared<ConstDecl>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+void IVarDecl::copy(FIRNode::Ptr node) {
+  const auto ivarDecl = to<IVarDecl>(node);
+  Stmt::copy(ivarDecl);
+  name = ivarDecl->name->clone<Identifier>();
+}
+
+FIRNode::Ptr IVarDecl::cloneNode() {
+  const auto node = std::make_shared<IVarDecl>();
   node->copy(shared_from_this());
   return node;
 }

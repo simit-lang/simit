@@ -25,6 +25,7 @@ struct UnnamedTupleType;
 struct ScalarType;
 struct NDTensorType;
 struct OpaqueType;
+struct IVarType;
 struct Identifier;
 struct IdentDecl;
 struct FieldDecl;
@@ -36,6 +37,7 @@ struct GenericParam;
 struct FuncDecl;
 struct VarDecl;
 struct ConstDecl;
+struct IVarDecl;
 struct WhileStmt;
 struct DoWhileStmt;
 struct IfStmt;
@@ -108,6 +110,7 @@ struct FIRVisitor {
   virtual void visit(std::shared_ptr<ScalarType> op) {}
   virtual void visit(std::shared_ptr<NDTensorType>);
   virtual void visit(std::shared_ptr<OpaqueType>) {}
+  virtual void visit(std::shared_ptr<IVarType>) {}
   virtual void visit(std::shared_ptr<Identifier> op) {}
   virtual void visit(std::shared_ptr<IdentDecl>);
   virtual void visit(std::shared_ptr<FieldDecl>);
@@ -119,6 +122,7 @@ struct FIRVisitor {
   virtual void visit(std::shared_ptr<FuncDecl>);
   virtual void visit(std::shared_ptr<VarDecl>);
   virtual void visit(std::shared_ptr<ConstDecl>);
+  virtual void visit(std::shared_ptr<IVarDecl>);
   virtual void visit(std::shared_ptr<WhileStmt>);
   virtual void visit(std::shared_ptr<DoWhileStmt>);
   virtual void visit(std::shared_ptr<IfStmt>);
