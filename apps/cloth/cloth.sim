@@ -1,0 +1,236 @@
+func cross(v1 : tensor[3](float), v2 : tensor[3](float)) -> (result : tensor[3](float))
+  result(0) = v1(1)*v2(2)-v1(2)*v2(1);
+  result(1) = v1(2)*v2(0)-v1(0)*v2(2);
+  result(2) = v1(0)*v2(1)-v1(1)*v2(0);
+end
+
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
+  m : float;
+  fixed : int;
+  ID : int;
+end
+
+element Hinge
+  restBendingAngle : float;
+  restLength : float;
+  restPerpLength: float;
+end
+
+element Face  
+  precomputedStretchingMatrix : tensor[3,3](float);
+  restLengths : tensor[3](float);
+end
+
+extern points : set{Point};
+extern faces : set{Face}(points, points, points);
+extern hinges: set{Hinge}(points, points, points, points);
+
+func computeAngle(p1 : tensor[3](float), p2 : tensor[3](float), q1 : tensor[3](float), q2 : tensor[3](float)) -> (theta : float)
+  ev = p2 - p1;
+  n1 = cross(ev, q1 - p1);
+  n2 = cross(q2 - p1, ev);
+  mag = norm(ev);
+  ev = ev/mag;
+  theta = atan2( dot( cross(n1, n2), ev ), dot(n1, n2) );
+end
+
+func edgeVectors(pts0 : tensor[3](float), pts1 : tensor[3](float), pts2 : tensor[3](float)) -> (vec : tensor[3,3](float))
+  for i in 0:3
+    vec(i,0) = pts1(i) - pts0(i);
+    vec(i,1) = pts2(i) - pts1(i);
+    vec(i,2) = pts0(i) - pts2(i);
+  end
+end
+
+func precomputeMatrix(inout f : Face, pts : (Point*3))
+  edgevecs = edgeVectors(pts(0).x, pts(1).x, pts(2).x);
+  uvs = edgevecs;
+
+  A = 0.5 * norm( cross(uvs(2), uvs(1)) );
+  for i in 0:3
+    j = mod((i+1),3);
+    k = mod((i+2),3);
+    for l in i:3
+      m = mod((l+1),3);
+      n = mod((l+2),3);
+      f.precomputedStretchingMatrix(i,l) = dot(uvs(:,k), uvs(:,m)) * dot(uvs(:,j),uvs(:,n)) + dot(uvs(:,k), uvs(:,n))*dot(uvs(:,j),uvs(:,m));
+      f.precomputedStretchingMatrix(l,i) = dot(uvs(:,k), uvs(:,m)) * dot(uvs(:,j),uvs(:,n)) + dot(uvs(:,k), uvs(:,n))*dot(uvs(:,j),uvs(:,m));
+    end
+  end
+  f.precomputedStretchingMatrix = f.precomputedStretchingMatrix / (256.0 * A * A * A);
+end
+
+func precomputeFaceQuantities(inout f : Face, pts : (Point*3))
+  edgevecs = edgeVectors(pts(0).x, pts(1).x, pts(2).x);
+  var uvs : tensor[3,3](float);
+
+  for i in 0:3
+    uvs(i,0) = edgevecs(i,1);
+    uvs(i,1) = edgevecs(i,2);
+    uvs(i,2) = edgevecs(i,0);
+  end
+
+  uvs2 = uvs(:,2);
+  uvs1 = uvs(:,1);
+  A = 0.5 * norm( cross(uvs2, uvs1) );
+
+  for i in 0:3
+    j = mod((i+1),3);
+    k = mod((i+2),3);
+    for l in i:3
+      m = mod((l+1),3);
+      n = mod((l+2),3);
+      f.precomputedStretchingMatrix(i,l) = dot(uvs(:,k), uvs(:,m)) * dot(uvs(:,j),uvs(:,n)) + dot(uvs(:,k), uvs(:,n))*dot(uvs(:,j),uvs(:,m));
+      f.precomputedStretchingMatrix(l,i) = dot(uvs(:,k), uvs(:,m)) * dot(uvs(:,j),uvs(:,n)) + dot(uvs(:,k), uvs(:,n))*dot(uvs(:,j),uvs(:,m));
+    end
+  end
+  f.precomputedStretchingMatrix = f.precomputedStretchingMatrix / (256.0 * A * A * A);
+
+  vec = edgevecs;
+  for i in 0:3
+    v = vec(:,i);
+    f.restLengths(i) = dot(v, v);
+  end
+end
+  
+
+func precomputeHingeQuantities(inout h : Hinge, pts : (Point*4) )
+  theta = computeAngle(pts(0).x, pts(1).x, pts(2).x, pts(3).x);
+  h.restBendingAngle = theta;
+  A1 = 0.5 * norm( cross(pts(1).x - pts(0).x, pts(2).x - pts(0).x) );
+  A2 = 0.5 * norm( cross(pts(1).x - pts(0).x, pts(3).x - pts(0).x) );
+  e0 = norm(pts(1).x - pts(0).x);
+  h.restPerpLength = 2.0*(A1+A2)/(3.0 * e0);
+  h.restLength = e0;
+end
+
+func dihedralAngleDerivatives(p1 : tensor[3](float), p2 : tensor[3](float), q1 : tensor[3](float), q2 : tensor[3](float)) 
+	-> (del_p1_theta : tensor[3](float), del_p2_theta : tensor[3](float), del_q1_theta : tensor[3](float), del_q2_theta : tensor[3](float))
+  v11 = q1 - p2;
+  v12 = q1 - p1;
+  v21 = q2 - p2;
+  v22 = q2 - p1;
+  v = p2 - p1;
+  
+  n1 = cross(v12, v);
+  n2 = cross(v, v22);
+  
+  n1norm2 = dot(n1, n1);
+  n2norm2 = dot(n2, n2);
+  vnorm = norm(v);
+  
+  if (vnorm < 1e-8 or n1norm2 < 1e-8 or n2norm2 < 1e-8)
+    del_p1_theta = [0.0, 0.0, 0.0];
+    del_p2_theta = [0.0, 0.0, 0.0];
+    del_q1_theta = [0.0, 0.0, 0.0];
+    del_q2_theta = [0.0, 0.0, 0.0];
+  else
+    del_q1_theta = n1 * vnorm/n1norm2;
+    del_q2_theta = n2 * vnorm/n2norm2;
+    F11 = n1 * dot(v11, v) / vnorm / n1norm2;
+    F12 = n2 * dot(v21, v) / vnorm / n2norm2;
+    F21 = n1 * dot(-v12, v) / vnorm / n1norm2;
+    F22 = n2 * dot(-v22, v) / vnorm / n2norm2;
+
+    del_p1_theta = F11 + F12;
+    del_p2_theta = F21 + F22;
+  end
+end
+
+func stretchingForce(f : Face, pts : (Point*3)) -> (force : tensor[points](tensor[3](float)))
+  v = edgeVectors(pts(1).x, pts(2).x, pts(0).x);
+  curSquaredNorms = [0.0, 0.0, 0.0];
+  for i in 0:3
+    vi = v(:, i);
+    curSquaredNorms(i) = dot(vi, vi);
+  end
+
+  var uvs : tensor[3](float);
+  uvs(0) = f.restLengths(1);
+  uvs(1) = f.restLengths(2);
+  uvs(2) = f.restLengths(0);
+
+  s = curSquaredNorms - uvs;
+  for k in 0:3
+    k2 = mod((k+1),3);
+    k1 = mod((k+2),3);
+    for i in 0:3
+      force(pts(k)) = -4.0 * ( f.precomputedStretchingMatrix(i,k2) * s(i) * v(:,k2)
+                              -f.precomputedStretchingMatrix(i,k1) * s(i) * v(:,k1));
+    end
+  end
+end
+
+func bendingForce(h : Hinge, pts : (Point*4)) -> (force : tensor[points](tensor[3](float)))
+  curtheta = computeAngle(pts(0).x, pts(1).x, pts(2).x, pts(3).x);
+  del_p1_theta, del_p2_theta, del_q1_theta, del_q2_theta = dihedralAngleDerivatives(pts(0).x, pts(1).x, pts(2).x, pts(3).x);
+  force(pts(0)) = -del_p1_theta * h.restLength / h.restPerpLength * (curtheta - h.restBendingAngle);
+  force(pts(1)) = -del_p2_theta * h.restLength / h.restPerpLength * (curtheta - h.restBendingAngle);
+  force(pts(2)) = -del_q1_theta * h.restLength / h.restPerpLength * (curtheta - h.restBendingAngle);
+  force(pts(3)) = -del_q2_theta * h.restLength / h.restPerpLength * (curtheta - h.restBendingAngle);
+end
+
+func invMassMatrix(p : Point) -> (Minv : tensor[points, points](tensor[3,3](float)))
+  block = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  minv = 1.0/p.m;
+  if(p.fixed > 0)
+    minv = 0.0;
+  end
+  block = block*minv;
+  Minv(p,p) = block;
+end
+
+func enforceConstraints(timeStep : float, inout p : Point)
+  dist = norm(p.x);
+  if (dist < 2.0)
+    newpos = 2.0*p.x/dist;
+    p.v = p.v + (newpos-p.x)/timeStep;
+    p.x = 1.0 * newpos;
+  end
+end
+
+func gravityForce(p : Point) -> (force : tensor[points](tensor[3](float)))
+  force(p) = [0.0, -9.8, 0.0];
+  if(p.fixed > 0)
+    force(p) = [0.0, 0.0, 0.0];
+  end
+end
+
+func shiftcloth(inout p : Point)
+  p.x(1) = p.x(1) + 2.0;
+end
+
+func printForce(force : tensor[points](tensor[3](float)), p : Point)
+  print force(p)(0);
+  print force(p)(1);
+  print force(p)(2);
+end
+
+proc initializeClothPhysics
+  map shiftcloth to points;
+  map precomputeFaceQuantities to faces;
+  map precomputeHingeQuantities to hinges;  
+end
+
+proc main
+  timeStep = 1.0e-5;
+  stretchingStiffness = 1.0e5;
+  bendingStiffness = 1.0e0;
+  damping = 1e-3;
+
+  points.x = points.x + timeStep * points.v;
+  map enforceConstraints(timeStep) to points;
+  force = map stretchingForce to faces reduce +;
+  totalforce = force * stretchingStiffness;
+  force = map bendingForce to hinges reduce +;
+  gforce = map gravityForce to points reduce +;
+  totalforce = totalforce + force * bendingStiffness;
+  totalforce = totalforce - damping*points.v;
+
+  Minv = map invMassMatrix to points reduce +;
+
+  impulse = gforce + Minv * totalforce;
+  points.v = points.v + timeStep * impulse;
+end
