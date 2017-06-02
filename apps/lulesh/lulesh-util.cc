@@ -135,7 +135,14 @@ void ParseCommandLineOptions(int argc, char *argv[],
          /* -v */
          else if (strcmp(argv[i], "-v") == 0) {
 #if VIZ_MESH            
-            opts->viz = 1;
+        	 if (i+1 >= argc) {
+                ParseError("Missing integer argument to -v\n", myRank);
+             }
+             ok = StrToInt(argv[i+1], &(opts->viz));
+             if (!ok) {
+                ParseError("Parse Error on option -c integer value required after argument\n", myRank);
+             }
+             i+=2;
 #else
             ParseError("Use of -v requires compiling with -DVIZ_MESH\n", myRank);
 #endif
@@ -264,8 +271,8 @@ void VerifyAndWriteFinalOutput(Real_t elapsed_time,
    // GrindTime1 only takes a single domain into account, and is thus a good way to measure
    // processor speed indepdendent of MPI parallelism.
    // GrindTime2 takes into account speedups from MPI parallelism 
-   Real_t grindTime1 = ((elapsed_time*1e6)/locDom.cycle())/(nx*nx*nx);
-   Real_t grindTime2 = ((elapsed_time*1e6)/locDom.cycle())/(nx*nx*nx*numRanks);
+   Real_t grindTime1 = ((elapsed_time*1e3)/locDom.cycle())/(nx*nx*nx);
+   Real_t grindTime2 = ((elapsed_time*1e3)/locDom.cycle())/(nx*nx*nx*numRanks);
 
    Index_t ElemId = 0;
    printf("Run completed:  \n");
@@ -298,7 +305,7 @@ void VerifyAndWriteFinalOutput(Real_t elapsed_time,
    printf("        MaxRelDiff   = %12.6e\n\n", MaxRelDiff   );
 
    // Timing information
-   printf("\nElapsed time         = %10.2f (s)\n", elapsed_time);
+   printf("\nElapsed time         = %10.2f (ms)\n", elapsed_time);
    printf("Grind time (us/z/c)  = %10.8g (per dom)  (%10.8g overall)\n", grindTime1, grindTime2);
    printf("FOM                  = %10.8g (z/s)\n\n", 1000.0/grindTime2); // zones per second
 

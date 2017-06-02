@@ -344,16 +344,6 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   fjzet = Real_t(.125) * ( (z6-z0) - (z5-z3) + (z7-z1) - (z4-z2) );
   fjzze = Real_t(.125) * ( (z6-z0) + (z5-z3) + (z7-z1) + (z4-z2) );
 
-//  std::cout << " FJXI " << fjxxi << " " << fjyxi << " " << fjzxi <<   std::endl;
-//  std::cout << " xyz 0 " << x0 << " " << y0 << " " << z0 <<   std::endl;
-//  std::cout << " xyz 1 " << x1 << " " << y1 << " " << z1 <<   std::endl;
-//  std::cout << " xyz 2 " << x2 << " " << y2 << " " << z2 <<   std::endl;
-//  std::cout << " xyz 3 " << x3 << " " << y3 << " " << z3 <<   std::endl;
-//  std::cout << " xyz 4 " << x4 << " " << y4 << " " << z4 <<   std::endl;
-//  std::cout << " xyz 5 " << x5 << " " << y5 << " " << z5 <<   std::endl;
-//  std::cout << " xyz 6 " << x6 << " " << y6 << " " << z6 <<   std::endl;
-//  std::cout << " xyz 7 " << x7 << " " << y7 << " " << z7 <<   std::endl;
-
   /* compute cofactors */
   cjxxi =    (fjyet * fjzze) - (fjzet * fjyze);
   cjxet =  - (fjyxi * fjzze) + (fjzxi * fjyze);
@@ -400,7 +390,6 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
 
   /* calculate jacobian determinant (volume) */
   *volume = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
-//  std::cout << " CJXET " << cjxet << std::endl;
 }
 
 /******************************************/
@@ -424,8 +413,6 @@ void SumElemFaceNormal(Real_t *normalX0, Real_t *normalY0, Real_t *normalZ0,
    Real_t areaX = Real_t(0.25) * (bisectY0 * bisectZ1 - bisectZ0 * bisectY1);
    Real_t areaY = Real_t(0.25) * (bisectZ0 * bisectX1 - bisectX0 * bisectZ1);
    Real_t areaZ = Real_t(0.25) * (bisectX0 * bisectY1 - bisectY0 * bisectX1);
-
-
 
    *normalX0 += areaX;
    *normalX1 += areaX;
@@ -465,11 +452,6 @@ void CalcElemNodeNormals(Real_t pfx[8],
                   &pfx[3], &pfy[3], &pfz[3],
                   x[0], y[0], z[0], x[1], y[1], z[1],
                   x[2], y[2], z[2], x[3], y[3], z[3]);
-//  	std::cout << "first B " << pfx[1] << " " << pfy[1] << " " << pfz[1]<<  std::endl;
-//   	std::cout << " point " << x[0] << " " << y[0] << " " << z[0]<<  std::endl;
-//   	std::cout << " point " << x[1] << " " << y[1] << " " << z[1]<<  std::endl;
-//   	std::cout << " point " << x[2] << " " << y[2] << " " << z[2]<<  std::endl;
-//   	std::cout << " point " << x[3] << " " << y[3] << " " << z[3]<<  std::endl;
    /* evaluate face two: nodes 0, 4, 5, 1 */
    SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0],
                   &pfx[4], &pfy[4], &pfz[4],
@@ -477,7 +459,6 @@ void CalcElemNodeNormals(Real_t pfx[8],
                   &pfx[1], &pfy[1], &pfz[1],
                   x[0], y[0], z[0], x[4], y[4], z[4],
                   x[5], y[5], z[5], x[1], y[1], z[1]);
-//  	std::cout << "second B " << pfx[0] << " " << pfy[0] << " " << pfz[0]<<  std::endl;
    /* evaluate face three: nodes 1, 5, 6, 2 */
    SumElemFaceNormal(&pfx[1], &pfy[1], &pfz[1],
                   &pfx[5], &pfy[5], &pfz[5],
@@ -522,7 +503,6 @@ void SumElemStressesToNodeForces( const Real_t B[][8],
       fy[i] = -( stress_yy * B[1][i]  );
       fz[i] = -( stress_zz * B[2][i] );
    }
-//   std::cout << " n.f " << fx[0] << " " << fy[0] << " " << fz[0] << std::endl;
 }
 
 /******************************************/
@@ -552,20 +532,10 @@ void IntegrateStressForElems( Domain &domain,
     // Volume calculation involves extra work for numerical consistency
     CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
                                          B, &determ[k]);
-//	if (k<5) {
-//		for (int i=0; i<8; i++) {
-//    	std::cout << "premier B " << B[0][i] << " " << B[1][i] << " " << B[2][i]<<  std::endl;
-//	}
-//	}
+
     CalcElemNodeNormals( B[0] , B[1], B[2],
                           x_local, y_local, z_local );
-//        if (k<5) {
-//        	for (int i=0; i<8; i++) {
-//            	std::cout << "B " << B[0][i] << " " << B[1][i] << " " << B[2][i]<<  std::endl;
-//        	}
-//        	std::cout << "stress " << sigxx[k] << " " << sigyy[k] << " " << sigzz[k]<<  std::endl;
-//
-//        }
+
     SumElemStressesToNodeForces( B, sigxx[k], sigyy[k], sigzz[k],
     		fx_local, fy_local, fz_local ) ;
 
@@ -575,9 +545,6 @@ void IntegrateStressForElems( Domain &domain,
     	domain.fx(gnode) += fx_local[lnode];
     	domain.fy(gnode) += fy_local[lnode];
     	domain.fz(gnode) += fz_local[lnode];
-//        if (k<2) {
-//        	std::cout << "n.f " << domain.fx(gnode) << " " << domain.fy(gnode) << " " << domain.fz(gnode) <<  std::endl;
-//        }
     }
 
   }
@@ -672,7 +639,6 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
                hourgam[2][i] * xd[2] + hourgam[3][i] * xd[3] +
                hourgam[4][i] * xd[4] + hourgam[5][i] * xd[5] +
                hourgam[6][i] * xd[6] + hourgam[7][i] * xd[7];
-//		  std::cout << "hx " << hxx[i] << std::endl;
    }
    for(Index_t i = 0; i < 8; i++) {
       hgfx[i] = coefficient *
@@ -824,14 +790,6 @@ void CalcFBHourglassForceForElems( Domain &domain,
                                                   dvdz[i3+7] * hourmodz );
 
       }
-//      std::cout << "hourgam ";
-//      for (int i=0;i<4;i++){
-//    	  for (int j =0;j<8;j++) {
-//    		  std::cout << " " << hourgam[j][i] ;
-//    	  }
-//      }
-//      std::cout << std::endl;
-
       /* compute forces */
       /* store forces into h arrays (force arrays) */
 
@@ -876,16 +834,11 @@ void CalcFBHourglassForceForElems( Domain &domain,
       zd1[7] = domain.zd(n7si2);
 
       coefficient = - hourg * Real_t(0.01) * ss1 * mass1 / volume13;
-//            std::cout << "Coef " << coefficient << std::endl;
-//                  std::cout << "nodeVel " << xd1[0] << " " << xd1[1] << " "<< xd1[2] << " "<< xd1[3] << " "<< xd1[4] << " "<< xd1[5] << " "<< xd1[6] << " "<< xd1[7] << std::endl;
 
       CalcElemFBHourglassForce(xd1,yd1,zd1,
                       hourgam,
                       coefficient, hgfx, hgfy, hgfz);
 
-//          	  for (int j =0;j<8;j++) {
-//          		  std::cout << "hgf " << hgfx[j] << " " << hgfy[j] << " " << hgfz[j] << std::endl;
-//          	  }
       domain.fx(n0si2) += hgfx[0];
       domain.fy(n0si2) += hgfy[0];
       domain.fz(n0si2) += hgfz[0];
@@ -917,11 +870,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
       domain.fx(n7si2) += hgfx[7];
       domain.fy(n7si2) += hgfy[7];
       domain.fz(n7si2) += hgfz[7];
-//            std::cout << " force inter " << domain.fx(n0si2) << " " << domain.fy(n0si2) << " " << domain.fz(n0si2) << std::endl;
-
    }
-//               std::cout << " force inter " << domain.fx(0) << " " << domain.fy(0) << " " << domain.fz(0) << std::endl;
-
 }
 
 /******************************************/
@@ -956,7 +905,6 @@ void CalcHourglassControlForElems(Domain& domain,
          dvdx[jj] = pfx[ii];
          dvdy[jj] = pfy[ii];
          dvdz[jj] = pfz[ii];
-//   if (i<5)   std::cout << "dv " << dvdx[jj] << " " << dvdy[jj] << " " << dvdz[jj] << std::endl;
          x8n[jj]  = x1[ii];
          y8n[jj]  = y1[ii];
          z8n[jj]  = z1[ii];
@@ -1013,7 +961,6 @@ void CalcVolumeForceForElems(Domain& domain)
          if (determ[k] <= Real_t(0.0)) {
             exit(VolumeError);
          }
-//		std::cout << "determ " << determ[k] << std::endl;
       }
 
       CalcHourglassControlForElems(domain, determ, hgcoef) ;
@@ -1037,16 +984,8 @@ static inline void CalcForceForNodes(Domain& domain)
      domain.fz(i) = Real_t(0.0) ;
   }
 
-//  for (Index_t i=0; i<numNode; ++i) {
-//     std:: cout << " Force " << domain.fx(i) << " " << domain.fy(i) << " " << domain.fz(i) << std::endl;
-//  }
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
-
-//  for (Index_t i=0; i<numNode; ++i) {
-//     std:: cout << " Force " << domain.fx(i) << " " << domain.fy(i) << " " << domain.fz(i) << std::endl;
-//  }
-
 }
 
 /******************************************/
@@ -1054,14 +993,11 @@ static inline void CalcForceForNodes(Domain& domain)
 static inline
 void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
-   
    for (Index_t i = 0; i < numNode; ++i) {
       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
    }
-
-
 }
 
 /******************************************/
@@ -1112,9 +1048,6 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
      if( FABS(zdtmp) < u_cut ) zdtmp = Real_t(0.0);
      domain.zd(i) = zdtmp ;
    }
-//        for (Index_t i=0; i<numNode; ++i) {
-//           std:: cout << " Velocities " << domain.xd(i) << " " << domain.yd(i) << " " << domain.zd(i) << std::endl;
-//        }
 }
 
 /******************************************/
@@ -1128,10 +1061,6 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
      domain.y(i) += domain.yd(i) * dt ;
      domain.z(i) += domain.zd(i) * dt ;
    }
-//        for (Index_t i=0; i<numNode; ++i) {
-//           std:: cout << " Position " << domain.x(i) << " " << domain.y(i) << " " << domain.z(i) << std::endl;
-//        }
-
 }
 
 /******************************************/
@@ -1149,9 +1078,7 @@ void LagrangeNodal(Domain& domain)
    CalcAccelerationForNodes(domain, domain.numNode());
    
    ApplyAccelerationBoundaryConditionsForNodes(domain);
-//   for (Index_t i=0; i<domain.numNode(); ++i) {
-//      std:: cout << " Acceleration " << domain.xdd(i) << " " << domain.ydd(i) << " " << domain.zdd(i) << std::endl;
-//   }
+
    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
 
    CalcPositionForNodes( domain, delt, domain.numNode() );
@@ -1585,8 +1512,6 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
             break;
       }
 
-//                std:: cout << " delvp " << delvp << std::endl;
-
       delvm = delvm * norm ;
       delvp = delvp * norm ;
 
@@ -1624,7 +1549,6 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
             delvp = 0; /* ERROR - but quiets the compiler */
             break;
       }
-//      std:: cout << " delvm " << delvm << std::endl;//" delvp " << delvp << std::endl;
 
       delvm = delvm * norm ;
       delvp = delvp * norm ;
@@ -1662,7 +1586,6 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
             delvp = 0; /* ERROR - but quiets the compiler */
             break;
       }
-//      std:: cout << " delvm " << delvm << std::endl;//" delvp " << delvp << std::endl;
 
       delvm = delvm * norm ;
       delvp = delvp * norm ;
@@ -1676,7 +1599,6 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
       if ( delvp   < phizeta ) phizeta = delvp ;
       if ( phizeta < Real_t(0.)) phizeta = Real_t(0.);
       if ( phizeta > monoq_max_slope  ) phizeta = monoq_max_slope;
-//      std:: cout << " phi " << phixi << " " << phieta << " " << phizeta << std::endl;
 
       /* Remove length scale */
 
@@ -1692,17 +1614,13 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
          if ( delvxxi   > Real_t(0.) ) delvxxi   = Real_t(0.) ;
          if ( delvxeta  > Real_t(0.) ) delvxeta  = Real_t(0.) ;
          if ( delvxzeta > Real_t(0.) ) delvxzeta = Real_t(0.) ;
-//         std:: cout << " delvx " << delvxxi << " " << delvxeta << " " << delvxzeta << std::endl;
 
          Real_t rho = domain.elemMass(i) / (domain.volo(i) * vnew[i]) ;
-//         std:: cout << " rho " << rho << std::endl;
 
          qlin = -qlc_monoq * rho *
             (  delvxxi   * (Real_t(1.) - phixi) +
                delvxeta  * (Real_t(1.) - phieta) +
                delvxzeta * (Real_t(1.) - phizeta)  ) ;
-
-//                  std:: cout << " qlc_monoq " << qlc_monoq << std::endl;
 
          qquad = qqc_monoq * rho *
             (  delvxxi*delvxxi     * (Real_t(1.) - phixi*phixi) +
@@ -1757,9 +1675,6 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 
       /* Calculate velocity gradients */
       CalcMonotonicQGradientsForElems(domain, vnew);
-//      for (Index_t i=0; i<numElem; ++i) {
-//    	  std:: cout << " delv " << domain.delv_xi(i) << " " << domain.delv_eta(i) << " " << domain.delv_zeta(i) << std::endl;
-//      }
 
       CalcMonotonicQForElems(domain, vnew) ;
 
@@ -1829,13 +1744,6 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 {
    Real_t *pHalfStep = Allocate<Real_t>(length) ;
 
-//   for (Index_t i = 0 ; i < length ; ++i) {
-//
-//   std::cout << "e_new " << e_new[i] << " q_new " << q_new[i] << " bvc " <<  bvc[i] << " pbvc " << pbvc[i]
-//		     << " compression " << compression[i] << " compHalfStep " << compHalfStep[i]
-//			 << " delvc " <<  delvc[i] << std::endl;
-//   }
-
    for (Index_t i = 0 ; i < length ; ++i) {
       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
          + Real_t(0.5) * work[i];
@@ -1871,7 +1779,6 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
          * (  Real_t(3.0)*(p_old[i]     + q_old[i])
               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
    }
-//   std::cout << "e_new1 " << *e_new << std::endl;
 
    for (Index_t i = 0 ; i < length ; ++i) {
 
@@ -1944,7 +1851,6 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
    }
 
    Release(&pHalfStep) ;
-//   std::cout << " e_new at the end " << *e_new << std::endl;
 
    return ;
 }
@@ -2051,17 +1957,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 	   for (Index_t i = 0 ; i < numElemReg ; ++i) {
 		   work[i] = Real_t(0.) ;
 	   }
-//	   std::cout << " rep " << rep << " j " << j << std::endl;
-//	   for (Index_t i = 0 ; i < numElemReg ; ++i) {
-//		   if (j==1) {
-////	   std::cout << "e_new " << e_new[i] << " q_new " << q_new[i] << " bvc " <<  bvc[i] << " pbvc " << pbvc[i]
-////			     << " compression " << compression[i] << " compHalfStep " << compHalfStep[i]
-////				 << " delvc " <<  delvc[i] << std::endl;
-//			   std::cout << "e_new " << e_new[i] << " q_new " << q_new[i]
-//					     << " compression " << compression[i] << " compHalfStep " << compHalfStep[i]
-//						 << " delvc " <<  delvc[i] << std::endl;
-//		   }
-//	   }
+
 	   CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc,
                          p_old, e_old,  q_old, compression, compHalfStep,
                          vnewc, work,  delvc, pmin,
@@ -2150,14 +2046,13 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
        //Determine load imbalance for this region
        //round down the number with lowest cost
        if(r < domain.numReg()/2)
-	 rep = 1;
+    	   rep = 1;
        //you don't get an expensive region unless you at least have 5 regions
        else if(r < (domain.numReg() - (domain.numReg()+15)/20))
          rep = 1 + domain.cost();
        //very expensive regions
        else
-	 rep = 10 * (1+ domain.cost());
-//       std::cout << " Numreg " << domain.numReg() << " numElemReg " << numElemReg << std::endl;
+    	   rep = 10 * (1+ domain.cost());
        EvalEOSForElems(domain, vnew, numElemReg, regElemList, rep);
     }
 
@@ -2192,34 +2087,24 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
 
   CalcLagrangeElements(domain, vnew) ;
-//     for (Index_t i=0; i<numElem; ++i) {
-//        std:: cout << " vnew " << vnew[i] << std::endl;
-//     }
 
   /* Calculate Q.  (Monotonic q option requires communication) */
   CalcQForElems(domain, vnew) ;
 
-//       for (Index_t i=0; i<numElem; ++i) {
-//          std:: cout << " qq " << domain.qq(i) << " ql " << domain.ql(i) << std::endl;
-//       }
-
   ApplyMaterialPropertiesForElems(domain, vnew) ;
-//         for (Index_t i=0; i<numElem; ++i) {
-//            std:: cout << " pressure " << domain.p(i) << std::endl;
-//         }
 
   UpdateVolumesForElems(domain, vnew, domain.v_cut(), numElem) ;
-//       for (Index_t i=0; i<numElem; ++i) {
-//          std:: cout << " volume " << domain.v(i) << std::endl;
-//       }
-//         for (Index_t i=0; i<5; ++i) {
-//            std:: cout << " BILAN : volume " << domain.v(i) << " energy " << domain.e(i)
-//            		<< " arealg " << domain.arealg(i)
-//					<< " pressure " << domain.p(i) << " q "<<  domain.q(i)
-//					<< " qq " << domain.qq(i) << " ql " << domain.ql(i)
-//					<< " volo " << domain.volo(i) << " vdov " << domain.vdov(i)
-//					<< " delv " << domain.delv(i) << " ss " << domain.ss(i) << " elemMass " << domain.elemMass(i) << std::endl;
-//         }
+
+//  for (Index_t i=0; i<5; ++i) {
+//	  std:: cout << " FINAL RESULTS : volume " << domain.v(i) << " energy " << domain.e(i)
+//                 << " arealg " << domain.arealg(i)
+//				 << " pressure " << domain.p(i) << " q "<<  domain.q(i)
+//				 << " qq " << domain.qq(i) << " ql " << domain.ql(i)
+//				 << " volo " << domain.volo(i) << " vdov " << domain.vdov(i)
+//				 << " delv " << domain.delv(i) << " ss " << domain.ss(i)
+//				 << " elemMass " << domain.elemMass(i) << std::endl;
+//  }
+
   Release(&vnew);
 }
 
@@ -2351,7 +2236,7 @@ int main(int argc, char *argv[])
    opts.numFiles = (int)(numRanks+10)/9;
    opts.showProg = 0;
    opts.quiet = 0;
-   opts.viz = 0;
+   opts.viz = -1;
    opts.balance = 1;
    opts.cost = 1;
 
@@ -2393,6 +2278,11 @@ int main(int argc, char *argv[])
          printf("cycle = %d, time = %e, dt=%e\n",
                 locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
       }
+      // Write out final viz file */
+      if ((opts.viz>0) && (locDom->cycle()%opts.viz) == 0) {
+         DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
+      }
+
    }
 
    // Use reduced max elapsed time
@@ -2401,12 +2291,12 @@ int main(int argc, char *argv[])
    gettimeofday(&end, NULL) ;
    elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
    double elapsed_timeG;
-   elapsed_timeG = elapsed_time;
+   elapsed_timeG = elapsed_time*1000;
 
    // Write out final viz file */
-   //if (opts.viz) {
-   //   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
-   //}
+   if (opts.viz>0) {
+      DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
+   }
    
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);

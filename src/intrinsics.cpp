@@ -125,7 +125,7 @@ void cbrtInit() {
   cbrtVar = Func("cbrt",
                  {Var("x", Float)},
                  {Var("r", Float)},
-                 Func::External);
+                 Func::Intrinsic);
 }
 const Func& cbrt() {
   if (!cbrtVar.defined()) {
@@ -134,20 +134,46 @@ const Func& cbrt() {
   return cbrtVar;
 }
 
-static Func cbrt3Var;
-void cbrt3Init() {
-  cbrt3Var = Func("cbrt3",
-                 {Var("x", TensorType::make(ScalarType::Float,
-                         {IndexDomain(3)}))},
-                 {Var("r", TensorType::make(ScalarType::Float,
-                         {IndexDomain(3)}))},
-                 Func::External);
+static Func absVar;
+void absInit() {
+  absVar = Func("abs",
+                {Var("x", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
 }
-const Func& cbrt3() {
-  if (!cbrt3Var.defined()) {
-    cbrt3Init();
+const Func& abs() {
+  if (!absVar.defined()) {
+    absInit();
   }
-  return cbrt3Var;
+  return absVar;
+}
+
+static Func maxVar;
+void maxInit() {
+  maxVar = Func("max",
+                {Var("a", Float), Var("b", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& max() {
+  if (!maxVar.defined()) {
+    maxInit();
+  }
+  return maxVar;
+}
+
+static Func minVar;
+void minInit() {
+  minVar = Func("min",
+                {Var("a", Float), Var("b", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+const Func& min() {
+  if (!minVar.defined()) {
+    minInit();
+  }
+  return minVar;
 }
 
 static Func logVar;
@@ -666,7 +692,9 @@ const std::map<std::string,Func> &byNames() {
     atan2Init();
     sqrtInit();
     cbrtInit();    
-    cbrt3Init();
+    absInit();
+    maxInit();
+    minInit();
     logInit();
     expInit();
     powInit();
@@ -678,11 +706,11 @@ const std::map<std::string,Func> &byNames() {
     normInit();
     dotInit();
     detInit();
-	det2Init();
-	det4Init();
+    det2Init();
+    det4Init();
     invInit();
-	inv2Init();
-	inv4Init();
+    inv2Init();
+    inv4Init();
     crossInit();
     solveInit();
     luInit();
@@ -711,7 +739,9 @@ const std::map<std::string,Func> &byNames() {
                       {"atan2",atan2Var},
                       {"sqrt",sqrtVar},
                       {"cbrt",cbrtVar},
-                      {"cbrt3",cbrt3Var},
+                      {"abs",absVar},
+                      {"max",maxVar},
+                      {"min",minVar},
                       {"log",logVar},
                       {"exp",expVar},
                       {"pow",powVar},
@@ -723,13 +753,13 @@ const std::map<std::string,Func> &byNames() {
                       {"norm",normVar},
                       {"dot",dotVar},
                       {"det",detVar},
-					  {"det2",det2Var},
-					  {"det4",det4Var},
+                      {"det2",det2Var},
+                      {"det4",det4Var},
                       {"inv",invVar},
-					  {"inv2",inv2Var},
-					  {"inv4",inv4Var},
+                      {"inv2",inv2Var},
+                      {"inv4",inv4Var},
                       {"cross",crossVar},
-					  {"__solve",solveVar},
+                      {"__solve",solveVar},
                       {"lu", luVar},
                       {"lufree", lufreeVar},
                       {"lusolve", lusolveVar},

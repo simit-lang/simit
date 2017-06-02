@@ -169,6 +169,18 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                      {ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
   addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::abs().getName(),
+                     {ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::max().getName(),
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
+                     ir::intrinsics::min().getName(),
+                     {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::log().getName(),
                      {ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
@@ -180,7 +192,6 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                      ir::intrinsics::pow().getName(),
                      {ScalarType::Type::FLOAT, ScalarType::Type::FLOAT},
                      {ScalarType::Type::FLOAT});
-
   addScalarIntrinsic(&intrinsics,
                      ir::intrinsics::clock().getName(),
                      {}, {ScalarType::Type::FLOAT});
@@ -194,10 +205,6 @@ std::vector<FuncDecl::Ptr> createIntrinsics() {
                ir::intrinsics::det().getName(),
                {threeByThreeTensorType},
                {makeTensorType(ScalarType::Type::FLOAT)});
-  addIntrinsic(&intrinsics,
-               ir::intrinsics::cbrt3().getName(),
-               {threeVectorType},
-               {threeVectorType});
   addIntrinsic(&intrinsics,
                ir::intrinsics::det2().getName(),
                {twoByTwoTensorType},

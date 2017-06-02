@@ -936,9 +936,17 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   else if (callStmt.callee == ir::intrinsics::atan2() ||
            callStmt.callee == ir::intrinsics::tan()   ||
            callStmt.callee == ir::intrinsics::asin()  ||
+           callStmt.callee == ir::intrinsics::max()  ||
+           callStmt.callee == ir::intrinsics::min()  ||
            callStmt.callee == ir::intrinsics::acos()) {
     std::string fname = callStmt.callee.getName() + floatTypeName;
     call = emitCall(fname, args, llvmFloatType());
+  }
+  else if (callStmt.callee == ir::intrinsics::cbrt()) {
+	call = emitCall(callStmt.callee.getName(), args, llvmFloatType());
+  }
+  else if (callStmt.callee == ir::intrinsics::abs()) {
+	call = emitCall("f" + callStmt.callee.getName(), args, llvmFloatType());
   }
   else if (callStmt.callee == ir::intrinsics::mod()) {
     iassert(callStmt.actuals.size() == 2) << "mod takes two inputs, got"

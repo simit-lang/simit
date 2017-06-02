@@ -1,7 +1,7 @@
 Point the cmake build system to Simit like so:
 
     export SIMIT_INCLUDE_DIR=<path to simit src dir>
-    export SIMIT_LIB_DIR=<path to simit lib dir>
+    export SIMIT_LIBRARY_DIR=<path to simit lib dir>
 
 Build the lulesh example like so:
 
@@ -10,8 +10,11 @@ Build the lulesh example like so:
     cmake ..
     make
 
-Run the lulesh example like so:
+Run the lulesh orginal example like so (only one region):
 
-    ./lulesh 
+    ./lulesh-serial -r 1 
 
 
+Run the lulesh simit version like so :
+
+    ./lulesh-simit 

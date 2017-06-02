@@ -158,7 +158,7 @@ Additional BSD Notice
 
 #include "lulesh.h"
 
-// DLU : using simit namespace
+// using simit namespace
 #include "graph.h"
 #include "program.h"
 #include "mesh.h"
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
    opts.numFiles = (int)(numRanks+10)/9;
    opts.showProg = 0;
    opts.quiet = 0;
-   opts.viz = 0;
+   opts.viz = -1;
    opts.balance = 1;
    opts.cost = 1;
 
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
       printf("See help (-h) for more options\n\n");
    }
 
-   // DLU - Initialize Simit
+   // Initialize Simit
    simit::init("cpu", sizeof(double));
 
    // Set up the mesh and decompose. Assumes regular cubes for now
@@ -215,10 +215,14 @@ int main(int argc, char *argv[])
    locDom = new Domain(numRanks, col, row, plane, opts.nx,
                        side, opts.numReg, opts.balance, opts.cost) ;
 
-   // DLU - Create a graph and initialize it with Domain data
+   // Create a graph and initialize it with Domain data
    Set nodes;
    Set elems(nodes, nodes, nodes, nodes, nodes, nodes, nodes, nodes);
    Set connects(elems,elems,elems,elems,elems,elems,elems);
+   Set symmX(nodes);
+   Set symmY(nodes);
+   Set symmZ(nodes);
+
    // The fields of the nodes set
    FieldRef<double,3> coord 	= nodes.addField<double,3>("coord");	// Nodal coordinates
    FieldRef<double,3> coord_local 	= nodes.addField<double,3>("coord_local");	// Nodal coordinates
@@ -233,20 +237,7 @@ int main(int argc, char *argv[])
    Index_t edgeElems = opts.nx;
    Index_t edgeNodes = edgeElems+1;  // In Lulesh same number of elems and nodes in each dimension
    Index_t nidx = 0 ;
-   std::vector<int> symmX(edgeNodes*edgeNodes*edgeNodes,0) ;
-   std::vector<int> symmY(edgeNodes*edgeNodes*edgeNodes,0) ;
-   std::vector<int> symmZ(edgeNodes*edgeNodes*edgeNodes,0) ;
-   for (int bc =0; bc<edgeNodes*edgeNodes; ++bc){
-	   if (!locDom->symmXempty() != 0) {
-		   symmX[locDom->symmX(bc)]=1;
-	   }
-	   if (!locDom->symmYempty() != 0) {
-		   symmY[locDom->symmY(bc)]=1;
-	   }
-	   if (!locDom->symmZempty() != 0) {
-		   symmZ[locDom->symmZ(bc)]=1;
-	   }
-   }
+
    for (Index_t plane=0; plane<edgeNodes; ++plane) {
      for (Index_t row=0; row<edgeNodes; ++row) {
        for (Index_t col=0; col<edgeNodes; ++col) {
@@ -257,7 +248,6 @@ int main(int argc, char *argv[])
     	     a.set(node, {locDom->xdd(nidx),locDom->ydd(nidx),locDom->zdd(nidx)});
     	     f.set(node, {locDom->fx(nidx),locDom->fy(nidx),locDom->fz(nidx)});
     	     nodalMass.set(node, locDom->nodalMass(nidx));
-    	     symm.set(node, {symmX[nidx],symmY[nidx],symmZ[nidx]});
     	     ++nidx ;
        }
      }
@@ -275,7 +265,6 @@ int main(int argc, char *argv[])
    FieldRef<double> qq    		= elems.addField<double>("qq");   		/* quadratic term for q */
    FieldRef<double> v     		= elems.addField<double>("v");   		/* relative volume */
    FieldRef<double> volo     	= elems.addField<double>("volo");   	/* reference volume */
-   FieldRef<double> vnew   		= elems.addField<double>("vnew");   	/* new relative volume -- temporary */
    FieldRef<double> delv     	= elems.addField<double>("delv");   	/* m_vnew - m_v */
    FieldRef<double> vdov     	= elems.addField<double>("vdov");    	/* volume derivative over volume */
    FieldRef<double> arealg     	= elems.addField<double>("arealg");   	/* characteristic length of an element */
@@ -293,21 +282,18 @@ int main(int argc, char *argv[])
 										 nodeRefs[locDom->nodelist(nidx)[4]], nodeRefs[locDom->nodelist(nidx)[5]],
 										 nodeRefs[locDom->nodelist(nidx)[6]], nodeRefs[locDom->nodelist(nidx)[7]]);
     	     elemRefs.push_back(elem);
-    	     //dxyz.set(elem, {locDom->dxx(nidx),locDom->dyy(nidx),locDom->dzz(nidx)});
-    	     //delvel.set(elem, {locDom->delv_xi(nidx),locDom->delv_eta(nidx),locDom->delv_zeta(nidx)});
-    	     //delx.set(elem, {locDom->delx_xi(nidx),locDom->delx_eta(nidx),locDom->delx_zeta(nidx)});
-    	     e.set(elem,{locDom->e(nidx)});
-    	     p.set(elem,{locDom->p(nidx)});
-    	     q.set(elem,{locDom->q(nidx)});
-    	     ql.set(elem,{locDom->ql(nidx)});
-    	     qq.set(elem,{locDom->qq(nidx)});
-    	     v.set(elem,{locDom->v(nidx)});
-    	     volo.set(elem,{locDom->volo(nidx)});
-    	     delv.set(elem,{locDom->delv(nidx)});
-    	     vdov.set(elem,{locDom->vdov(nidx)});
-    	     arealg.set(elem,{locDom->arealg(nidx)});
-    	     ss.set(elem,{locDom->ss(nidx)});
-    	     elemMass.set(elem,{locDom->elemMass(nidx)});
+    	     e.set(elem,locDom->e(nidx));
+    	     p.set(elem,locDom->p(nidx));
+    	     q.set(elem,locDom->q(nidx));
+    	     ql.set(elem,locDom->ql(nidx));
+    	     qq.set(elem,locDom->qq(nidx));
+    	     v.set(elem,locDom->v(nidx));
+    	     volo.set(elem,locDom->volo(nidx));
+    	     delv.set(elem,locDom->delv(nidx));
+    	     vdov.set(elem,locDom->vdov(nidx));
+    	     arealg.set(elem,locDom->arealg(nidx));
+    	     ss.set(elem,locDom->ss(nidx));
+    	     elemMass.set(elem,locDom->elemMass(nidx));
     	     Int_t bcMask = locDom->elemBC(nidx) ;
     	     std::vector<int> maskxim(3,0);
     	     switch (bcMask & XI_M) {
@@ -351,7 +337,6 @@ int main(int argc, char *argv[])
     	         case ZETA_P_SYMM: maskzetap[0]=0;maskzetap[1]=1;maskzetap[2]=0; break ;
     	         case ZETA_P_FREE: maskzetap[0]=1;maskzetap[1]=0;maskzetap[2]=0; break ;
     	      }
-//    	      elemBC.set(elem,{0,0,0,0,0,0, 0,0,0,0,0,0, 0,1,0,0,0,0});
     	      elemBC.set(elem,{maskxim[2],maskxip[2],masketam[2],masketap[2],maskzetam[2],maskzetap[2],
     	    		  	  	   maskxim[1],maskxip[1],masketam[1],masketap[1],maskzetam[1],maskzetap[1],
 							   maskxim[0],maskxip[0],masketam[0],masketap[0],maskzetam[0],maskzetap[0]});
@@ -375,8 +360,29 @@ int main(int argc, char *argv[])
        }
      }
    }
-	simit::Tensor<int,2> cycle;
+   std::vector<ElementRef> symmXRefs;
+   std::vector<ElementRef> symmYRefs;
+   std::vector<ElementRef> symmZRefs;
+   for (int bc =0; bc<edgeNodes*edgeNodes; ++bc){
+	   if (!locDom->symmXempty() != 0) {
+		   ElementRef BoundNode = symmX.add(nodeRefs[locDom->symmX(bc)]);
+		   symmXRefs.push_back(BoundNode);
+	   }
+	   if (!locDom->symmYempty() != 0) {
+		   ElementRef BoundNode = symmY.add(nodeRefs[locDom->symmY(bc)]);
+		   symmYRefs.push_back(BoundNode);
+	   }
+	   if (!locDom->symmZempty() != 0) {
+		   ElementRef BoundNode = symmZ.add(nodeRefs[locDom->symmZ(bc)]);
+		   symmZRefs.push_back(BoundNode);
+	   }
+   }
+
+	simit::Tensor<int,2> cycle, iterMax, showProg, frequency;
 	cycle(0)= locDom->cycle();
+	iterMax(0)=opts.its;
+	showProg(0)=opts.showProg;
+	frequency(0)=opts.viz;
 	simit::Tensor<double,2> time, deltatime, stoptime, dtfixed,
 							dtcourant, dthydro, deltatimemultlb,
 							deltatimemultub, dtmax,
@@ -418,119 +424,79 @@ int main(int argc, char *argv[])
    Program program;
    program.loadFile(codefile);
 
-   Function TimeIncrement_sim = program.compile("TimeIncrement_sim");
-   TimeIncrement_sim.bind("nodes",  &nodes);
-   TimeIncrement_sim.bind("elems", &elems);
-   TimeIncrement_sim.bind("connects", &connects);
-   TimeIncrement_sim.bind("cycle", &cycle);
-   TimeIncrement_sim.bind("time", &time);
-   TimeIncrement_sim.bind("deltatime", &deltatime);
-   TimeIncrement_sim.bind("stoptime", &stoptime);
-   TimeIncrement_sim.bind("dtfixed", &dtfixed);
-   TimeIncrement_sim.bind("dtcourant", &dtcourant);
-   TimeIncrement_sim.bind("dthydro", &dthydro);
-   TimeIncrement_sim.bind("deltatimemultlb", &deltatimemultlb);
-   TimeIncrement_sim.bind("deltatimemultub", &deltatimemultub);
-   TimeIncrement_sim.bind("dtmax", &dtmax);
-   TimeIncrement_sim.bind("hgcoef", &hgcoef);
-   TimeIncrement_sim.bind("u_cut", &u_cut);
-   TimeIncrement_sim.bind("qstop", &qstop);
-   TimeIncrement_sim.bind("monoq_limiter_mult", &monoq_limiter_mult);
-   TimeIncrement_sim.bind("monoq_max_slope", &monoq_max_slope);
-   TimeIncrement_sim.bind("qlc_monoq", &qlc_monoq);
-   TimeIncrement_sim.bind("qqc_monoq", &qqc_monoq);
-   TimeIncrement_sim.bind("eosvmin", &eosvmin);
-   TimeIncrement_sim.bind("eosvmax", &eosvmax);
-   TimeIncrement_sim.bind("v_cut", &v_cut);
-   TimeIncrement_sim.bind("qqc", &qqc);
-   TimeIncrement_sim.bind("dvovmax", &dvovmax);
-   TimeIncrement_sim.bind("rho0", &rho0);
-   TimeIncrement_sim.bind("ss4o3", &ss4o3);
-   TimeIncrement_sim.bind("e_cut", &e_cut);
-   TimeIncrement_sim.bind("p_cut", &p_cut);
-   TimeIncrement_sim.bind("q_cut", &q_cut);
-   TimeIncrement_sim.bind("emin", &emin);
-   TimeIncrement_sim.bind("pmin", &pmin);
+   Function lulesh_sim = program.compile("lulesh_sim");
+   lulesh_sim.bind("nodes",  &nodes);
+   lulesh_sim.bind("elems", &elems);
+   lulesh_sim.bind("connects", &connects);
+   lulesh_sim.bind("symmX", &symmX);
+   lulesh_sim.bind("symmY", &symmY);
+   lulesh_sim.bind("symmZ", &symmZ);
+   lulesh_sim.bind("cycle", &cycle);
+   lulesh_sim.bind("time", &time);
+   lulesh_sim.bind("frequency", &frequency);
+   lulesh_sim.bind("deltatime", &deltatime);
+   lulesh_sim.bind("stoptime", &stoptime);
+   lulesh_sim.bind("iterMax", &iterMax);
+   lulesh_sim.bind("showProg", &showProg);
+   lulesh_sim.bind("dtfixed", &dtfixed);
+   lulesh_sim.bind("dtcourant", &dtcourant);
+   lulesh_sim.bind("dthydro", &dthydro);
+   lulesh_sim.bind("deltatimemultlb", &deltatimemultlb);
+   lulesh_sim.bind("deltatimemultub", &deltatimemultub);
+   lulesh_sim.bind("dtmax", &dtmax);
+   lulesh_sim.bind("hgcoef", &hgcoef);
+   lulesh_sim.bind("u_cut", &u_cut);
+   lulesh_sim.bind("qstop", &qstop);
+   lulesh_sim.bind("monoq_limiter_mult", &monoq_limiter_mult);
+   lulesh_sim.bind("monoq_max_slope", &monoq_max_slope);
+   lulesh_sim.bind("qlc_monoq", &qlc_monoq);
+   lulesh_sim.bind("qqc_monoq", &qqc_monoq);
+   lulesh_sim.bind("eosvmin", &eosvmin);
+   lulesh_sim.bind("eosvmax", &eosvmax);
+   lulesh_sim.bind("v_cut", &v_cut);
+   lulesh_sim.bind("qqc", &qqc);
+   lulesh_sim.bind("dvovmax", &dvovmax);
+   lulesh_sim.bind("rho0", &rho0);
+   lulesh_sim.bind("ss4o3", &ss4o3);
+   lulesh_sim.bind("e_cut", &e_cut);
+   lulesh_sim.bind("p_cut", &p_cut);
+   lulesh_sim.bind("q_cut", &q_cut);
+   lulesh_sim.bind("emin", &emin);
+   lulesh_sim.bind("pmin", &pmin);
 
-   Function LagrangeLeapFrog_sim = program.compile("LagrangeLeapFrog_sim");
-   LagrangeLeapFrog_sim.bind("nodes",  &nodes);
-   LagrangeLeapFrog_sim.bind("elems", &elems);
-   LagrangeLeapFrog_sim.bind("connects", &connects);
-   LagrangeLeapFrog_sim.bind("cycle", &cycle);
-   LagrangeLeapFrog_sim.bind("time", &time);
-   LagrangeLeapFrog_sim.bind("deltatime", &deltatime);
-   LagrangeLeapFrog_sim.bind("stoptime", &stoptime);
-   LagrangeLeapFrog_sim.bind("dtfixed", &dtfixed);
-   LagrangeLeapFrog_sim.bind("dtcourant", &dtcourant);
-   LagrangeLeapFrog_sim.bind("dthydro", &dthydro);
-   LagrangeLeapFrog_sim.bind("deltatimemultlb", &deltatimemultlb);
-   LagrangeLeapFrog_sim.bind("deltatimemultub", &deltatimemultub);
-   LagrangeLeapFrog_sim.bind("dtmax", &dtmax);
-   LagrangeLeapFrog_sim.bind("hgcoef", &hgcoef);
-   LagrangeLeapFrog_sim.bind("u_cut", &u_cut);
-   LagrangeLeapFrog_sim.bind("qstop", &qstop);
-   LagrangeLeapFrog_sim.bind("monoq_limiter_mult", &monoq_limiter_mult);
-   LagrangeLeapFrog_sim.bind("monoq_max_slope", &monoq_max_slope);
-   LagrangeLeapFrog_sim.bind("qlc_monoq", &qlc_monoq);
-   LagrangeLeapFrog_sim.bind("qqc_monoq", &qqc_monoq);
-   LagrangeLeapFrog_sim.bind("eosvmin", &eosvmin);
-   LagrangeLeapFrog_sim.bind("eosvmax", &eosvmax);
-   LagrangeLeapFrog_sim.bind("v_cut", &v_cut);
-   LagrangeLeapFrog_sim.bind("qqc", &qqc);
-   LagrangeLeapFrog_sim.bind("dvovmax", &dvovmax);
-   LagrangeLeapFrog_sim.bind("rho0", &rho0);
-   LagrangeLeapFrog_sim.bind("ss4o3", &ss4o3);
-   LagrangeLeapFrog_sim.bind("e_cut", &e_cut);
-   LagrangeLeapFrog_sim.bind("p_cut", &p_cut);
-   LagrangeLeapFrog_sim.bind("q_cut", &q_cut);
-   LagrangeLeapFrog_sim.bind("emin", &emin);
-   LagrangeLeapFrog_sim.bind("pmin", &pmin);
-
-   TimeIncrement_sim.init();
-   LagrangeLeapFrog_sim.init();
-
-//   std::cout << locDom->x(locDom->nodelist(0)[7]) << std::endl;
-//   std::cout << locDom->y(locDom->nodelist(0)[7]) << std::endl;
-//   std::cout << locDom->z(locDom->nodelist(0)[7]) << std::endl;
+   lulesh_sim.init();
 
    // BEGIN timestep to solution */
    timeval start;
    gettimeofday(&start, NULL) ;
-
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
-//	   std::cout << " set coord " << coord << std::endl;
-//	   std::cout << " End of CPP " << std::endl;
-	   TimeIncrement_sim.run() ;
-      locDom->cycle() = cycle(0);
-      locDom->time() = time(0);
-      locDom->deltatime() = deltatime(0);
-//  	stoptime(0)=locDom->stoptime();
-//  	dtfixed(0)=locDom->dtfixed();
-//  	deltatimemultlb(0)=locDom->deltatimemultlb();
-//  	deltatimemultub(0)=locDom->deltatimemultub();
-//  	dtmax(0)=locDom->dtmax();
-//  	hgcoef(0)=locDom->hgcoef();
-//  	u_cut(0)=locDom->u_cut();
-//  	qstop(0)=locDom->qstop();
-//  	monoq_limiter_mult(0)=locDom->monoq_limiter_mult();
-//  	monoq_max_slope(0)=locDom->monoq_max_slope();
-//  	qlc_monoq(0)=locDom->qlc_monoq();
-//  	qqc_monoq(0)=locDom->qqc_monoq();
-//  	eosvmin(0)=locDom->eosvmin();
-//  	eosvmax(0)=locDom->eosvmax();
-//  	v_cut(0)=locDom->v_cut();
-//  	qqc(0)=locDom->qqc();
-//  	dvovmax(0)=locDom->dvovmax();
-      //LagrangeLeapFrog_sim.bind("deltatime", Tensor<double>(double(locDom->deltatime())));
-      LagrangeLeapFrog_sim.run();
-      locDom->dtcourant() = dtcourant(0);
-      locDom->dthydro() = dthydro(0);
-
-      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
-         printf("cycle = %d, time = %e, dt=%e\n",
-                locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
-      }
+	   lulesh_sim.run();
+	   locDom->cycle()=cycle(0);
+	   locDom->time()=time(0);
+	   if (opts.viz>0) {
+		   // Put some physical quantities back in locDom to dump with visit
+		   nidx = 0 ;
+		   for (Index_t plane=0; plane<edgeElems; ++plane) {
+			   for (Index_t row=0; row<edgeElems; ++row) {
+				   for (Index_t col=0; col<edgeElems; ++col) {
+					   locDom->e(nidx)=e.get(elemRefs[nidx]);
+					   locDom->p(nidx)=p.get(elemRefs[nidx]);
+					   locDom->v(nidx)=v.get(elemRefs[nidx]);
+					   locDom->q(nidx)=q.get(elemRefs[nidx]);
+					   locDom->x(nidx)=coord.get(elemRefs[nidx])(0);
+					   locDom->y(nidx)=coord.get(elemRefs[nidx])(1);
+					   locDom->z(nidx)=coord.get(elemRefs[nidx])(2);
+					   locDom->xd(nidx)=vel.get(elemRefs[nidx])(0);
+					   locDom->yd(nidx)=vel.get(elemRefs[nidx])(1);
+					   locDom->zd(nidx)=vel.get(elemRefs[nidx])(2);
+					   nidx++;
+				   }
+			   }
+		   }
+		   // Write out final viz file */
+		   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
+	   }
    }
 
    // Use reduced max elapsed time
@@ -539,16 +505,31 @@ int main(int argc, char *argv[])
    gettimeofday(&end, NULL) ;
    elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
    double elapsed_timeG;
-   elapsed_timeG = elapsed_time;
+   elapsed_timeG = elapsed_time*1000;
 
-   // Write out final viz file */
-   //if (opts.viz) {
-   //   DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
-   //}
-   
+   // Put some physical quantitites back in locDom to verify results
+   nidx = 0 ;
+   for (Index_t plane=0; plane<edgeElems; ++plane) {
+     for (Index_t row=0; row<edgeElems; ++row) {
+       for (Index_t col=0; col<edgeElems; ++col) {
+  	     locDom->e(nidx)=e.get(elemRefs[nidx]);
+	     locDom->p(nidx)=p.get(elemRefs[nidx]);
+	     locDom->v(nidx)=v.get(elemRefs[nidx]);
+	     locDom->q(nidx)=q.get(elemRefs[nidx]);
+	     locDom->x(nidx)=coord.get(elemRefs[nidx])(0);
+	     locDom->y(nidx)=coord.get(elemRefs[nidx])(1);
+	     locDom->z(nidx)=coord.get(elemRefs[nidx])(2);
+	     locDom->xd(nidx)=vel.get(elemRefs[nidx])(0);
+	     locDom->yd(nidx)=vel.get(elemRefs[nidx])(1);
+	     locDom->zd(nidx)=vel.get(elemRefs[nidx])(2);
+	     nidx++;
+       }
+     }
+   }
+   locDom->cycle()=cycle(0);
+   locDom->time()=time(0);
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-
    return 0 ;
 }
