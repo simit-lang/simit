@@ -1,4 +1,4 @@
-iterMax 100
+iterMax 101
 CGNSFileName ../pansteak100x100.cgns
 timeMax 4.5
 iterMax_coupling 30
