@@ -61,7 +61,10 @@ int main(int argc, char **argv)
     std::cout << "---- Iteration " << iter << " ----" << std::endl;
     std::cout << "  -- Time " << time << " -- dt " << dt << " --" << std::endl;
 
-    Pan.solve_thermal.runSafe();
+    if (Pan.PM.get(TPM::solver_type)<6)
+      Pan.solve_thermal.runSafe();
+    else
+      Pan.solve_thermalGS.runSafe();
 
     time+=dt;
 
@@ -82,6 +85,10 @@ int main(int argc, char **argv)
   double elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
   elapsed_time = elapsed_time*1000;
   printf("\nElapsed time         = %10.2f (ms)\n", elapsed_time);
+  FieldRef<double> T = Pan.quads_MG[1]->getField<double>("T");
+  for (auto quad = Pan.quads_MG[1]->begin(); quad != Pan.quads_MG[1]->end(); ++quad) {
+    std::cout << float(T.get(*quad)) << std::endl;
+  }
   if (PM.get(TPM::dumpVisit)) {
     DumpToVisit("Pan_L1",iter, time, Pan.Xsize[1], Pan.Ysize[1],
                 Pan.quads_MG[1], Pan.points_MG[1]);

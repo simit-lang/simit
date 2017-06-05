@@ -4,7 +4,7 @@ CGNSFileName_0 ../pansteak49x49.cgns
 timeMax 4.5
 iterMax_coupling 30
 tolerance_coupling 0.01
-dumpVisit 1
+dumpVisit 0
 dumpFrequency 2
 PanFileName ../pan.therm
 SteakFileName ../steak.therm

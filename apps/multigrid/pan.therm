@@ -2,8 +2,8 @@ cfl 100
 T_init 350
 coupling_direction 1
 qwb 500000
-solver_type 4
+solver_type 8
 solver_itermax 10000
-solver_tolerance 0.000000000001
+solver_tolerance 0.000001
 smoother_iter 4
 

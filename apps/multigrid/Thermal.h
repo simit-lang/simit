@@ -51,6 +51,8 @@ public:
 
   // Simit functions
   Function solve_thermal;
+  Function solve_thermalGS;
+  Function init_MG;
   Function compute_dt;
   Function flux_interface;
   Function temperature_interface;

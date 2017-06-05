@@ -279,6 +279,12 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0,
   solve_thermal = program.compile("solve_thermal");
   bindSimitFunc(&solve_thermal);
 
+  solve_thermalGS = program.compile("solve_thermalGS");
+  bindSimitFunc(&solve_thermalGS);
+
+  init_MG = program.compile("init_MG");
+  bindSimitFunc(&init_MG);
+
   compute_dt = program.compile("compute_dt");
   bindSimitFunc(&compute_dt);
 
