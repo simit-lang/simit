@@ -9,11 +9,11 @@
 
 #include "../thermal/ParameterManager.h"
 #include "../thermal/ParameterManagerMacros.h"
-#include "ThermalParameterManager.h"
+#include "MGParameterManager.h"
 
 using namespace simit;
 
-#define TPM ThermalParameterManager
+#define TPM MGParameterManager
 
 // Thermal-viz
 void DumpToVisit(std::string ZoneName,int iter, double tim,
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
   //1- Analyse command line arguments
   if (argc != 2) {
-    std::cerr << "Usage: thermic <path to .therm file>" << std::endl;
+    std::cerr << "Usage: mg <path to .therm file>" << std::endl;
     return -1;
   }
   std::string thermfile = argv[1];
@@ -50,8 +50,8 @@ int main(int argc, char **argv)
 
   int iter=0;
   if (PM.get(TPM::dumpVisit)) {
-    //		DumpToVisit("Pan_L0",iter, time, Pan_L0.Xsize, Pan_L0.Ysize, Pan_L0.quads, Pan_L0.points);
-    //		DumpToVisit("Pan_L1",iter, time, Pan_L1.Xsize, Pan_L1.Ysize, Pan_L1.quads, Pan_L1.points);
+    DumpToVisit("Pan_L1",iter, time, Pan.Xsize[1], Pan.Ysize[1],
+                Pan.quads_MG[1], Pan.points_MG[1]);
   }
   // Time loop
   timeval start;
@@ -61,30 +61,13 @@ int main(int argc, char **argv)
     std::cout << "---- Iteration " << iter << " ----" << std::endl;
     std::cout << "  -- Time " << time << " -- dt " << dt << " --" << std::endl;
 
-    //		int iter_coupling=0;
-    //		bool converged = false;
-    //		// Strong coupling
-    //		while ((iter_coupling < iterMax_coupling) && !converged) {
-    //			// Extrapolate Temperature on Steak and set Pan
-    //			Pan.setBC_Tw(Steak.bcbottom);
-    //			// Thermal solving for the Pan
     Pan.solve_thermal.runSafe();
-    //			// Extrapolate Temperature on Pan and set Steak
-    //			Pan.temperature_interface.runSafe();
-    //			Steak.setBC_qw(Pan.bcup);
-    //			// Thermal solving for the Steak
-    //			Steak.solve_thermal.runSafe();
-    //			Steak.temperature_interface.runSafe();
-    //			converged = Pan.compareTw(Steak.bcbottom,PM.get(TPM::tolerance_coupling));
-    //			iter_coupling++;
-    //		}
-    //		if (converged)
-    //			std::cout << " >>> Strong coupling converged in " << iter_coupling << " iterations" << std::endl;
+
     time+=dt;
 
     if ((PM.get(TPM::dumpVisit)) && (iter%(PM.get(TPM::dumpFrequency))==0)) {
-      //			DumpToVisit("Pan_L0",iter, time, Pan_L0.Xsize, Pan_L0.Ysize, Pan_L0.quads, Pan_L0.points);
-      //			DumpToVisit("Pan_L1",iter, time, Pan_L1.Xsize, Pan_L1.Ysize, Pan_L1.quads, Pan_L1.points);
+      DumpToVisit("Pan_L1",iter, time, Pan.Xsize[1], Pan.Ysize[1],
+                  Pan.quads_MG[1], Pan.points_MG[1]);
     }
     // Compute the next timestep value
     Pan.compute_dt.runSafe();
@@ -100,7 +83,7 @@ int main(int argc, char **argv)
   elapsed_time = elapsed_time*1000;
   printf("\nElapsed time         = %10.2f (ms)\n", elapsed_time);
   if (PM.get(TPM::dumpVisit)) {
-    //		DumpToVisit("Pan_L0",iter, time, Pan_L0.Xsize, Pan_L0.Ysize, Pan_L0.quads, Pan_L0.points);
-    //		DumpToVisit("Pan_L1",iter, time, Pan_L1.Xsize, Pan_L1.Ysize, Pan_L1.quads, Pan_L1.points);
+    DumpToVisit("Pan_L1",iter, time, Pan.Xsize[1], Pan.Ysize[1],
+                Pan.quads_MG[1], Pan.points_MG[1]);
   }
 }

@@ -331,9 +331,11 @@ void Thermal::setBC_qw(Set *InterfaceIN, int i){
   //	double Tw;
   FieldRef<double> qwin  = InterfaceOUT->getField<double>("qwin");
   FieldRef<double> qwout = InterfaceIN->getField<double>("qwout");
-  for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
+  for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator>
+      bc(InterfaceOUT->begin(),InterfaceIN->begin());
+      bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
     qwin.set((ElementRef)*bc.first,-qwout.get((ElementRef)*bc.second));
-    //		Tw=InterfaceIN->getField<double>("Twout").get((ElementRef)*bc.second);
+    //	Tw=InterfaceIN->getField<double>("Twout").get((ElementRef)*bc.second);
   }
   //	std::cout << " TW " << Tw << std::endl;
 }
@@ -349,7 +351,9 @@ void Thermal::setBC_Tw(Set *InterfaceIN, int i){
   FieldRef<double> Twin  = InterfaceOUT->getField<double>("Twin");
   FieldRef<double> Twout = InterfaceIN->getField<double>("Twout");
   //	double Tw;
-  for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
+  for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator>
+      bc(InterfaceOUT->begin(),InterfaceIN->begin());
+      bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
     Twin.set((ElementRef)*bc.first,Twout.get((ElementRef)*bc.second));
     //		Tw=Twout.get((ElementRef)*bc.second);
   }
@@ -367,8 +371,11 @@ bool Thermal::compareTw(Set *InterfaceIN, double tolerance, int i){
   FieldRef<double> Twin  = InterfaceOUT->getField<double>("Twin");
   FieldRef<double> Twout = InterfaceIN->getField<double>("Twout");
   bool converged=true;
-  for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator> bc(InterfaceOUT->begin(),InterfaceIN->begin()); bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
-    if (abs( Twin.get((ElementRef)*bc.first)-Twout.get((ElementRef)*bc.second) )/Twin.get((ElementRef)*bc.first) > tolerance) {
+  for (std::pair<simit::Set::ElementIterator, simit::Set::ElementIterator>
+      bc(InterfaceOUT->begin(),InterfaceIN->begin());
+      bc.first != InterfaceOUT->end(); ++bc.first,++bc.second) {
+    if (abs( Twin.get((ElementRef)*bc.first)-Twout.get((ElementRef)*bc.second) )
+        /Twin.get((ElementRef)*bc.first) > tolerance) {
       converged=false;
       break;
     }

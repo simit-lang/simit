@@ -1,6 +1,6 @@
 
-#ifndef APPS_THERMAL_THERMAL_H_
-#define APPS_THERMAL_THERMAL_H_
+#ifndef APPS_MULTIGRID_THERMAL_H_
+#define APPS_MULTIGRID_THERMAL_H_
 
 #include "graph.h"
 #include "program.h"
@@ -11,11 +11,11 @@
 
 #include "../thermal/ParameterManager.h"
 #include "../thermal/ParameterManagerMacros.h"
-#include "ThermalParameterManager.h"
+#include "MGParameterManager.h"
 
 using namespace simit;
 
-#define TPM ThermalParameterManager
+#define TPM MGParameterManager
 
 class Thermal {
 public:
@@ -63,4 +63,4 @@ public:
 
 };
 
-#endif /* APPS_THERMAL_THERMAL_H_ */
+#endif /* APPS_MULTIGRID_THERMAL_H_ */
