@@ -1,5 +1,5 @@
 iterMax 101
-CGNSFileName ../pansteak100x100.cgns
+CGNSFileName ../pansteak5x5.cgns
 timeMax 4.5
 iterMax_coupling 30
 tolerance_coupling 0.0015
