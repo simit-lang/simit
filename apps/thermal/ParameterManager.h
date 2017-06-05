@@ -60,14 +60,14 @@ private ParameterManager<T4>
 {
 public:
   PMM_GET(1)
-PMM_GET(2)
-PMM_GET(3)
-PMM_GET(4)
+  PMM_GET(2)
+  PMM_GET(3)
+  PMM_GET(4)
 
-PMM_SET(1)
-PMM_SET(2)
-PMM_SET(3)
-PMM_SET(4)
+  PMM_SET(1)
+  PMM_SET(2)
+  PMM_SET(3)
+  PMM_SET(4)
 friend std::ostream& operator<<
 (std::ostream& os, const ParameterManager4<T1, T2, T3, T4>& pmm) {
     pmm.ParameterManager<T1>::print(os);

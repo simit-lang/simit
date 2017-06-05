@@ -3,6 +3,11 @@ Point the cmake build system to Simit like so:
     export SIMIT_INCLUDE_DIR=<path to simit src dir>
     export SIMIT_LIBRARY_DIR=<path to simit lib dir>
 
+Mandatory: Download and install CGNS  from 
+				https://cgns.github.io/
+Optional:  Download and install Visit from 
+				https://wci.llnl.gov/simulation/computer-codes/visit/
+				
 Build the thermic example like so:
 
     mkdir build
@@ -12,7 +17,6 @@ Build the thermic example like so:
 
 Run the explicit thermic example like so:
 
-    ./thermic ../thermic.sim ../../data/tet-bunny/bunny.1
+    ./mg ../params.therm
 
-The thermic code run for 100 time steps and leave 100 .obj files in
-your build directory.
+
