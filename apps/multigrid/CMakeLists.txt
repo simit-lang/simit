@@ -3,7 +3,8 @@ project(mg)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11")
 file(GLOB SOURCE_CODE ${PROJECT_SOURCE_DIR}/*.cpp)
-add_executable(${PROJECT_NAME} ${SOURCE_CODE})
+set(DEP_THERMAL "${PROJECT_SOURCE_DIR}/../thermal/ThermalViz.cpp")
+add_executable(${PROJECT_NAME} ${SOURCE_CODE} ${DEP_THERMAL})
 
 # Simit include files and library
 if (NOT DEFINED ENV{SIMIT_INCLUDE_DIR} OR NOT DEFINED ENV{SIMIT_LIBRARY_DIR})

@@ -9,8 +9,8 @@
 
 #include "cgnslib.h"
 
-#include "ParameterManager.h"
-#include "ParameterManagerMacros.h"
+#include "../thermal/ParameterManager.h"
+#include "../thermal/ParameterManagerMacros.h"
 #include "ThermalParameterManager.h"
 
 using namespace simit;

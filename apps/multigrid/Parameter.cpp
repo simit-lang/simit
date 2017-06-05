@@ -1,3 +1,0 @@
-#include "../thermal/Parameter.h"
-
-
