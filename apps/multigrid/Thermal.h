@@ -46,7 +46,8 @@ public:
   simit::Tensor<int,2> 	solver_type;
   simit::Tensor<int,2> 	solver_itermax;
   simit::Tensor<double,2> solver_tolerance;
-  simit::Tensor<int,2> 	smoother_iter;
+  simit::Tensor<int,2>  smoother_iter;
+  simit::Tensor<int,2>  solver_assembly;
   simit::Tensor<int,4> 	bc_types;
 
   // Simit functions

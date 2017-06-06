@@ -274,6 +274,7 @@ Thermal::Thermal(std::string paramFile, std::string CGNSFileName_L0,
   solver_itermax(0)=PM.get(TPM::solver_itermax);
   solver_tolerance(0)=PM.get(TPM::solver_tolerance);
   smoother_iter(0)=PM.get(TPM::smoother_iter);
+  solver_assembly(0)=PM.get(TPM::solver_assembly);
   bc_types={0,0,0,0};
 
   solve_thermal = program.compile("solve_thermal");
@@ -321,6 +322,7 @@ void Thermal::bindSimitFunc(Function *simFunc){
   simFunc->bind("solver_itermax", &solver_itermax);
   simFunc->bind("solver_tolerance", &solver_tolerance);
   simFunc->bind("smoother_iter", &smoother_iter);
+  simFunc->bind("solver_assembly", &solver_assembly);
   simFunc->bind("bc_types", &bc_types);
   simFunc->bind("links", links);
   simFunc->init();

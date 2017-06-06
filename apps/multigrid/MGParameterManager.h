@@ -6,6 +6,7 @@
 class MGParameterManager:public ThermalParameterManager {
 public:
   static const Parameter<int>    smoother_iter;
+  static const Parameter<int>    solver_assembly;
   static const Parameter<std::string> CGNSFileName_0;	// Relative path to the CGNS File
   static const Parameter<std::string> CGNSFileName_1;	// Relative path to the CGNS File
 

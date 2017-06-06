@@ -7,6 +7,7 @@
 
 // Defining default values
 PM_DEF ( int, smoother_iter, 10);
+PM_DEF ( int, solver_assembly, 1);
 PM_DEF ( std::string, CGNSFileName_0, "../rectangular.cgns");
 PM_DEF ( std::string, CGNSFileName_1, "../rectangular.cgns");
 
@@ -14,6 +15,7 @@ void MGParameterManager::initializeMG(void)
 {
   // Initialize with default values
   PM_INIT(smoother_iter);
+  PM_INIT(solver_assembly);
   PM_INIT(CGNSFileName_0);
   PM_INIT(CGNSFileName_1);
 }
@@ -42,6 +44,7 @@ bool MGParameterManager::readParameters(std::string paramFileName)
         PM_READ_INT("solver_type",paramValue)
         PM_READ_INT("solver_itermax",paramValue)
         PM_READ_INT("smoother_iter",paramValue)
+        PM_READ_INT("solver_assembly",paramValue)
         PM_READ_DOUBLE("timeMax",paramValue)
         PM_READ_DOUBLE("cfl",paramValue)
         PM_READ_DOUBLE("tolerance_coupling",paramValue)
