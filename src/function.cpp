@@ -21,12 +21,12 @@ void Function::clear() {
 
 void Function::bind(const std::string& name, simit::Set *set) {
 #ifdef SIMIT_ASSERTS
-  uassert(defined()) << "undefined function";
-  uassert(impl->hasBindable(name))
+  simit_uassert(defined()) << "undefined function";
+  simit_uassert(impl->hasBindable(name))
       << "no argument or global " << util::quote(name) << " in function";
   // Check that the set matches the argument type
   ir::Type argType = impl->getBindableType(name);
-  uassert(argType.isSet()) << "Argument is not a set";
+  simit_uassert(argType.isSet()) << "Argument is not a set";
   const ir::SetType *argSetType = argType.toSet();
   const ir::ElementType *elemType = argSetType->elementType.toElement();
 
@@ -68,18 +68,18 @@ void Function::bind(const std::string& name, simit::Set *set) {
         name + "." + fieldData->name + " type does not match Simit type " +
         util::quote(*elemFieldType);
 
-    uassert(setFieldTypeComponentType == elemFieldType->getComponentType() &&
+    simit_uassert(setFieldTypeComponentType == elemFieldType->getComponentType() &&
             setFieldType->getOrder() == elemFieldType->order())
         << fieldTypeErrorString;
 
     const vector<ir::IndexDomain> &fieldDims = elemFieldType->getDimensions();
     for (size_t i=0; i < elemFieldType->order(); ++i) {
-      uassert(fieldDims[i].getIndexSets().size() == 1)
+      simit_uassert(fieldDims[i].getIndexSets().size() == 1)
           << fieldTypeErrorString;
 
       size_t argFieldRange = fieldDims[i].getIndexSets()[0].getSize();
 
-      uassert(setFieldType->getDimension(i) == argFieldRange)
+      simit_uassert(setFieldType->getDimension(i) == argFieldRange)
           << fieldTypeErrorString;
     }
   }
@@ -90,12 +90,12 @@ void Function::bind(const std::string& name, simit::Set *set) {
 
 void Function::bind(const string& name, const TensorType& ttype, void* data) {
 #ifdef SIMIT_ASSERTS
-  uassert(defined()) << "undefined function";
-  uassert(impl->hasBindable(name))
+  simit_uassert(defined()) << "undefined function";
+  simit_uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
   ir::Type type = ir::convert(ttype);
   ir::Type argType = impl->getBindableType(name);
-  uassert(type == argType)
+  simit_uassert(type == argType)
       << "tensor type " << type
       << " does not match function argument type " << argType;
 #endif
@@ -103,8 +103,8 @@ void Function::bind(const string& name, const TensorType& ttype, void* data) {
 }
 
 void Function::bind(const std::string& name, void* data) {
-  uassert(defined()) << "undefined function";
-  uassert(impl->hasBindable(name))
+  simit_uassert(defined()) << "undefined function";
+  simit_uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
   impl->bind(name, data);
 }
@@ -114,12 +114,12 @@ void Function::bind(const string& name, TensorData& data) {
 }
 
 void Function::init() {
-  uassert(defined()) << "undefined function";
+  simit_uassert(defined()) << "undefined function";
   funcPtr = impl->init();
 }
 
 void Function::runSafe() {
-  uassert(defined()) << "undefined function";
+  simit_uassert(defined()) << "undefined function";
   if (!impl->isInitialized()) {
     init();
   }
@@ -129,12 +129,12 @@ void Function::runSafe() {
 }
 
 void Function::mapArgs() {
-  uassert(defined()) << "undefined function";
+  simit_uassert(defined()) << "undefined function";
   impl->mapArgs();
 }
 
 void Function::unmapArgs(bool updated) {
-  uassert(defined()) << "undefined function";
+  simit_uassert(defined()) << "undefined function";
   impl->unmapArgs(updated);
 }
 

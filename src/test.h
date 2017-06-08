@@ -61,7 +61,7 @@ public:
       return false;
     }
     for (auto pair : util::zip(actuals, func.getArguments())) {
-      iassert(ir::isa<ir::Literal>(pair.first));
+      simit_iassert(ir::isa<ir::Literal>(pair.first));
       const auto actualType = pair.first.type();
       const auto argType = pair.second.getType();
       if (actualType != argType || (actualType.isTensor() &&
@@ -79,7 +79,7 @@ public:
       return false;
     }
     for (auto pair : util::zip(expects, func.getResults())) {
-      iassert(ir::isa<ir::Literal>(pair.first));
+      simit_iassert(ir::isa<ir::Literal>(pair.first));
       if (pair.first.type() != pair.second.getType()) {
         diags->report() << "The result types do not match the expected result "
                            "types.";

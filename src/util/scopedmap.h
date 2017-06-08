@@ -27,7 +27,7 @@ public:
   size_t levels() const { return scopes.size(); }
 
   void clear() {
-    iassert(levels() == 1);
+    simit_iassert(levels() == 1);
     scopes.front().clear();
   }
 
@@ -71,7 +71,7 @@ public:
              const SearchScope searchScope = SearchScope::All) {
     switch (searchScope) {
       case SearchScope::CurrentOnly:
-        iassert(scopes.front().find(symbol) != scopes.front().end()) <<
+        simit_iassert(scopes.front().find(symbol) != scopes.front().end()) <<
             "Attempting to load symbol (" << symbol << ") not in current scope";
         return scopes.front().at(symbol);
       default:
@@ -84,7 +84,7 @@ public:
       }
     }
     assert(false);
-    ierror << "Attempting to load symbol " << symbol
+    simit_ierror << "Attempting to load symbol " << symbol
            << " which is not in the symbol table";
     return scopes.begin()->begin()->second;  // silence warning
   }
@@ -93,7 +93,7 @@ public:
                    const SearchScope searchScope = SearchScope::All) const {
     switch (searchScope) {
       case SearchScope::CurrentOnly:
-        iassert(scopes.front().find(symbol) != scopes.front().end()) <<
+        simit_iassert(scopes.front().find(symbol) != scopes.front().end()) <<
             "Attempting to load symbol (" << symbol << ") not in current scope";
         return scopes.front().at(symbol);
       default:
@@ -105,7 +105,7 @@ public:
         return scope.at(symbol);
       }
     }
-    ierror << "Attempting to get a symbol that is not in symbol table.";
+    simit_ierror << "Attempting to get a symbol that is not in symbol table.";
     return scopes.begin()->at(symbol); // silence warning
   }
 

@@ -911,7 +911,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
       break;
     }
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
 }
@@ -1113,12 +1113,12 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   // tensors) some intrinsics have undefined types and must be handled as
   // special cases. TODO: Remove these restrictions and these special cases.
   if (funcName == ir::intrinsics::norm().getName()) {
-    iassert(expr->args.size() == 1);
+    simit_iassert(expr->args.size() == 1);
     typeCheckOrder(expr->args[0], argTypes[0], 1);
     return;
   }
   else if (funcName == ir::intrinsics::dot().getName()) {
-    iassert(expr->args.size() == 2);
+    simit_iassert(expr->args.size() == 2);
     typeCheckOrder(expr->args[0], argTypes[0], 1);
     typeCheckOrder(expr->args[1], argTypes[1], 1);
 
@@ -1134,20 +1134,20 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   }
   else if (funcName == ir::intrinsics::lu().getName() ||
            funcName == ir::intrinsics::chol().getName()) {
-    iassert(expr->args.size() == 1);
+    simit_iassert(expr->args.size() == 1);
     typeCheckOrder(expr->args[0], argTypes[0], 2);
     return;
   }
   else if (funcName == ir::intrinsics::lusolve().getName() ||
            funcName == ir::intrinsics::lltsolve().getName()) {
-    iassert(expr->args.size() == 2);
+    simit_iassert(expr->args.size() == 2);
     typeCheckIsOpaque(expr->args[0], argTypes[0]);
     typeCheckOrder(expr->args[1], argTypes[1], 1);
     return;
   }
   else if (funcName == ir::intrinsics::lumatsolve().getName() ||
            funcName == ir::intrinsics::lltmatsolve().getName()) {
-    iassert(expr->args.size() == 2);
+    simit_iassert(expr->args.size() == 2);
     typeCheckIsOpaque(expr->args[0], argTypes[0]);
     typeCheckOrder(expr->args[1], argTypes[1], 2);
     return;
@@ -1164,7 +1164,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
     if (!env.compareTypes(argType.type[0], funcArg->type)) {
       std::stringstream errMsg;
-      iassert(funcArg->type != nullptr);
+      simit_iassert(funcArg->type != nullptr);
       errMsg << "expected argument of type " << toString(funcArg->type)
              << " but got an argument of type " << toString(argType);
       reportError(errMsg.str(), arg);
@@ -1458,7 +1458,7 @@ void TypeChecker::visit(NamedTupleReadExpr::Ptr expr) {
     return;
   }
 
-  iassert(lhsType.isSingleValue());
+  simit_iassert(lhsType.isSingleValue());
   
   if (!isa<NamedTupleType>(lhsType.type[0])) {
     std::stringstream errMsg;
@@ -1501,7 +1501,7 @@ void TypeChecker::visit(UnnamedTupleReadExpr::Ptr expr) {
     return;
   }
 
-  iassert(lhsType.isSingleValue());
+  simit_iassert(lhsType.isSingleValue());
 
   if (!isa<UnnamedTupleType>(lhsType.type[0])) {
     std::stringstream errMsg;
@@ -2180,7 +2180,7 @@ void TypeChecker::typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr lit) {
         tensorType->blockType = makeTensorType(ScalarType::Type::COMPLEX);
         break;
       default:
-        unreachable;
+        simit_unreachable;
         break;
     }
 
@@ -2202,7 +2202,7 @@ TypeChecker::DenseTensorType
     tensorType.addComplexValues(to<ComplexVectorLiteral>(lit)->vals.size());
   } else {
     const auto ndTensorLit = to<NDTensorLiteral>(lit);
-    iassert(!ndTensorLit->transposed);
+    simit_iassert(!ndTensorLit->transposed);
   
     tensorType = getDenseTensorType(ndTensorLit->elems[0]);
     tensorType.addDimension();
@@ -2499,7 +2499,7 @@ std::string TypeChecker::getConcretizedTypeSignatureString(FuncDecl::Ptr decl) {
 
     private:
       virtual void visit(SetIndexSet::Ptr set) {
-        iassert((bool)set->setDef);
+        simit_iassert((bool)set->setDef);
         oss << set->setDef;
       }
 
@@ -2515,7 +2515,7 @@ std::string TypeChecker::getConcretizedTypeSignatureString(FuncDecl::Ptr decl) {
             break;
         }
         
-        iassert(!decl->originalName.empty());
+        simit_iassert(!decl->originalName.empty());
         oss << "func " << decl->originalName << "(";
         
         for (auto arg : decl->args) {
@@ -2796,7 +2796,7 @@ TypeChecker::ExprType TypeChecker::inferType(Expr::Ptr ptr) {
 }
 
 bool TypeChecker::typeCheck(FIRNode::Ptr ptr) {
-  iassert(!isa<Expr>(ptr));
+  simit_iassert(!isa<Expr>(ptr));
   
   const bool tmp = retTypeChecked;
   retTypeChecked = true;
@@ -2830,7 +2830,7 @@ void TypeChecker::getDimensions(TensorType::Ptr type, TensorDimensions &dims) {
     dims.resize(tensorType->indexSets.size());
   }
   
-  iassert(dims.size() == tensorType->indexSets.size());
+  simit_iassert(dims.size() == tensorType->indexSets.size());
 
   for (unsigned i = 0; i < dims.size(); ++i) {
     dims[i].push_back(tensorType->indexSets[i]);
@@ -2932,7 +2932,7 @@ std::string TypeChecker::toString(ScalarType::Type type) {
     case ScalarType::Type::STRING:
       return "string";
     default:
-      unreachable;
+      simit_unreachable;
       return "";
   }
 }

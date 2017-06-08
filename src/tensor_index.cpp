@@ -51,54 +51,54 @@ bool TensorIndex::isComputed() const {
   switch (content->kind) {
     case PExpr: return false;
     case Sten: return true;
-    default: unreachable;
+    default: simit_unreachable;
   }
 }
 
 const pe::PathExpression& TensorIndex::getPathExpression() const {
-  iassert(content->kind == PExpr);
+  simit_iassert(content->kind == PExpr);
   return content->pexpr;
 }
 
 const StencilLayout& TensorIndex::getStencilLayout() const {
-  iassert(content->kind == Sten);
+  simit_iassert(content->kind == Sten);
   return content->stencil;
 }
 
 void TensorIndex::setStencilLayout(StencilLayout stencil) {
-  iassert(content->kind == Sten);
+  simit_iassert(content->kind == Sten);
   content->stencil = stencil;
 }
 
 const Var& TensorIndex::getRowptrArray() const {
-  iassert(!isComputed());
+  simit_iassert(!isComputed());
   return content->coordArray;
 }
 
 const Var& TensorIndex::getColidxArray() const {
-  iassert(!isComputed());
+  simit_iassert(!isComputed());
   return content->sinkArray;
 }
 
 const Expr TensorIndex::computeRowptr(Expr source) const {
-  iassert(isComputed());
+  simit_iassert(isComputed());
   if (getKind() == Sten) {
     return source * Expr((int)content->stencil.getLayout().size());
   }
   else {
-    unreachable;
+    simit_unreachable;
     return Expr();
   }
 }
 
 const Expr TensorIndex::computeColidx(Expr coord) const {
-  iassert(isComputed());
+  simit_iassert(isComputed());
   if (getKind() == Sten) {
     not_supported_yet;
     return Expr();
   }
   else {
-    unreachable;
+    simit_unreachable;
     return Expr();
   }
 }

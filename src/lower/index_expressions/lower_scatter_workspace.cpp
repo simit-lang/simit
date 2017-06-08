@@ -92,7 +92,7 @@ static void createLoopNest(const IndexVarGraph &ivGraph,
                            const IndexVariableLoop &linkedLoop,
                            set<IndexVar> *visited,
                            vector<IndexVariableLoop> *loops) {
-  iassert(util::contains(ivGraph, linkedLoop.getIndexVar()));
+  simit_iassert(util::contains(ivGraph, linkedLoop.getIndexVar()));
   for (const IndexVar &sink : ivGraph.at(linkedLoop.getIndexVar())) {
     if (!util::contains(*visited, sink)) {
       visited->insert(sink);
@@ -177,7 +177,7 @@ createFastForwardLoop(const TensorIndexVar &tensorIndexVar, Var inductionVar) {
 static Stmt createSubsetLoopStmt(const Var &inductionVar,
                                  const vector<TensorIndexVar> &tensorIndexVars,
                                  Stmt body) {
-  iassert(tensorIndexVars.size() > 0);
+  simit_iassert(tensorIndexVars.size() > 0);
 
   Stmt loop;
 
@@ -280,7 +280,7 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
     Expr loopCondition = subsetLoopCondition(tensorIndexVars);
     loop = Block::make(initCoordAndSinkVars, While::make(loopCondition,loopBody));
   }
-  iassert(loop.defined());
+  simit_iassert(loop.defined());
 
   return loop;
 }
@@ -292,7 +292,7 @@ Stmt createSubsetLoopStmt(const Var& target, const Var& inductionVar,
   Stmt computeStmt = Store::make(target, inductionVar,
                                  subsetLoop.getComputeExpression(),
                                  subsetLoop.getCompoundOperator());
-  iassert(target.getType().isTensor());
+  simit_iassert(target.getType().isTensor());
   Type blockType = target.getType().toTensor()->getBlockType();
   const TensorType* btype = blockType.toTensor();
 
@@ -354,9 +354,9 @@ static Stmt copyFromWorkspace(Var target, Expr targetIndex,
 
 Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                            Environment* environment, Storage* storage) {
-  iassert(target.getType().isTensor());
+  simit_iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
-  tassert(type->order() <= 2)
+  simit_tassert(type->order() <= 2)
       << "lowerScatterWorkspace does not support higher-order tensors";
 
   Type blockType = type->getBlockType();
@@ -400,7 +400,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         environment->addTemporary(workspace);
         storage->add(workspace, TensorStorage::Kind::Dense);
       }
-      iassert(workspace.defined());
+      simit_iassert(workspace.defined());
 
       vector<Stmt> loopStatements;
 
@@ -417,7 +417,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
         loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
       }
-      iassert(loops.size() > 0);
+      simit_iassert(loops.size() > 0);
 
       // Create the loop that copies the workspace to the target
       auto& resultVars = indexExpression->resultVars;

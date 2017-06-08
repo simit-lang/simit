@@ -120,10 +120,10 @@ public:
   /// GRID EDGE SET constructors
   Set(const char *name, Set& points, std::vector<int> dims)
       : Set(std::string(name), Grid) {
-    uassert(dims.size() > 0)
+    simit_uassert(dims.size() > 0)
         << "Grid Edge Set constructor takes an optional name followed by "
         << "the underlying point set and a vector of integer dimension sizes";
-    uassert(points.getSize() == 0)
+    simit_uassert(points.getSize() == 0)
         << "Grid Edge Set constructor must be passed an empty underlying "
         << "point set, which it will then proceed to initialize.";
     this->endpointSets = {&points, &points};
@@ -179,7 +179,7 @@ public:
 
   /// Returns the dimensions for a grid edge set
   inline const std::vector<int>& getDimensions() const {
-    uassert(kind == Grid)
+    simit_uassert(kind == Grid)
         << "Can only retrieve dimensions for a grid edge set";
     return dimensions;
   }
@@ -193,9 +193,9 @@ public:
 
   /// Return the grid point at the given location.
   inline ElementRef getGridPoint(std::vector<int> coords) const {
-    uassert(kind == Grid)
+    simit_uassert(kind == Grid)
         << "Cannot retrieve grid point of non-grid set";
-    uassert(coords.size() == dimensions.size())
+    simit_uassert(coords.size() == dimensions.size())
         << "Must provide number of coords equal to the number of dimensions";
     int index = 0;
     int totalSize = 1;
@@ -204,7 +204,7 @@ public:
       index += coords[i];
       totalSize *= dimensions[i];
     }
-    uassert(index >= 0 && index < totalSize)
+    simit_uassert(index >= 0 && index < totalSize)
         << "Coordinates must not be negative and must fall within the "
         << "grid dimensions";
     return gridPoints[index];
@@ -212,9 +212,9 @@ public:
 
   /// Return the grid edge at the given location and direction.
   inline ElementRef getGridEdge(std::vector<int> coords, int dir) const {
-    uassert(kind == Grid)
+    simit_uassert(kind == Grid)
         << "Cannot retrieve grid edge of non-grid set";
-    uassert(coords.size() == dimensions.size())
+    simit_uassert(coords.size() == dimensions.size())
         << "Must provide number of coords equal to dimensions";
     int index = 0;
     int totalSize = 1;
@@ -227,14 +227,14 @@ public:
     index *= dimensions.size();
     index += dir;
     totalSize *= dimensions.size();
-    uassert(index >= 0 && index < totalSize)
+    simit_uassert(index >= 0 && index < totalSize)
         << "Coordinates must not be negative and must fall within the "
         << "grid dimensions";
     return gridEdges[index];
   }
 
   inline std::vector<int> getGridPointCoords(ElementRef elt) const {
-    uassert(kind == Grid)
+    simit_uassert(kind == Grid)
         << "Cannot retrieve grid point coords of non-grid set";
     int index = elt.getIdent();
     std::vector<int> coords;
@@ -243,7 +243,7 @@ public:
       coords.push_back(index % dimSize);
       index /= dimSize;
     }
-    iassert(coords.size() == dimensions.size());
+    simit_iassert(coords.size() == dimensions.size());
     return coords;
   }
 
@@ -264,12 +264,12 @@ public:
  
   // Added for reordering
   void setSpatialField(const std::string& name) {
-    uassert(fieldNames.find(name) != fieldNames.end())
+    simit_uassert(fieldNames.find(name) != fieldNames.end())
         << "Invalid field name setting spatial field";
     FieldData *fieldData = fields[fieldNames[name]];
-    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. \
+    simit_uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. \
       Currently order:" << fieldData->type->getOrder();
-    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D \
+    simit_uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D \
       in order 1. Currently: " << fieldData->type->getDimension(0); 
     spatialFieldName = name;
   }
@@ -279,10 +279,10 @@ public:
   FieldRef<T, dimensions...> getField(std::string fieldName) {
     // need to check if the field actually exists because maps just add an entry
     // if none exists
-    uassert(fieldNames.find(fieldName) != fieldNames.end())
+    simit_uassert(fieldNames.find(fieldName) != fieldNames.end())
         << "Invalid field name in getField()";
     FieldData *fieldData = fields[fieldNames[fieldName]];
-    uassert(typeOf<T>() == fieldData->type->getComponentType())
+    simit_uassert(typeOf<T>() == fieldData->type->getComponentType())
         << "Incorrect field type.";
     return FieldRef<T, dimensions...>(fieldData);
   }
@@ -291,7 +291,7 @@ public:
   /// The endpoints refer to the respective Sets they come from.
   template <typename ...Endpoints>
   ElementRef add(Endpoints... endpoints) {
-    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of \
+    simit_iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of \
       endpoints.";
     if (numElements > capacity-1) {
       increaseEdgeCapacity();
@@ -306,7 +306,7 @@ public:
 
   /// Remove an element from the Set
   void remove(ElementRef element) {
-    uassert(kind != Grid)
+    simit_uassert(kind != Grid)
         << "Element removal disallowed for grid edge sets";
     for (auto f : fields){
       switch (f->type->getComponentType()) {
@@ -383,12 +383,12 @@ public:
     }
 
     friend bool operator<(const ElementIterator& l, const ElementIterator& r) {
-      iassert(l.set == r.set);
+      simit_iassert(l.set == r.set);
       return l.curElem < r.curElem;
     }
 
     bool operator<(const ElementIterator& other) {
-      iassert(set == other.set);
+      simit_iassert(set == other.set);
       return curElem.ident < other.curElem.ident;
     }
 
@@ -484,9 +484,9 @@ public:
 
       friend inline bool operator<(const Iterator &e1,
                                    const Iterator &e2) {
-        iassert(e1.set == e2.set)
+        simit_iassert(e1.set == e2.set)
             << "Comparing Endpoints::Iterators from two different Sets";
-        iassert(e1.curElem.getIdent() == e2.curElem.getIdent())
+        simit_iassert(e1.curElem.getIdent() == e2.curElem.getIdent())
             << "Comparing Endpoints::Iterators over two different edges";
         return e1.endpointNum < e2.endpointNum;
       }
@@ -518,7 +518,7 @@ public:
   }
 
   void* getFieldData(const std::string &fieldName) {
-    uassert(fieldNames.find(fieldName) != fieldNames.end())
+    simit_uassert(fieldNames.find(fieldName) != fieldNames.end())
         << "The Set has no field " << fieldName;
     return fields[fieldNames.at(fieldName)]->data;
   }
@@ -554,7 +554,7 @@ public:
       ComponentType getComponentType() const { return componentType; }
       size_t getOrder() const { return dimensions.size(); }
       size_t getDimension(size_t i) const {
-        iassert(i<getOrder());
+        simit_iassert(i<getOrder());
         return dimensions[i];
       }
       size_t getSize() const { return size; }
@@ -659,7 +659,7 @@ private:
   // helper for adding edges
   template <typename F, typename ...T>
   void addEndpoints(int which, F f, T ... eps) {
-    uassert(endpointSets[which]->getSize() > f.ident)
+    simit_uassert(endpointSets[which]->getSize() > f.ident)
         << "Invalid member of set (" << endpointSets[which]->getName()
 		<< ")in addEdge (" << f.ident << " < "
 		<< endpointSets[which]->getSize() << ")";
@@ -668,7 +668,7 @@ private:
   }
   template <typename F>
   void addEndpoints(int which, F f) {
-    uassert(endpointSets[which]->getSize() > f.ident)
+    simit_uassert(endpointSets[which]->getSize() > f.ident)
         << "Invalid member of set (" << endpointSets[which]->getName()
 		<< ") in addEdge (" << f.ident << " < "
 		<< endpointSets[which]->getSize() << ")";
@@ -805,7 +805,7 @@ protected:
 
   template <typename T>
   inline T *getElemDataPtr(ElementRef element, size_t elementFieldSize) const {
-    iassert(sizeof(T) == componentSize(fieldData->type->getComponentType()));
+    simit_iassert(sizeof(T) == componentSize(fieldData->type->getComponentType()));
     return &static_cast<T*>(data)[element.ident * elementFieldSize];
   }
 
@@ -837,7 +837,7 @@ class FieldRefBaseParameterized : public FieldRefBase {
   }
 
   void set(ElementRef element, std::initializer_list<T> values) {
-    iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
+    simit_iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
         << "Incorrect number of init values";
     T *elemData = this->getElemDataPtr(element);
     size_t i=0;
@@ -848,7 +848,7 @@ class FieldRefBaseParameterized : public FieldRefBase {
 
   template <typename Collection>
   void set(ElementRef element, Collection values) {
-    iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
+    simit_iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
         << "Incorrect number of init values : " << 
         (TensorRef<T,dimensions...>::getSize());
     T *elemData = this->getElemDataPtr(element);
@@ -948,7 +948,7 @@ public:
 
   inline TensorRef<ComponentType,Dimensions...>&
   operator=(const std::initializer_list<ComponentType> &vals) {
-    iassert(vals.size() == util::product<Dimensions...>::value);
+    simit_iassert(vals.size() == util::product<Dimensions...>::value);
     size_t i=0;
     for (ComponentType val : vals) {
       data[i++] = val;

@@ -47,16 +47,16 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
       return llvmType(type.toSet(), addrspace);
     case Type::UnnamedTuple:
     case Type::NamedTuple:
-      ierror << "Tuples not supported in the backend";
+      simit_ierror << "Tuples not supported in the backend";
       break;
     case Type::Array:
       return llvmType(*type.toArray(), addrspace);
     case Type::Opaque:
       return LLVM_INT8_PTR;
     case Type::Undefined:
-      ierror << "Can't create llvm type for undefined simit type";
+      simit_ierror << "Can't create llvm type for undefined simit type";
   }
-  unreachable;
+  simit_unreachable;
   return nullptr;
 }
 
@@ -73,7 +73,7 @@ llvm::StructType *llvmType(const ir::SetType *setType,
   else if (lSetType != nullptr) {
     return llvmType(*lSetType, addrspace, packed);
   }
-  unreachable;
+  simit_unreachable;
   return nullptr;
 }
 
@@ -141,7 +141,7 @@ llvm::Type* llvmType(ScalarType stype) {
     case ScalarType::String:
       return LLVM_INT8_PTR;
   }
-  unreachable;
+  simit_unreachable;
   return nullptr;
 }
 
@@ -171,7 +171,7 @@ llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
       return llvm::PointerType::get(charPtrType, addrspace);
     }
   }
-  unreachable;
+  simit_unreachable;
   return nullptr;
 }
 

@@ -72,19 +72,19 @@ int Program::loadString(const string &programString) {
   for (auto &error : errors) {
     content->diags.report() << error.toString();
   }
-  uassert(errors.size() == 0) << "Program contains the following errors:" 
+  simit_uassert(errors.size() == 0) << "Program contains the following errors:" 
                               << std::endl << content->diags.getMessage("  ");
   return status;
 }
 
 int Program::loadFile(const std::string &filename) {
-  uassert(ifstream(filename).good()) << "Could not load file: " << filename;
+  simit_uassert(ifstream(filename).good()) << "Could not load file: " << filename;
   std::vector<ParseError> errors;
   int status = content->frontend->parseFile(filename, &content->ctx, &errors);
   for (auto &error : errors) {
     content->diags.report() << error.toString();
   }
-  uassert(errors.size() == 0) << "Program contains the following errors:" 
+  simit_uassert(errors.size() == 0) << "Program contains the following errors:" 
                               << std::endl << content->diags.getMessage("  ");
   return status;
 }
@@ -99,14 +99,14 @@ std::vector<std::string> Program::getFunctionNames() const {
 
 Function Program::compile(const std::string &function) {
   ir::Func simitFunc = content->ctx.getFunction(function);
-  uassert(simitFunc.defined()) << "Attempting to compile an unknown function "
+  simit_uassert(simitFunc.defined()) << "Attempting to compile an unknown function "
                                << "(" << function << ")";
   return simit::compile(simitFunc, content->backend);
 }
 
 Function Program::compileWithTimers(const std::string &function) {
   ir::Func simitFunc = content->ctx.getFunction(function);
-  uassert(simitFunc.defined()) << "Attempting to compile an unknown function "
+  simit_uassert(simitFunc.defined()) << "Attempting to compile an unknown function "
                                << "(" << function << ")";
   return simit::compile(simitFunc, content->backend, true);
 }

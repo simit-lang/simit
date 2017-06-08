@@ -171,7 +171,7 @@ std::string Token::tokenTypeString(Token::Type type) {
     case Token::Type::FALSE:
       return "'false'";
     default:
-      unreachable;
+      simit_unreachable;
       return "";
   }
 }

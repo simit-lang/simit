@@ -17,7 +17,7 @@ public:
   using IRRewriter::visit;
 
   void visit(const GPUKernel *op) {
-    iassert(!inKernel) << "Cannot handle nested GPU kernels";
+    simit_iassert(!inKernel) << "Cannot handle nested GPU kernels";
     inKernel = true;
     sharding = op->sharding;
     renamedTemps.clear();

@@ -37,7 +37,7 @@ public:
       first = IRRewriter::rewrite(op->rest);
       rest = op->first;
     }
-    iassert(first.defined());
+    simit_iassert(first.defined());
     if (isa<Block>(first)) {
       const Block *firstBlock = to<Block>(first);
       Stmt innerFirst, innerLeftover;
@@ -49,7 +49,7 @@ public:
         innerFirst = firstBlock->rest;
         innerLeftover = firstBlock->first;
       }
-      iassert(innerFirst.defined());
+      simit_iassert(innerFirst.defined());
       if (innerLeftover.defined()) {
         if (forward) {
           stmt = Block::make(
@@ -80,12 +80,12 @@ public:
       }
     }
 
-    iassert(isa<Block>(stmt));
+    simit_iassert(isa<Block>(stmt));
     if (forward) {
-      iassert(!isa<Block>(to<Block>(stmt)->first));
+      simit_iassert(!isa<Block>(to<Block>(stmt)->first));
     }
     else {
-      iassert(!isa<Block>(to<Block>(stmt)->rest));
+      simit_iassert(!isa<Block>(to<Block>(stmt)->rest));
     }
   }
 
@@ -116,12 +116,12 @@ public:
     Stmt maybeKernel, rest;
     // Ensure canonicalization in the correct direction
     if (forward) {
-      iassert(!isa<Block>(op->first));
+      simit_iassert(!isa<Block>(op->first));
       maybeKernel = op->first;
       rest = op->rest;
     }
     else {
-      iassert(!isa<Block>(op->rest));
+      simit_iassert(!isa<Block>(op->rest));
       maybeKernel = op->rest;
       rest = op->first;
     }
@@ -183,12 +183,12 @@ public:
               
           Stmt replacedOtherBody = otherKernel->body;
           if (kernel->sharding.xSharded) {
-            iassert(otherKernel->sharding.xSharded);
+            simit_iassert(otherKernel->sharding.xSharded);
             replacedOtherBody = replaceVar(
                 replacedOtherBody,
                 otherKernel->sharding.xVar, kernel->sharding.xVar);
           }
-          iassert(!kernel->sharding.ySharded &&
+          simit_iassert(!kernel->sharding.ySharded &&
                   !kernel->sharding.zSharded &&
                   !otherKernel->sharding.ySharded &&
                   !otherKernel->sharding.zSharded);

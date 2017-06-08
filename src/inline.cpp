@@ -110,7 +110,7 @@ void CallRewriter::visit(const CallStmt *op) {
   stmt = Scope::make(op->callee.getBody());
 
   // Replace callee parameters with arguments
-  iassert(op->actuals.size() == op->callee.getArguments().size());
+  simit_iassert(op->actuals.size() == op->callee.getArguments().size());
   for (size_t i = 0; i < op->actuals.size(); ++i) {
     stmt = replaceVarByExpr(stmt, op->callee.getArguments()[i], op->actuals[i]);
   }
@@ -121,7 +121,7 @@ void CallRewriter::visit(const CallStmt *op) {
   const std::set<Var> referencedVars = getReferencedVars(op->actuals);
 
   // Replace callee result variables with assignment targets
-  iassert(op->results.size() == op->callee.getResults().size());
+  simit_iassert(op->results.size() == op->callee.getResults().size());
   for (size_t i = 0; i < op->results.size(); ++i) {
     if (util::contains(referencedVars, op->results[i])) {
       const auto resName = op->callee.getResults()[i].getName();
@@ -180,7 +180,7 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
   //iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
   //    << "mapped functions must have exactly two arguments";
 
-  iassert(map->vars.size() == kernel.getResults().size());
+  simit_iassert(map->vars.size() == kernel.getResults().size());
   for (size_t i=0; i < kernel.getResults().size(); ++i) {
     resultToMapVar[kernel.getResults()[i]] = map->vars[i];
   }
@@ -189,7 +189,7 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
   this->neighborSets = map->neighbors;
   this->throughSet = map->through;
 
-  iassert(kernel.getArguments().size() >= 1)
+  simit_iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
 
   auto argIt = kernel.getArguments().begin()+map->partial_actuals.size();
@@ -212,7 +212,7 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
     // by the extern variable.
     Expr pointsSet = this->throughEdges.getType().toGridSet()
         ->underlyingPointSet.getSet();
-    tassert(isa<VarExpr>(pointsSet))
+    simit_tassert(isa<VarExpr>(pointsSet))
         << "Grid edge set " << this->throughEdges
         << " must refer to underlying point set via the extern variable";
     this->throughPoints = to<VarExpr>(pointsSet)->var;
@@ -336,7 +336,7 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
 }
 
 void MapFunctionRewriter::visit(const UnnamedTupleRead *op) {
-  iassert(isa<VarExpr>(op->tuple))
+  simit_iassert(isa<VarExpr>(op->tuple))
       << "This code assumes no expressions return a tuple";
 
   if (to<VarExpr>(op->tuple)->var == neighbors) {
@@ -355,12 +355,12 @@ void MapFunctionRewriter::visit(const UnnamedTupleRead *op) {
     expr = Load::make(endpoints, indexExpr);
   }
   else {
-    ierror << "Assumes tuples are only used for neighbor lists";
+    simit_ierror << "Assumes tuples are only used for neighbor lists";
   }
 }
 
 void MapFunctionRewriter::visit(const NamedTupleRead *op) {
-  iassert(isa<VarExpr>(op->tuple))
+  simit_iassert(isa<VarExpr>(op->tuple))
       << "This code assumes no expressions return a tuple";
 
   if (to<VarExpr>(op->tuple)->var == neighbors) {
@@ -379,17 +379,17 @@ void MapFunctionRewriter::visit(const NamedTupleRead *op) {
     expr = Load::make(endpoints, indexExpr);
   }
   else {
-    ierror << "Assumes tuples are only used for neighbor lists";
+    simit_ierror << "Assumes tuples are only used for neighbor lists";
   }
 }
 
 void MapFunctionRewriter::visit(const SetRead *op) {
-  iassert(isa<VarExpr>(op->set)) << "Set read set must be a variable";
+  simit_iassert(isa<VarExpr>(op->set)) << "Set read set must be a variable";
   const Var& setVar = to<VarExpr>(op->set)->var;
   unsigned dims = throughEdges.getType().toGridSet()->dimensions;
   if (setVar == throughEdges) {
-    iassert(op->indices.size() == dims*2);
-    iassert(gridIndexVars.size() == dims);
+    simit_iassert(op->indices.size() == dims*2);
+    simit_iassert(gridIndexVars.size() == dims);
     // Index into grid edge set assuming canonical ordering
     vector<int> offsets = getOffsets(op->indices);
     vector<int> srcOff, sinkOff;
@@ -399,15 +399,15 @@ void MapFunctionRewriter::visit(const SetRead *op) {
       srcOff.push_back(offsets[i]);
       sinkOff.push_back(offsets[dims+i]);
       if (srcOff.back() != sinkOff.back()) {
-        iassert(dir == -1)
+        simit_iassert(dir == -1)
             << "Cannot have multiple offsets in relative grid indexing";
-        iassert(abs(srcOff.back() - sinkOff.back()) == 1)
+        simit_iassert(abs(srcOff.back() - sinkOff.back()) == 1)
             << "Cannot offset by more than 1 in grid edge indexing";
         dir = i;
         srcBase = (srcOff.back() < sinkOff.back());
       }
     }
-    iassert(dir != -1) << "Must have an offset in grid edge indexing";
+    simit_iassert(dir != -1) << "Must have an offset in grid edge indexing";
     
     // Convert index offsets to a single offset expr
     vector<Expr> indices, base;
@@ -419,8 +419,8 @@ void MapFunctionRewriter::visit(const SetRead *op) {
     for (const Var& v : gridIndexVars) {
       base.push_back(v);
     }
-    iassert(indices.size() == dims+1);
-    iassert(base.size() == dims+1);
+    simit_iassert(indices.size() == dims+1);
+    simit_iassert(base.size() == dims+1);
     
     vector<Expr> finalIndices = getGridEdgeOffsetIndices(
         base, indices, throughSet);
@@ -434,8 +434,8 @@ void MapFunctionRewriter::visit(const SetRead *op) {
     for (const Var& v : gridIndexVars) {
       base.emplace_back(v);
     }
-    iassert(indices.size() == dims);
-    iassert(base.size() == dims);
+    simit_iassert(indices.size() == dims);
+    simit_iassert(base.size() == dims);
     
     vector<Expr> finalIndices = getGridPointOffsetIndices(
         base, indices, throughSet);
@@ -692,7 +692,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
 
   auto vars    = map->vars;
   auto results = map->function.getResults();
-  iassert(results.size() == vars.size())
+  simit_iassert(results.size() == vars.size())
       << "Should be same number of results as assigned to vars";
   for (size_t i=0; i<results.size(); ++i) {
     auto var = vars[i];
@@ -705,14 +705,14 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
   }
 
   Expr target = map->target;
-  iassert(map->target.type().isSet());
+  simit_iassert(map->target.type().isSet());
   
   const auto& endpoints = map->target.type().toUnstructuredSet()->endpointSets;
   const int cardinality = endpoints.size();
 
   // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
-    iassert(ivs.size() == 0);
+    simit_iassert(ivs.size() == 0);
     std::map<TensorIndex, Var> indexToLocs;
     vector<Stmt> initLocs;
 
@@ -721,10 +721,10 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
 
     for (size_t i=0; i<results.size(); ++i) {
       auto var = vars[i];
-      iassert(storage->hasStorage(var));
+      simit_iassert(storage->hasStorage(var));
       auto varStorage = storage->getStorage(var);
       if (varStorage.getKind() == TensorStorage::Indexed) {
-        iassert(varStorage.getTensorIndex().defined());
+        simit_iassert(varStorage.getTensorIndex().defined());
 
         auto result = results[i];
         auto index  = varStorage.getTensorIndex();
@@ -733,7 +733,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
         if (!result.getType().isTensor()) continue;
 
         auto type = result.getType().toTensor();
-        tassert(type->order() == 2) << "Only matrix indices supported";
+        simit_tassert(type->order() == 2) << "Only matrix indices supported";
 
         auto dims = type->getOuterDimensions();
 
@@ -760,7 +760,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
                                     &indexToLocs);
         }
         else {
-          unreachable;
+          simit_unreachable;
         }
         initLocs.push_back(Comment::make("Gather locs from " + index.getName(),
                                          gatherLocs, true));
@@ -777,28 +777,28 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
     // the proper indices.
     std::map<vector<int>, Expr> clocs;
     Var stencilVar, mapVar;
-    iassert(map->vars.size() == map->function.getResults().size());
+    simit_iassert(map->vars.size() == map->function.getResults().size());
     for (unsigned i = 0; i < map->vars.size(); ++i) {
       auto var = map->vars[i];
       auto res = map->function.getResults()[i];
       if (storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil) {
-        iassert(!stencilVar.defined());
-        iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
+        simit_iassert(!stencilVar.defined());
+        simit_iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
                 .getStencilFunc() == map->function.getName());
-        iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
+        simit_iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
                 .getStencilVar() == var.getName());
         mapVar = var;
         stencilVar = res;
       }
       else if (storage->getStorage(var).getKind()
                == TensorStorage::Kind::Indexed) {
-        iassert(!stencilVar.defined());
+        simit_iassert(!stencilVar.defined());
         mapVar = var;
         stencilVar = res;
       }
     }
     // Must have exactly one stencil-assembled output
-    iassert(stencilVar.defined())
+    simit_iassert(stencilVar.defined())
         << "map with through must assemble exactly one stencil-assembled var";
     // Build compile-time locs
     StencilLayout s = buildStencilLocs(
@@ -807,7 +807,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
       // Resolve StencilLayout in storage
       storage->getStorage(mapVar).getTensorIndex().setStencilLayout(s);
     }
-    iassert(ivs.size() > 0);
+    simit_iassert(ivs.size() > 0);
     return rewriter.inlineMapFunc(map, lv, storage, Var(),
                                   std::map<TensorIndex,Var>(), clocs, ivs);
   }
@@ -823,7 +823,7 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
 
   // The function must have at least one argument, namely the target. It may
   // also have a neighbor set, as well as other arguments.
-  iassert(kernel.getArguments().size() >= 1)
+  simit_iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
   
   Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
@@ -849,12 +849,12 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
 
   Stmt loop;
   if (!map->through.defined()) {
-    iassert(gridIndexVars.size() == 0);
+    simit_iassert(gridIndexVars.size() == 0);
     ForDomain domain(map->target);
     loop = For::make(loopVar, domain, inlinedMapFunc);
   }
   else {
-    iassert(map->through.type().isGridSet());
+    simit_iassert(map->through.type().isGridSet());
     initializers.push_back(AssignStmt::make(loopVar, 0));
     int dims = map->through.type().toGridSet()->dimensions;
     loop = Block::make(inlinedMapFunc, AssignStmt::make(
@@ -875,7 +875,7 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
   
   if (map->reduction.getKind() != ReductionOperator::Undefined) {
     for (auto &var : map->vars) {
-      iassert(var.getType().isTensor());
+      simit_iassert(var.getType().isTensor());
       Stmt init = AssignStmt::make(var, var);
       init = initializeLhsToZero(init);
       inlinedMap = Block::make(init, inlinedMap);

@@ -20,7 +20,7 @@ void BackendVisitorBase::accept(const Stmt& stmt) {
 
 void BackendVisitorBase::visitError(std::string type, const void* op) {
   const IRNode* ir = static_cast<const IRNode*>(op);
-  ierror << type << " should never reach the backend: " << util::toString(*ir);
+  simit_ierror << type << " should never reach the backend: " << util::toString(*ir);
 }
 
 void BackendVisitorBase::compile(const ir::Kernel& kernel) {

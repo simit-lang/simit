@@ -76,7 +76,7 @@ const std::vector<std::string>& Function::getArgs() const {
 }
 
 const ir::Type& Function::getArgType(std::string arg) const {
-  uassert(hasArg(arg)) << "No argument with name: " << arg;
+  simit_uassert(hasArg(arg)) << "No argument with name: " << arg;
   return argumentTypes.at(arg);
 }
 
@@ -89,17 +89,17 @@ bool Function::hasGlobal(std::string name) const {
 }
 
 const ir::Type& Function::getGlobalType(std::string name) const {
-  uassert(hasGlobal(name)) << "No global called " << name << " in function";
+  simit_uassert(hasGlobal(name)) << "No global called " << name << " in function";
   return environment->getExtern(name).getVar().getType();
 }
 
 bool Function::hasBindable(std::string bindable) const {
-  iassert(!(hasArg(bindable) && hasGlobal(bindable)));
+  simit_iassert(!(hasArg(bindable) && hasGlobal(bindable)));
   return hasArg(bindable) || hasGlobal(bindable);
 }
 
 const ir::Type& Function::getBindableType(std::string bindable) const {
-  iassert(hasBindable(bindable));
+  simit_iassert(hasBindable(bindable));
   return (hasArg(bindable)) ? getArgType(bindable) : getGlobalType(bindable);
 }
 

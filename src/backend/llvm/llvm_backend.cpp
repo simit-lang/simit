@@ -112,7 +112,7 @@ Func LLVMBackend::makeSystemTensorsGlobal(Func func) {
 Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
-  iassert(func.getBody().defined()) << "cannot compile an undefined function";
+  simit_iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
   this->dataLayout.reset(new llvm::DataLayout(module));
 
@@ -137,7 +137,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     if (f.getKind() != Func::Internal) {
       continue;
     }
-    iassert(f.getBody().defined());
+    simit_iassert(f.getBody().defined());
 
     this->storage.add(f.getStorage());
 
@@ -163,7 +163,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 
     symtable.unscope();
   }
-  iassert(llvmFunc);
+  simit_iassert(llvmFunc);
 
   // Declare malloc and free if necessary
   llvm::FunctionType *m =
@@ -185,7 +185,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     Type type = bufferVar.getType();
     llvm::Type *ltype = llvmType(type);
 
-    iassert(type.isTensor());
+    simit_iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
     llvm::Value *len= emitComputeLen(ttype,this->storage.getStorage(bufferVar));
     unsigned compSize = ttype->getComponentType().bytes();
@@ -214,7 +214,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   builder->CreateRetVoid();
   symtable.clear();
 
-  iassert(!llvm::verifyModule(*module))
+  simit_iassert(!llvm::verifyModule(*module))
       << "LLVM module does not pass verification";
 
   auto engineBuilder = createEngineBuilder(module);
@@ -251,44 +251,44 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 }
 
 void LLVMBackend::compile(const ir::Literal& literal) {
-  iassert(literal.type.isTensor()) << "Only tensor literals supported for now";
+  simit_iassert(literal.type.isTensor()) << "Only tensor literals supported for now";
   const TensorType *type = literal.type.toTensor();
 
   if (type->order() == 0) {
     ScalarType ctype = type->getComponentType();
     switch (ctype.kind) {
       case ScalarType::Int: {
-        iassert(ctype.bytes() == 4) << "Only 4-byte ints currently supported";
+        simit_iassert(ctype.bytes() == 4) << "Only 4-byte ints currently supported";
         val = llvmInt(((int*)literal.data)[0]);
         break;
       }
       case ScalarType::Float: {
-        iassert(ctype.bytes() == ScalarType::floatBytes)
+        simit_iassert(ctype.bytes() == ScalarType::floatBytes)
             << "Only " << ScalarType::floatBytes
             << "-byte float mode allowed by current float setting";
         val = llvmFP(literal.getFloatVal(0));
         break;
       }
       case ScalarType::Boolean: {
-        iassert(ctype.bytes() == sizeof(bool));
+        simit_iassert(ctype.bytes() == sizeof(bool));
         bool data = ((bool*)literal.data)[0];
         val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
       }
       case ScalarType::Complex: {
-        iassert(ctype.bytes() == ScalarType::floatBytes*2)
+        simit_iassert(ctype.bytes() == ScalarType::floatBytes*2)
           << "Only " << ScalarType::floatBytes
           << "-byte float mode allowed by current float setting";
         val = llvmComplex(literal.getFloatVal(0), literal.getFloatVal(1));
         break;
       }
       case ScalarType::String: {
-        iassert(ctype.bytes() == sizeof(char));
+        simit_iassert(ctype.bytes() == sizeof(char));
         std::string data((const char *)literal.data);
         val = emitGlobalString(data);
         break;
       }
-      default: unreachable;
+      default: simit_unreachable;
     }
   }
   else {
@@ -296,11 +296,11 @@ void LLVMBackend::compile(const ir::Literal& literal) {
     // (unify with GPUBackend).
     val = llvmPtr(literal);
   }
-  iassert(val);
+  simit_iassert(val);
 }
 
 void LLVMBackend::compile(const ir::VarExpr& varExpr) {
-  iassert(symtable.contains(varExpr.var))
+  simit_iassert(symtable.contains(varExpr.var))
       << varExpr.var << " not found in symbol table:\n\n" << symtable;
 
   val = symtable.get(varExpr.var);
@@ -325,7 +325,7 @@ void LLVMBackend::compile(const ir::VarExpr& varExpr) {
   // which is why we can't assume Simit scalars are always kept on the stack.
   //if (isScalar(varExpr.type) && val->getType()->isPointerTy()) {
   if (isScalar(varExpr.type)) {
-    iassert(!isString(varExpr.type) || val->getType()->isPointerTy());
+    simit_iassert(!isString(varExpr.type) || val->getType()->isPointerTy());
     if (val->getType()->isPointerTy() && (!isString(varExpr.type) || 
         val->getType()->getContainedType(0)->isPointerTy())) {
       val = builder->CreateLoad(val, valName);
@@ -354,7 +354,7 @@ void LLVMBackend::compile(const ir::Length& length) {
 }
 
 void LLVMBackend::compile(const ir::IndexRead& indexRead) {
-  iassert(indexRead.edgeSet.type().isSet());
+  simit_iassert(indexRead.edgeSet.type().isSet());
   llvm::Value *edgesValue = compile(indexRead.edgeSet);
   std::shared_ptr<SetLayout> layout =
       getSetLayout(indexRead.edgeSet, edgesValue, builder.get());
@@ -363,16 +363,16 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
       val = layout->getEpsArray();
       break;
     case ir::IndexRead::GridDim:
-      iassert(indexRead.edgeSet.type().isGridSet());
+      simit_iassert(indexRead.edgeSet.type().isGridSet());
       val = layout->getSize(indexRead.index);
       break;
     default:
-      unreachable;
+      simit_unreachable;
   }
 }
 
 void LLVMBackend::compile(const ir::Neg& negExpr) {
-  iassert(isScalar(negExpr.type));
+  simit_iassert(isScalar(negExpr.type));
   llvm::Value *a = compile(negExpr.a);
 
   switch (negExpr.type.toTensor()->getComponentType().kind) {
@@ -390,13 +390,13 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
     }
     case ScalarType::Boolean:
     case ScalarType::String:
-      ierror << "Cannot negate a boolean or string value.";
+      simit_ierror << "Cannot negate a boolean or string value.";
       break;
   }
 }
 
 void LLVMBackend::compile(const ir::Add& addExpr) {
-  iassert(isScalar(addExpr.type));
+  simit_iassert(isScalar(addExpr.type));
 
   llvm::Value *a = compile(addExpr.a);
   llvm::Value *b = compile(addExpr.b);
@@ -420,13 +420,13 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
     }
     case ScalarType::Boolean:
     case ScalarType::String:
-      ierror << "Cannot add boolean or string values.";
+      simit_ierror << "Cannot add boolean or string values.";
       break;
   }
 }
 
 void LLVMBackend::compile(const ir::Sub& subExpr) {
-  iassert(isScalar(subExpr.type));
+  simit_iassert(isScalar(subExpr.type));
 
   llvm::Value *a = compile(subExpr.a);
   llvm::Value *b = compile(subExpr.b);
@@ -450,13 +450,13 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
     }
     case ScalarType::Boolean:
     case ScalarType::String:
-      ierror << "Cannot subtract boolean or string values.";
+      simit_ierror << "Cannot subtract boolean or string values.";
       break;
   }
 }
 
 void LLVMBackend::compile(const ir::Mul& mulExpr) {
-  iassert(isScalar(mulExpr.type));
+  simit_iassert(isScalar(mulExpr.type));
 
   llvm::Value *a = compile(mulExpr.a);
   llvm::Value *b = compile(mulExpr.b);
@@ -484,13 +484,13 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
     }
     case ScalarType::Boolean:
     case ScalarType::String:
-      ierror << "Cannot multiply boolean or string values.";
+      simit_ierror << "Cannot multiply boolean or string values.";
       break;
   }
 }
 
 void LLVMBackend::compile(const ir::Div& divExpr) {
-  iassert(isScalar(divExpr.type));
+  simit_iassert(isScalar(divExpr.type));
 
   llvm::Value *a = compile(divExpr.a);
   llvm::Value *b = compile(divExpr.b);
@@ -526,16 +526,16 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
     }
     case ScalarType::Boolean:
     case ScalarType::String:
-      ierror << "Cannot divide boolean or string values.";
+      simit_ierror << "Cannot divide boolean or string values.";
       break;
   }
 }
 
 void LLVMBackend::compile(const ir::Rem& remExpr) {
-  iassert(isScalar(remExpr.type));
-  iassert(isInt(remExpr.type));
-  iassert(isInt(remExpr.a.type()));
-  iassert(isInt(remExpr.b.type()));
+  simit_iassert(isScalar(remExpr.type));
+  simit_iassert(isInt(remExpr.type));
+  simit_iassert(isInt(remExpr.a.type()));
+  simit_iassert(isInt(remExpr.b.type()));
 
   llvm::Value *a = compile(remExpr.a);
   llvm::Value *b = compile(remExpr.b);
@@ -545,8 +545,8 @@ void LLVMBackend::compile(const ir::Rem& remExpr) {
 }
 
 void LLVMBackend::compile(const ir::Not& notExpr) {
-  iassert(isBoolean(notExpr.type));
-  iassert(isBoolean(notExpr.a.type()));
+  simit_iassert(isBoolean(notExpr.type));
+  simit_iassert(isBoolean(notExpr.a.type()));
 
   llvm::Value *a = compile(notExpr.a);
 
@@ -555,9 +555,9 @@ void LLVMBackend::compile(const ir::Not& notExpr) {
 
 #define LLVMBACKEND_VISIT_COMPARE_OP(Type, op, float_cmp, int_cmp)             \
 void LLVMBackend::compile(Type op) {                                           \
-  iassert(isBoolean(op.type));                                                 \
-  iassert(isScalar(op.a.type()));                                              \
-  iassert(isScalar(op.b.type()));                                              \
+  simit_iassert(isBoolean(op.type));                                                 \
+  simit_iassert(isScalar(op.a.type()));                                              \
+  simit_iassert(isScalar(op.b.type()));                                              \
                                                                                \
   llvm::Value *a = compile(op.a);                                              \
   llvm::Value *b = compile(op.b);                                              \
@@ -584,9 +584,9 @@ LLVMBACKEND_VISIT_COMPARE_OP(const Ge&, op, CreateFCmpOGE, CreateICmpSGE)
 LLVMBACKEND_VISIT_COMPARE_OP(const Le&, op, CreateFCmpOLE, CreateICmpSLE)
 
 void LLVMBackend::compile(const ir::And& andExpr) {
-  iassert(isBoolean(andExpr.type));
-  iassert(isBoolean(andExpr.a.type()));
-  iassert(isBoolean(andExpr.b.type()));
+  simit_iassert(isBoolean(andExpr.type));
+  simit_iassert(isBoolean(andExpr.a.type()));
+  simit_iassert(isBoolean(andExpr.b.type()));
 
   llvm::Value *a = compile(andExpr.a);
   llvm::Value *b = compile(andExpr.b);
@@ -595,9 +595,9 @@ void LLVMBackend::compile(const ir::And& andExpr) {
 }
 
 void LLVMBackend::compile(const ir::Or& orExpr) {
-  iassert(isBoolean(orExpr.type));
-  iassert(isBoolean(orExpr.a.type()));
-  iassert(isBoolean(orExpr.b.type()));
+  simit_iassert(isBoolean(orExpr.type));
+  simit_iassert(isBoolean(orExpr.a.type()));
+  simit_iassert(isBoolean(orExpr.b.type()));
 
   llvm::Value *a = compile(orExpr.a);
   llvm::Value *b = compile(orExpr.b);
@@ -606,9 +606,9 @@ void LLVMBackend::compile(const ir::Or& orExpr) {
 }
 
 void LLVMBackend::compile(const ir::Xor& xorExpr) {
-  iassert(isBoolean(xorExpr.type));
-  iassert(isBoolean(xorExpr.a.type()));
-  iassert(isBoolean(xorExpr.b.type()));
+  simit_iassert(isBoolean(xorExpr.type));
+  simit_iassert(isBoolean(xorExpr.a.type()));
+  simit_iassert(isBoolean(xorExpr.b.type()));
 
   llvm::Value *a = compile(xorExpr.a);
   llvm::Value *b = compile(xorExpr.b);
@@ -665,10 +665,10 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
     llvmVar = builder->CreateAlloca(llvmType(type), nullptr, var.getName());
   }
   else {
-    terror << type << " declarations not supported yet";
+    simit_terror << type << " declarations not supported yet";
   }
 
-  iassert(llvmVar);
+  simit_iassert(llvmVar);
   symtable.insert(var, llvmVar);
 }
 
@@ -682,7 +682,7 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
       emitAssign(assignStmt.var, Add::make(assignStmt.var, assignStmt.value));
       return;
     }
-    default: ierror << "Unknown compound operator type";
+    default: simit_ierror << "Unknown compound operator type";
   }
 }
 
@@ -698,7 +698,7 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
     if (type->order() == 2 && type->hasSystemDimensions()) {
       // we need to add additional arguments: rowPtr and colIdx pointers,
       // as well as the number of rows, columns and blocksize.
-      tassert(isa<VarExpr>(argument));
+      simit_tassert(isa<VarExpr>(argument));
 
       auto tensorStorage = storage.getStorage(to<VarExpr>(argument)->var);
       auto tensorIndex = tensorStorage.getTensorIndex();
@@ -774,7 +774,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
     if (tensorType->order() == 2 && tensorType->hasSystemDimensions()) {
       // we need to add additional arguments: rowPtr and colIdx pointers,
       // as well as the number of rows, columns and blocksize.
-      tassert(isa<VarExpr>(result));
+      simit_tassert(isa<VarExpr>(result));
 
       auto tensorStorage = storage.getStorage(to<VarExpr>(result)->var);
       auto tensorIndex = tensorStorage.getTensorIndex();
@@ -832,7 +832,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
     resultValues.push_back(compile(result));
   }
   else {
-    terror << type << " type return values not supported yet";
+    simit_terror << type << " type return values not supported yet";
   }
 
   return resultValues;
@@ -861,14 +861,14 @@ void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
     builder->CreateCall(fun, args);
   }
   else {
-    ierror << "function " << callStmt.callee.getName()
+    simit_ierror << "function " << callStmt.callee.getName()
            << " not found in module";
   }
 }
 
 void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   // ensure it is called with the correct number of arguments.
-  uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
+  simit_uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
       "External function '" << callStmt.callee.getName() << "' called with " <<
       callStmt.actuals.size() << " arguments, but expected " <<
       callStmt.callee.getArguments().size() << " arguments.";
@@ -907,7 +907,7 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   llvm::Function *fun = nullptr;
   Func callee = callStmt.callee;
 
-  iassert(callee != ir::intrinsics::norm() && callee != ir::intrinsics::dot())
+  simit_iassert(callee != ir::intrinsics::norm() && callee != ir::intrinsics::dot())
       << "norm and dot should have been lowered";
 
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
@@ -925,7 +925,7 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   // is it an LLVM intrinsic?
   auto foundIntrinsic = llvmIntrinsicByName.find(callStmt.callee);
   if (foundIntrinsic != llvmIntrinsicByName.end()) {
-    iassert(callStmt.results.size() == 1);
+    simit_iassert(callStmt.results.size() == 1);
     auto ctype = callStmt.results[0].getType().toTensor()->getComponentType();
     llvm::Type *overloadType = llvmType(ctype);
     fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
@@ -949,7 +949,7 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
 	call = emitCall("f" + callStmt.callee.getName(), args, llvmFloatType());
   }
   else if (callStmt.callee == ir::intrinsics::mod()) {
-    iassert(callStmt.actuals.size() == 2) << "mod takes two inputs, got"
+    simit_iassert(callStmt.actuals.size() == 2) << "mod takes two inputs, got"
         << callStmt.actuals.size();
     call = builder->CreateSRem(compile(callStmt.actuals[0]),
                                compile(callStmt.actuals[1]));
@@ -984,22 +984,22 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     call = emitCall("storeTime", args);
   }
   else if (callee == ir::intrinsics::det()) {
-    iassert(args.size() == 1);
+    simit_iassert(args.size() == 1);
     std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
     call = emitCall(fname, args, llvmFloatType());
   }
   else if (callee == ir::intrinsics::det2()) {
-    iassert(args.size() == 1);
+    simit_iassert(args.size() == 1);
 	std::string fname = callStmt.callee.getName() + floatTypeName;
 	call = emitCall(fname, args, llvmFloatType());
   }
   else if (callee == ir::intrinsics::det4()) {
-    iassert(args.size() == 1);
+    simit_iassert(args.size() == 1);
 	std::string fname = callStmt.callee.getName() + floatTypeName;
 	call = emitCall(fname, args, llvmFloatType());
   }
   else if (callee == ir::intrinsics::inv()) {
-    iassert(args.size() == 1);
+    simit_iassert(args.size() == 1);
 
     Var result = callStmt.results[0];
     llvm::Value *llvmResult = symtable.get(result);
@@ -1009,7 +1009,7 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     call = emitCall(fname, args);
   }
   else if (callee == ir::intrinsics::inv2()) {
-	iassert(args.size() == 1);
+	simit_iassert(args.size() == 1);
 
     Var result = callStmt.results[0];
     llvm::Value *llvmResult = symtable.get(result);
@@ -1019,7 +1019,7 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     call = emitCall(fname, args);
   }
   else if (callee == ir::intrinsics::inv4()) {
-	iassert(args.size() == 1);
+	simit_iassert(args.size() == 1);
 
     Var result = callStmt.results[0];
     llvm::Value *llvmResult = symtable.get(result);
@@ -1052,12 +1052,12 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     call = llvmCreateComplex(builder.get(), real, imag);
   }
   else {
-    ierror << "intrinsic " << callStmt.callee.getName() << " not found";
+    simit_ierror << "intrinsic " << callStmt.callee.getName() << " not found";
   }
-  iassert(call);
+  simit_iassert(call);
 
   if (!call->getType()->isVoidTy()) {
-    iassert(callStmt.results.size() == 1);
+    simit_iassert(callStmt.results.size() == 1);
     Var var = callStmt.results[0];
     llvm::Value *llvmVar = symtable.get(var);
     builder->CreateStore(call, llvmVar);
@@ -1098,7 +1098,7 @@ void LLVMBackend::compile(const ir::Store& store) {
       break;
     }
   }
-  iassert(value != nullptr);
+  simit_iassert(value != nullptr);
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = llvmCreateInBoundsGEP(builder.get(), buffer, index, locName);
@@ -1106,10 +1106,10 @@ void LLVMBackend::compile(const ir::Store& store) {
 }
 
 void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
-  iassert(fieldWrite.value.type().isTensor());
-  iassert(getFieldType(fieldWrite.elementOrSet,
+  simit_iassert(fieldWrite.value.type().isTensor());
+  simit_iassert(getFieldType(fieldWrite.elementOrSet,
                        fieldWrite.fieldName).isTensor());
-  iassert(fieldWrite.elementOrSet.type().isSet() ||
+  simit_iassert(fieldWrite.elementOrSet.type().isSet() ||
           fieldWrite.elementOrSet.type().isElement());
 
   Type fieldType = getFieldType(fieldWrite.elementOrSet, fieldWrite.fieldName);
@@ -1117,7 +1117,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
 
   // Assigning a scalar to an n-order tensor
   if (fieldType.toTensor()->order() > 0 && valueType.toTensor()->order() == 0) {
-    iassert(fieldWrite.cop == CompoundOperator::None)
+    simit_iassert(fieldWrite.cop == CompoundOperator::None)
         << "Compound write when assigning scalar to n-order tensor";
     if (isa<Literal>(fieldWrite.value) &&
         to<Literal>(fieldWrite.value)->getFloatVal(0) == 0.0) {
@@ -1162,7 +1162,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
         break;
       }
     }
-    iassert(valuePtr != nullptr);
+    simit_iassert(valuePtr != nullptr);
 
     const TensorType *tensorFieldType = fieldType.toTensor();
 
@@ -1280,7 +1280,7 @@ void LLVMBackend::compile(const ir::For& forLoop) {
       not_supported_yet;
       break;
   }
-  iassert(iNum);
+  simit_iassert(iNum);
 
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
@@ -1353,7 +1353,7 @@ void LLVMBackend::compile(const ir::Print& print) {
   llvm::Value *result = compile(print.expr);
   Type type = print.expr.type();
 
-  iassert(isScalar(type)) << "Backend can only compile scalars";
+  simit_iassert(isScalar(type)) << "Backend can only compile scalars";
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
@@ -1374,7 +1374,7 @@ void LLVMBackend::compile(const ir::Print& print) {
         specifier = std::string("%") + print.format + "d";
         break;
       case ScalarType::String:
-        unreachable;
+        simit_unreachable;
         break;
     }
 
@@ -1443,7 +1443,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       break;
     }
     case TensorStorage::Diagonal: {
-      iassert(dimensions.size() > 0);
+      simit_iassert(dimensions.size() > 0);
 
       // Just need one outer dimensions because diagonal implies square
       len = emitComputeLen(tensorType->getOuterDimensions()[0]);
@@ -1486,13 +1486,13 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       break;
     }
     case TensorStorage::Undefined:
-      ierror << "Can't compute the size of tensor with undefined storage";
+      simit_ierror << "Can't compute the size of tensor with undefined storage";
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
-  iassert(len != nullptr);
+  simit_iassert(len != nullptr);
   return len;
 }
 
@@ -1518,12 +1518,12 @@ llvm::Value *LLVMBackend::emitComputeLen(const IndexSet &is) {
                                     setValue->getName()+LEN_SUFFIX);
     }
     case IndexSet::Single:
-      unreachable;
+      simit_unreachable;
     case IndexSet::Dynamic:
       not_supported_yet;
       break;
   }
-  unreachable;
+  simit_unreachable;
   return nullptr;
 }
 
@@ -1548,7 +1548,7 @@ llvm::Value *LLVMBackend::emitCall(string name, vector<llvm::Value*> args,
   llvm::Function *fun =
       llvm::cast<llvm::Function>(module->getOrInsertFunction(name, ftype));
   
-  iassert(fun != nullptr)
+  simit_iassert(fun != nullptr)
       << "could not find" << fun << "with the given signature";
 
   return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
@@ -1582,7 +1582,7 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
   auto entry = llvm::BasicBlock::Create(LLVM_CTX, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 
-  iassert(llvmFunc->getArgumentList().size() == arguments.size()+results.size())
+  simit_iassert(llvmFunc->getArgumentList().size() == arguments.size()+results.size())
       << "Number of arguments to llvm func does not match simit func arguments";
 
   // Add arguments and results to symbol table
@@ -1692,13 +1692,13 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
 //         "assignment non-scalars should have been lowered by now");
   llvm::Value *valuePtr = compile(value);
 
-  iassert(var.getType().isTensor() && value.type().isTensor());
+  simit_iassert(var.getType().isTensor() && value.type().isTensor());
   std::string varName = var.getName();
-  iassert(symtable.contains(var)) << var << " has not been declared in:\n"
+  simit_iassert(symtable.contains(var)) << var << " has not been declared in:\n"
                                   << var << " = " << value << ";";
 
   llvm::Value *varPtr = symtable.get(var);
-  iassert(varPtr->getType()->isPointerTy());
+  simit_iassert(varPtr->getType()->isPointerTy());
 
   // Globals are stored as pointer-pointers so we must load them
   if (util::contains(globals, var)) {
@@ -1715,7 +1715,7 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
   }
   // Assign to n-order tensors
   else {
-    iassert(storage.hasStorage(var)) << var << " has no storage";
+    simit_iassert(storage.hasStorage(var)) << var << " has no storage";
     llvm::Value *len = emitComputeLen(varType, storage.getStorage(var));
     unsigned componentSize = varType->getComponentType().bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(componentSize));
@@ -1748,7 +1748,7 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
     }
     // Assign tensor to conforming tensor
     else {
-      iassert(var.getType() == value.type())
+      simit_iassert(var.getType() == value.type())
           << "variable and value types don't match";
       emitMemCpy(varPtr, valuePtr, size, componentSize);
     }
@@ -1768,7 +1768,7 @@ void LLVMBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
 llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
   // Allocate buffer for local variable in global storage.
   // TODO: We should allocate small local dense tensors on the stack
-  iassert(var.getType().isTensor());
+  simit_iassert(var.getType().isTensor());
   llvm::Type *ctype = llvmType(var.getType().toTensor()->getComponentType());
   llvm::PointerType *globalType = llvm::PointerType::get(ctype, globalAddrspace());
 

@@ -20,15 +20,15 @@ class NormalizeRowIndices : public IRRewriter {
     vector<int> litInds;
     for (auto e : sr->indices) {
       const Literal *lit = to<Literal>(e);
-      iassert(isScalar(lit->type));
-      iassert(isInt(lit->type));
+      simit_iassert(isScalar(lit->type));
+      simit_iassert(isInt(lit->type));
       litInds.push_back(lit->getIntVal(0));
     }
     return litInds;
   }
 
   void visit(const SetRead *op) {
-    iassert(rowNormOff.size() != 0)
+    simit_iassert(rowNormOff.size() != 0)
         << "Set read visit not paired to output write";
     
     vector<int> litInds = getLitInds(op);
@@ -46,7 +46,7 @@ class NormalizeRowIndices : public IRRewriter {
       }
     }
     else {
-      ierror << "Offset applied to strange number of indices: "
+      simit_ierror << "Offset applied to strange number of indices: "
              << rowNormOff.size() << " vs " << litInds.size();
     }
     expr = SetRead::make(op->set, newInds);
@@ -81,19 +81,19 @@ class NormalizeRowIndices : public IRRewriter {
         indices.push_back(SetRead::make(pointSet, zeros));
       }
       else {
-        iassert(isa<SetRead>(ind));
+        simit_iassert(isa<SetRead>(ind));
         indices.push_back(ind);
       }
     }
 
-    iassert(isa<SetRead>(indices[0]));
-    iassert(isa<SetRead>(indices[1]));
+    simit_iassert(isa<SetRead>(indices[0]));
+    simit_iassert(isa<SetRead>(indices[1]));
     const SetRead *rowRead= to<SetRead>(indices[0]);
     const SetRead *colRead= to<SetRead>(indices[1]);
     vector<int> rowIndices = getLitInds(rowRead);
     vector<int> colIndices = getLitInds(colRead);
 
-    iassert(rowNormOff.size() == 0);
+    simit_iassert(rowNormOff.size() == 0);
     // Negate row indices for offset in this statement
     for (int rind : rowIndices) {
       rowNormOff.push_back(-rind);

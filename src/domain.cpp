@@ -15,7 +15,7 @@ IndexSet::IndexSet(const Expr &set, Kind kind) : kind(kind), rangeSize(-1),
                                       set(new Expr(set)) {}
 
 const Expr &IndexSet::getSet() const {
-  iassert(kind==Set || kind==Single) << "Wrong kind (not a Set or Single) for "
+  simit_iassert(kind==Set || kind==Single) << "Wrong kind (not a Set or Single) for "
     << *this << " which is " << kind;
   return *set;
 }
@@ -34,7 +34,7 @@ bool operator==(const IndexSet &l, const IndexSet &r) {
       return true;
       break;
   }
-  unreachable;
+  simit_unreachable;
   return false;
 }
 
@@ -55,7 +55,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
       os << "*";
       break;
     default:
-      ierror;
+      simit_ierror;
       break;
   }
   return os;

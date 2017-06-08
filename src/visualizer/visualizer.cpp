@@ -143,7 +143,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
     char* errorLog = new char[logSize];
     glGetShaderInfoLog(vertexShader, logSize, &logSize, &errorLog[0]);
     std::cerr << errorLog << std::endl;
-    ierror << "Vertex shader failed to compile";
+    simit_ierror << "Vertex shader failed to compile";
     delete[] errorLog;
   }
   glCompileShader(fragmentShader);
@@ -154,7 +154,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
     char* errorLog = new char[logSize];
     glGetShaderInfoLog(fragmentShader, logSize, &logSize, &errorLog[0]);
     std::cerr << errorLog << std::endl;
-    ierror << "Fragment shader failed to compile";
+    simit_ierror << "Fragment shader failed to compile";
     delete[] errorLog;
   }
 
@@ -367,7 +367,7 @@ void invertMatrix(const GLfloat matrix[16], GLfloat inverse[16]) {
       matrix[2] * inv[8] +
       matrix[3] * inv[12];
 
-  iassert(det != 0) << "Non-invertible transformation matrix";
+  simit_iassert(det != 0) << "Non-invertible transformation matrix";
 
   det = 1.0 / det;
 
@@ -623,7 +623,7 @@ void bindEdgesData(Set &edges, FieldRef<double,3> coordField,
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
     for (auto &endPoint : edges.getEndpoints(*elem)) {
-      iassert(index < (edges.getSize() * 2 * 3))
+      simit_iassert(index < (edges.getSize() * 2 * 3))
           << "Too many edges in set edge info.";
       TensorRef<double,3> point = coordField.get(endPoint);
       data[index] = point(0);
@@ -668,7 +668,7 @@ void bindFacesData(Set &faces, FieldRef<double,3> coordField,
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
     for (auto &endPoint : faces.getEndpoints(*elem)) {
-      iassert(index < (faces.getSize() * 3 * 3))
+      simit_iassert(index < (faces.getSize() * 3 * 3))
           << "Too many faces in set edge info.";
       TensorRef<double,3> point = coordField.get(endPoint);
       posData[index] = point(0);
@@ -755,7 +755,7 @@ void initDrawing(int argc, char** argv) {
   int ret;
   ret = pthread_create(&internal::glutThread, NULL,
                        internal::handleWindowEvents, NULL);
-  iassert(!ret) << "Could not create event handler thread";
+  simit_iassert(!ret) << "Could not create event handler thread";
 
   internal::kInitialized = true;
 }

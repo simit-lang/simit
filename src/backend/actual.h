@@ -74,7 +74,7 @@ inline bool isa(Actual* a) {
 
 template <typename A>
 inline A* to(Actual* a) {
-  iassert(isa<A>(a)) << "Wrong Actual type";
+  simit_iassert(isa<A>(a)) << "Wrong Actual type";
   return static_cast<A*>(a);
 }
 

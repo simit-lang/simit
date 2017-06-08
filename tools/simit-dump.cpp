@@ -170,7 +170,7 @@ int main(int argc, const char* argv[]) {
       std::istringstream ss(sec);
       std::string header;
       if (!std::getline(ss, header)) {
-        ierror << "No text in string";
+        simit_ierror << "No text in string";
       }
       header = simit::util::trim(header.substr(3, header.size()-1));
 

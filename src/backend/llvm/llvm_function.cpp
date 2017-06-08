@@ -55,10 +55,10 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   std::string errStr;
   engineBuilder->setErrorStr(&errStr);
   this->executionEngine.reset(engineBuilder->create());
-  iassert((bool)this->executionEngine) << errStr;
+  simit_iassert((bool)this->executionEngine) << errStr;
   harnessEngineBuilder->setErrorStr(&errStr);
   this->harnessExecEngine.reset(harnessEngineBuilder->create());
-  iassert((bool)this->harnessExecEngine) << errStr;
+  simit_iassert((bool)this->harnessExecEngine) << errStr;
 
   // Finalize existing module so we can get global pointer hooks
   // from the LLVM memory manager.
@@ -78,13 +78,13 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
       *extPtr = nullptr;
       extPtrs.push_back(extPtr);
     }
-    iassert(!util::contains(this->externPtrs, bindable.getName()));
+    simit_iassert(!util::contains(this->externPtrs, bindable.getName()));
     this->externPtrs.insert({bindable.getName(), extPtrs});
   }
 
   // Initialize temporary pointers
   for (const Var& tmp : env.getTemporaries()) {
-    iassert(tmp.getType().isTensor())
+    simit_iassert(tmp.getType().isTensor())
         << "Only support tensor temporaries";
     uint64_t addr = executionEngine->getGlobalValueAddress(tmp.getName());
     void** tmpPtr = (void**)addr;
@@ -130,18 +130,18 @@ LLVMFunction::~LLVMFunction() {
 }
 
 void LLVMFunction::bind(const std::string& name, simit::Set* set) {
-  iassert(hasBindable(name));
-  iassert(getBindableType(name).isSet());
+  simit_iassert(hasBindable(name));
+  simit_iassert(getBindableType(name).isSet());
 
   if (hasArg(name)) {
     // Check set kinds match
     Type argType = getArgType(name);
     if (argType.isUnstructuredSet()) {
-      uassert(set->getKind() == simit::Set::Unstructured)
+      simit_uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
     }
     else if (argType.isGridSet()) {
-      uassert(set->getKind() == simit::Set::Grid)
+      simit_uassert(set->getKind() == simit::Set::Grid)
           << "Must bind a grid edge set to " << name;
     }
     else {
@@ -155,15 +155,15 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     Type globalType = getGlobalType(name);
 
     if (globalType.isUnstructuredSet()) {
-      uassert(set->getKind() == simit::Set::Unstructured)
+      simit_uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
     }
     else if (globalType.isGridSet()) {
-      uassert(set->getKind() == simit::Set::Grid)
+      simit_uassert(set->getKind() == simit::Set::Grid)
           << "Must bind a grid edge set to " << name;
       unsigned ndims = globalType.toGridSet()->dimensions;
       vector<int> dimensions = set->getDimensions();
-      uassert(dimensions.size() == ndims)
+      simit_uassert(dimensions.size() == ndims)
           << "Grid edge set with wrong number of dimensions: "
           << dimensions.size() << " passed, but " << ndims
           << " required";
@@ -173,33 +173,33 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     }
 
     // Write set values and pointers to the relevant extern
-    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    simit_iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
     void *externPtr = externPtrs.at(name)[0];
     writeSet(set, globalType, externPtr);
   }
 }
 
 void LLVMFunction::bind(const std::string& name, void* data) {
-  iassert(hasBindable(name));
+  simit_iassert(hasBindable(name));
   if (hasArg(name)) {
     arguments[name] = std::unique_ptr<Actual>(new TensorActual(data));
     initialized = false;
   }
   else if (hasGlobal(name)) {
     globals[name] = std::unique_ptr<Actual>(new TensorActual(data));
-    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    simit_iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
     *externPtrs.at(name)[0] = data;
   }
 }
 
 void LLVMFunction::bind(const std::string& name, TensorData& tensorData) {
-  iassert(hasBindable(name));
-  tassert(!hasArg(name)) << "Only support global sparse matrices";
+  simit_iassert(hasBindable(name));
+  simit_tassert(!hasArg(name)) << "Only support global sparse matrices";
 
   if (hasGlobal(name)) {
-    iassert(util::contains(externPtrs,name))
+    simit_iassert(util::contains(externPtrs,name))
         << "extern " << util::quote(name) << " does not have any extern ptrs";
-    iassert(externPtrs.at(name).size() == 3)
+    simit_iassert(externPtrs.at(name).size() == 3)
         << "extern " << util::quote(name) << " has wrong size "
         << externPtrs.at(name).size();
 
@@ -219,17 +219,17 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
         break;
       case ir::IndexSet::Set: {
         ir::Expr setExpr = indexSet.getSet();
-        iassert(ir::isa<ir::VarExpr>(setExpr))
+        simit_iassert(ir::isa<ir::VarExpr>(setExpr))
             << "Attempting to get the static size of a runtime dynamic set: "
             << quote(setExpr);
         string setName = ir::to<ir::VarExpr>(setExpr)->var.getName();
 
-        iassert(util::contains(arguments, setName) ||
+        simit_iassert(util::contains(arguments, setName) ||
                 util::contains(globals, setName));
         Actual* setActual = util::contains(arguments, setName)
                             ? arguments.at(setName).get()
                             : globals.at(setName).get();
-        iassert(isa<SetActual>(setActual));
+        simit_iassert(isa<SetActual>(setActual));
         Set* set = to<SetActual>(setActual)->getSet();
         result *= set->getSize();
         break;
@@ -238,7 +238,7 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
       case ir::IndexSet::Dynamic:
         not_supported_yet;
     }
-    iassert(result != 0);
+    simit_iassert(result != 0);
   }
   return result;
 }
@@ -262,13 +262,13 @@ Function::FuncType LLVMFunction::init() {
 
   // Allocate memory for temporaries
   for (const Var& tmp : environment.getTemporaries()) {
-    iassert(util::contains(temporaryPtrs, tmp.getName()));
+    simit_iassert(util::contains(temporaryPtrs, tmp.getName()));
     const Type& type = tmp.getType();
 
     if (type.isTensor()) {
       const ir::TensorType* tensorType = type.toTensor();
       unsigned order = tensorType->order();
-      iassert(order <= 2) << "Higher-order tensors not supported";
+      simit_iassert(order <= 2) << "Higher-order tensors not supported";
 
       if (order == 1) {
         // Vectors are currently always dense
@@ -283,21 +283,21 @@ Function::FuncType LLVMFunction::init() {
         Type blockType = tensorType->getBlockType();
         size_t blockSize = blockType.toTensor()->size();
         size_t componentSize = tensorType->getComponentType().bytes();
-        iassert(environment.hasTensorIndex(tmp))
+        simit_iassert(environment.hasTensorIndex(tmp))
             << "No tensor index for: " << tmp;
         const TensorIndex& ti = environment.getTensorIndex(tmp);
 
         if (ti.getKind() == TensorIndex::PExpr) {
           const pe::PathExpression& pexpr = ti.getPathExpression();
-          iassert(util::contains(pathIndices, pexpr));
+          simit_iassert(util::contains(pathIndices, pexpr));
           size_t matSize = pathIndices.at(pexpr).numNeighbors() *
               blockSize * componentSize;
           *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
         }
         else if (ti.getKind() == TensorIndex::Sten) {
           auto iss = tensorType->getOuterDimensions();
-          iassert(iss.size() == 2);
-          iassert(iss[0] == iss[1])
+          simit_iassert(iss.size() == 2);
+          simit_iassert(iss[0] == iss[1])
               << "Stencil tensor index must be for a homogeneous matrix";
           size_t gridSize = size(iss[0]);
           const StencilLayout& stencil = ti.getStencilLayout();
@@ -311,7 +311,7 @@ Function::FuncType LLVMFunction::init() {
       }
     }
     else {
-      unreachable << "don't know how to initialize temporary "
+      simit_unreachable << "don't know how to initialize temporary "
                   << util::quote(tmp);
     }
   }
@@ -321,7 +321,7 @@ Function::FuncType LLVMFunction::init() {
   Function::FuncType func;
   initialized = true;
   vector<string> formals = getArgs();
-  iassert(formals.size() == llvmFunc->getArgumentList().size());
+  simit_iassert(formals.size() == llvmFunc->getArgumentList().size());
   if (llvmFunc->getArgumentList().size() == 0) {
     llvm::Function *initFunc = getInitFunc();
     llvm::Function *deinitFunc = getDeinitFunc();
@@ -335,7 +335,7 @@ Function::FuncType LLVMFunction::init() {
     llvm::SmallVector<llvm::Value*, 8> args;
     auto llvmArgIt = llvmFunc->getArgumentList().begin();
     for (const std::string& formal : formals) {
-      uassert(util::contains(arguments, formal))
+      simit_uassert(util::contains(arguments, formal))
           << "Could not find formal argument " << formal <<  " in "
           << llvmFunc->getName().str();
 
@@ -343,7 +343,7 @@ Function::FuncType LLVMFunction::init() {
       ++llvmArgIt;
       Actual* actual = arguments.at(formal).get();
       ir::Type type = getArgType(formal);
-      iassert(type.kind() == ir::Type::Set || type.kind() == ir::Type::Tensor);
+      simit_iassert(type.kind() == ir::Type::Set || type.kind() == ir::Type::Tensor);
 
       class InitActual : public ActualVisitor {
       public:
@@ -408,9 +408,9 @@ Function::FuncType LLVMFunction::init() {
     deinit = getGlobalFunc(deinitHarness, harnessExecEngine.get());
     func = getGlobalFunc(funcHarness, harnessExecEngine.get());
 
-    iassert(!llvm::verifyModule(*module))
+    simit_iassert(!llvm::verifyModule(*module))
         << "LLVM module does not pass verification";
-    iassert(!llvm::verifyModule(*harnessModule))
+    simit_iassert(!llvm::verifyModule(*harnessModule))
         << "LLVM harness module does not pass verification";
   }
   return func;

@@ -14,7 +14,7 @@ void ConstChecker::check(Program::Ptr program) {
 
       // Verify that global constant is not inialized to a non-literal value, 
       // which is currently unsupported.
-      iassert((bool)decl->initVal);
+      simit_iassert((bool)decl->initVal);
       if (!isa<TensorLiteral>(decl->initVal)) {
         reportError("global constant must be initialized to a literal", decl);
       }

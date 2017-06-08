@@ -29,7 +29,7 @@ std::ostream &operator<<(std::ostream &os, const PathIndex &pi) {
 SetEndpointPathIndex::SetEndpointPathIndex(const simit::Set &edgeSet)
     : edgeSet(edgeSet) {
   // TODO: Generalize to support gaps in the future
-  iassert(edgeSet.isHomogeneous())
+  simit_iassert(edgeSet.isHomogeneous())
       << "Must be homogeneous because otherwise there are gaps";
 }
 
@@ -208,7 +208,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
 
           const int cardinality = edgeSet.getCardinality();
-          iassert(cardinality > 0) << "not an edge set" << edgeSet.getName();
+          simit_iassert(cardinality > 0) << "not an edge set" << edgeSet.getName();
 
           const simit::Set& vertexSet =
               *builder->getBinding(link->getVertexSet());
@@ -246,7 +246,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         }
         case Link::ve: {
           const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
-          iassert(edgeSet.getCardinality() > 0)
+          simit_iassert(edgeSet.getCardinality() > 0)
               << "not an edge set" << edgeSet.getName();
           
           // add each edge to the neighbor vectors of its endpoints
@@ -261,10 +261,10 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
           // populate neighbor lists
           for (auto &e : edgeSet) {
-            iassert(e.getIdent() >= 0);
+            simit_iassert(e.getIdent() >= 0);
             int i = 0;
             for (auto &ep : edgeSet.getEndpoints(e)) {
-              iassert(ep.getIdent() >= 0);
+              simit_iassert(ep.getIdent() >= 0);
               if (&vertexSet == edgeSet.getEndpointSet(i++)) {
                 pathNeighbors.at(ep.getIdent()).push_back(e.getIdent());
               }
@@ -283,14 +283,14 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           // create neighbor lists
           const simit::Set& sourceSet =
               *builder->getBinding(link->getVertexSet(0));
-          iassert(sourceSet.getName() ==
+          simit_iassert(sourceSet.getName() ==
                   builder->getBinding(link->getVertexSet(1))->getName());
           for (auto &v : sourceSet) {
             pathNeighbors.insert({v.getIdent(), vector<unsigned>()});
             for (auto &kv : stencil.getLayoutReversed()) {
               const vector<int> &offsets = kv.second;
               vector<int> base = throughSet.getGridPointCoords(v);
-              iassert(offsets.size() == base.size());
+              simit_iassert(offsets.size() == base.size());
               for (unsigned i = 0; i < base.size(); ++i) {
                 base[i] += offsets[i] + throughSet.getDimensions()[i];
                 base[i] = base[i] % throughSet.getDimensions()[i];
@@ -302,7 +302,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           pi = pack(pathNeighbors, false);
           break;
         }
-        default: unreachable;
+        default: simit_unreachable;
       }
     }
 
@@ -323,9 +323,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     PathIndex buildIndex(const PathExpression &pathExpr,
                          const Var &source, const Var &sink) {
       VarToLocationsMap locs = getVarToLocationsMap({pathExpr});
-      iassert(util::contains(locs, source))
+      simit_iassert(util::contains(locs, source))
           << "source variable is not in the path expression";
-      iassert(util::contains(locs, sink))
+      simit_iassert(util::contains(locs, sink))
           << "sink variable is not in the path expression";
       return builder->buildSegmented(locs.at(source)[0].pathExpr,
                                      locs.at(source)[0].endpoint);
@@ -337,9 +337,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
                                             const Var &quantified,
                                             const Var &sink) {
       VarToLocationsMap varToLocations = getVarToLocationsMap({lhs,rhs});
-      iassert(varToLocations.find(quantified) != varToLocations.end())
+      simit_iassert(varToLocations.find(quantified) != varToLocations.end())
           << "could not find quantified variable locations";
-      iassert(varToLocations[quantified].size() == 2)
+      simit_iassert(varToLocations[quantified].size() == 2)
           << "quantified binary expr only uses quantified variable once";
 
       Location sourceLoc = varToLocations[source][0];
@@ -357,7 +357,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
     void visit(const And *f) {
       auto &freeVars = f->getFreeVars();
-      iassert(freeVars.size() == 2)
+      simit_iassert(freeVars.size() == 2)
           << "For now, we only support matrix path expressions";
 
       PathExpression lhs = f->getLhs();
@@ -390,7 +390,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         }
       }
       else {
-        iassert(f->getQuantifiedVars().size() == 1)
+        simit_iassert(f->getQuantifiedVars().size() == 1)
             << "For now, we only support one quantified variable";
 
         QuantifiedVar qvar = f->getQuantifiedVars()[0];
@@ -429,7 +429,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
     void visit(const Or *f) {
       auto &freeVars = f->getFreeVars();
-      iassert(freeVars.size() == 2)
+      simit_iassert(freeVars.size() == 2)
           << "For now, we only support matrix path expressions";
 
       PathExpression lhs = f->getLhs();
@@ -449,14 +449,14 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           }
         }
         for (unsigned elem : rhsIndex) {
-          iassert(pathNeighbors.find(elem) != pathNeighbors.end());
+          simit_iassert(pathNeighbors.find(elem) != pathNeighbors.end());
           for (unsigned nbr : rhsIndex.neighbors(elem)) {
             pathNeighbors.at(elem).insert(nbr);
           }
         }
       }
       else {
-        iassert(f->getQuantifiedVars().size() == 1)
+        simit_iassert(f->getQuantifiedVars().size() == 1)
             << "For now, we only support one quantified variable";
 
         QuantifiedVar qvar = f->getQuantifiedVars()[0];
@@ -534,12 +534,12 @@ void PathIndexBuilder::bind(std::string name, const simit::Set* set) {
 }
 
 const simit::Set* PathIndexBuilder::getBinding(pe::Set pset) const {
-  iassert(pset.defined());
+  simit_iassert(pset.defined());
   return bindings.at(pset.getName());
 }
 
 const simit::Set* PathIndexBuilder::getBinding(ir::Var var) const {
-  iassert(var.defined());
+  simit_iassert(var.defined());
   return bindings.at(var.getName());
 }
 

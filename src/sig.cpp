@@ -196,20 +196,20 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
     }
 
     void visit(const IndexedTensor *op) {
-      iassert(!isa<IndexExpr>(op->tensor))
+      simit_iassert(!isa<IndexExpr>(op->tensor))
           << "IndexExprs should have been flattened by now:"
           << util::toString(*op);
 
-      iassert(op->tensor.type().isTensor());
+      simit_iassert(op->tensor.type().isTensor());
       auto type = op->tensor.type().toTensor();
 
       Var tensorVar;
       Expr setExpr;
       if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
         const Var &var = to<VarExpr>(op->tensor)->var;
-        iassert(var.getType().isTensor())
+        simit_iassert(var.getType().isTensor())
             << "Index expression result must be a tensor";
-        iassert(storage.hasStorage(var))
+        simit_iassert(storage.hasStorage(var))
             << "No storage descriptor found for " << var << " in "
             << util::toString(*op);
 
@@ -219,7 +219,7 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
           // Assumes all indexed matrices are (B)CSR
           auto type = var.getType().toTensor();
           IndexSet dimension = type->getOuterDimensions()[0];
-          iassert(dimension.getKind() == IndexSet::Set)
+          simit_iassert(dimension.getKind() == IndexSet::Set)
               << "Assumes first dimension is sparse";
           setExpr = dimension.getSet();
         }
@@ -358,7 +358,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
         }
         else {
-          iassert(gridSet.type().isGridSet());
+          simit_iassert(gridSet.type().isGridSet());
           int ndims = gridSet.type().toGridSet()->dimensions;
           string varName = nameGenerator.getName(indexVar.getName());
           Var var(varName, Int);
@@ -376,7 +376,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
     }
 
     void visit(const SIGEdge *e) {
-      tassert(e->endpoints.size() <= 2)
+      simit_tassert(e->endpoints.size() <= 2)
           << "This code does not support higher-order tensors yet";
 
       // There are three cases:
@@ -397,7 +397,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
       }
 
       // We currently only support case 2.
-      tassert(visited.size() == 1);
+      simit_tassert(visited.size() == 1);
       
       auto storageKind = storage.getStorage(e->tensor).getKind();
      
@@ -429,7 +429,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
             domainKind = ForDomain::Neighbors;
           }
           else {
-            ierror << "Unknown storage kind for tensor " << e->tensor;
+            simit_ierror << "Unknown storage kind for tensor " << e->tensor;
           }
           
           ForDomain domain;

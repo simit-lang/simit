@@ -61,29 +61,29 @@ public:
     if (!isTensor()) {
       assert(false);
     }
-    iassert(isTensor());
+    simit_iassert(isTensor());
     return tensor;
   }
   const ElementType* toElement() const {
-    iassert(isElement());
+    simit_iassert(isElement());
     return element;
   }
   const SetType* toSet() const {
-    iassert(isSet());
+    simit_iassert(isSet());
     return set;
   }
   const UnstructuredSetType* toUnstructuredSet() const;
   const GridSetType*         toGridSet()         const;
   const UnnamedTupleType* toUnnamedTuple() const {
-    iassert(isUnnamedTuple());
+    simit_iassert(isUnnamedTuple());
     return tuple;
   }
   const NamedTupleType* toNamedTuple() const {
-    iassert(isNamedTuple());
+    simit_iassert(isNamedTuple());
     return namedTuple;
   }
   const ArrayType* toArray() const {
-    iassert(isArray());
+    simit_iassert(isArray());
     return array;
   }
 
@@ -128,7 +128,7 @@ struct ScalarType {
       return (unsigned int)sizeof(char);
     }
     else {
-      iassert(isFloat());
+      simit_iassert(isFloat());
       return floatBytes;
     }
   }
@@ -145,7 +145,7 @@ struct ScalarType {
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ScalarType typeOf() {
-  ierror << "Unsupported type";
+  simit_ierror << "Unsupported type";
   return ScalarType::Int; // Suppress warning
 }
 
@@ -243,7 +243,7 @@ struct ElementType : TypeNode {
   }
 
   const Field& field(const std::string& fieldName) const {
-    iassert(hasField(fieldName)) << "Undefined field '"
+    simit_iassert(hasField(fieldName)) << "Undefined field '"
                                  << fieldName << "' in '" << name << "'";
     return fields[fieldNames.at(fieldName)];
   }
@@ -314,7 +314,7 @@ struct UnnamedTupleType : TypeNode {
   int size;
 
   static Type make(Type elementType, int size) {
-    iassert(elementType.isElement());
+    simit_iassert(elementType.isElement());
     UnnamedTupleType *type = new UnnamedTupleType;
     type->elementType = elementType;
     type->size = size;
@@ -334,7 +334,7 @@ struct NamedTupleType : TypeNode {
   }
 
   unsigned elementIndex(const std::string& elementName) const {
-    iassert(hasElement(elementName)) << "Undefined element '" 
+    simit_iassert(hasElement(elementName)) << "Undefined element '" 
                                      << elementName << "'";
     return elementNames.at(elementName); 
   }
@@ -347,7 +347,7 @@ struct NamedTupleType : TypeNode {
     NamedTupleType *type = new NamedTupleType;
     type->elements = elements;
     for (size_t i=0; i < elements.size(); ++i) {
-      iassert(elements[i].type.isElement());
+      simit_iassert(elements[i].type.isElement());
       type->elementNames[elements[i].name] = i;
     }
     return type;

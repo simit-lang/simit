@@ -128,7 +128,7 @@ inline bool isa(Stmt s) {
 
 template <typename S>
 inline const S* to(Stmt s) {
-  iassert(isa<S>(s)) << "Wrong Expr type " << s;
+  simit_iassert(isa<S>(s)) << "Wrong Expr type " << s;
   return static_cast<const S*>(s.ptr);
 }
 
@@ -399,11 +399,11 @@ struct ForDomain {
   ForDomain() {}
   ForDomain(class IndexSet indexSet) : kind(IndexSet), indexSet(indexSet) {}
   ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
-    iassert(kind != IndexSet);
+    simit_iassert(kind != IndexSet);
   }
   ForDomain(Expr set, Var var, Kind kind, class IndexSet indexSet) : kind(kind),
       indexSet(indexSet), set(set), var(var)  {
-    iassert(kind == NeighborsOf);
+    simit_iassert(kind == NeighborsOf);
   }
   ForDomain(Expr set, Var var, int dims, string varName="")
       : kind(Grid), set(set), var(var) {

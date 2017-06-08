@@ -25,7 +25,7 @@ void IREmitter::visit(RangeIndexSet::Ptr set) {
 void IREmitter::visit(SetIndexSet::Ptr set) {
   const ir::Expr setExpr = setExprs[set->setDef];
   
-  iassert(setExpr.type().isSet());
+  simit_iassert(setExpr.type().isSet());
   retIndexSet = ir::IndexSet(setExpr);
 }
 
@@ -34,7 +34,7 @@ void IREmitter::visit(DynamicIndexSet::Ptr set) {
 }
 
 void IREmitter::visit(ElementType::Ptr set) {
-  iassert(ctx->containsElementType(set->ident));
+  simit_iassert(ctx->containsElementType(set->ident));
   retType = ctx->getElementType(set->ident);
 }
 
@@ -73,7 +73,7 @@ void IREmitter::visit(NamedTupleType::Ptr type) {
 }
 
 void IREmitter::visit(UnnamedTupleType::Ptr type) {
-  iassert(type->length->val > 0);
+  simit_iassert(type->length->val > 0);
   
   const ir::Type elementType = emitType(type->element);
   retType = ir::UnnamedTupleType::make(elementType, type->length->val);
@@ -97,7 +97,7 @@ void IREmitter::visit(ScalarType::Ptr type) {
       retType = ir::String;
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
 }
@@ -157,7 +157,7 @@ void IREmitter::visit(IdentDecl::Ptr decl) {
 }
 
 void IREmitter::visit(ElementTypeDecl::Ptr decl) {
-  iassert(!ctx->containsElementType(decl->name->ident));
+  simit_iassert(!ctx->containsElementType(decl->name->ident));
   
   std::vector<ir::Field> fields;
   for (auto f : decl->fields) {
@@ -219,7 +219,7 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
                         ir::Func::Kind::External : ir::Func::Kind::Internal;
   const auto func = ir::Func(funcName, arguments, results, body, funcKind);
 
-  iassert(!ctx->containsFunction(funcName));
+  simit_iassert(!ctx->containsFunction(funcName));
   ctx->addFunction(func);
 }
 
@@ -316,7 +316,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
       loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
 
@@ -336,7 +336,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
       forStmt = ir::ForRange::make(loopVar, domain.lower, domain.upper, body);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
   ctx->addStatement(forStmt);
@@ -479,7 +479,7 @@ void IREmitter::visit(XorExpr::Ptr expr) {
 }
 
 void IREmitter::visit(EqExpr::Ptr expr) {
-  iassert(expr->operands.size() > 1);
+  simit_iassert(expr->operands.size() > 1);
   ir::Expr lhs = emitExpr(expr->operands[0]);
 
   // Chained (n-ary) comparison operations are translated to conjunction of 
@@ -510,7 +510,7 @@ void IREmitter::visit(EqExpr::Ptr expr) {
         cmpExpr = ir::Ne::make(lhs, rhs);
         break;
       default:
-        unreachable;
+        simit_unreachable;
         break;
     }
 
@@ -557,13 +557,13 @@ void IREmitter::visit(MulExpr::Ptr expr) {
     return;
   }
 
-  iassert(ltype->order() <= 2 && rtype->order() <= 2);
+  simit_iassert(ltype->order() <= 2 && rtype->order() <= 2);
   if (ltype->order() == 0 || rtype->order() == 0) {
     // Scale
     retExpr = builder->binaryElwiseExpr(lhs, ir::IRBuilder::Mul, rhs);
   } else if (ltype->order() == 1 && rtype->order() == 1) {
     // Vector-Vector Multiplication (inner and outer product)
-    iassert(lhs.type() == rhs.type());
+    simit_iassert(lhs.type() == rhs.type());
     if (ltype->isColumnVector) {
       retExpr = builder->outerProduct(lhs, rhs);
     } else {
@@ -571,15 +571,15 @@ void IREmitter::visit(MulExpr::Ptr expr) {
     }
   } else if (ltype->order() == 2 && rtype->order() == 1) {
     // Matrix-Vector
-    iassert(ldimensions[1] == rdimensions[0]);
+    simit_iassert(ldimensions[1] == rdimensions[0]);
     retExpr = builder->gemv(lhs, rhs);
   } else if (ltype->order() == 1 && rtype->order() == 2) {
     // Vector-Matrix
-    iassert(ldimensions[0] == rdimensions[0]);
+    simit_iassert(ldimensions[0] == rdimensions[0]);
     retExpr = builder->gevm(lhs, rhs);
   } else if (ltype->order() == 2 && rtype->order() == 2) {
     // Matrix-Matrix
-    iassert(ldimensions[1] == rdimensions[0]);
+    simit_iassert(ldimensions[1] == rdimensions[0]);
     retExpr = builder->gemm(lhs, rhs);
   }
 }
@@ -602,9 +602,9 @@ void IREmitter::visit(LeftDivExpr::Ptr expr) {
   auto A = emitExpr(expr->lhs);
   auto b = emitExpr(expr->rhs);
 
-  iassert(A.type().isTensor());
+  simit_iassert(A.type().isTensor());
   auto Atype = A.type().toTensor();
-  iassert(Atype->order() == 2);
+  simit_iassert(Atype->order() == 2);
 
   // The type of x in $Ax = b$ is the same as the second dimension of A.
   auto xtype = ir::TensorType::make(Atype->getComponentType(),
@@ -637,7 +637,7 @@ void IREmitter::visit(ElwiseDivExpr::Ptr expr) {
 
 void IREmitter::visit(NegExpr::Ptr expr) {
   const ir::Expr operand = emitExpr(expr->operand);
-  iassert(!ir::isa<ir::Literal>(operand));
+  simit_iassert(!ir::isa<ir::Literal>(operand));
   retExpr = !expr->negate ? operand : (insideIndexExprAssignStmt ?
           ctx->getBuilder()->unaryTensorElwiseExpr(ir::IRBuilder::Neg, operand):
           ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand));
@@ -675,7 +675,7 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
       retExpr = builder->transposedMatrix(operand);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
 }
@@ -686,7 +686,7 @@ void IREmitter::visit(CallExpr::Ptr expr) {
 
   std::vector<ir::Expr> arguments;
   for (auto argument : expr->args) {
-    iassert((bool)argument);
+    simit_iassert((bool)argument);
     const ir::Expr arg = emitExpr(argument);
     arguments.push_back(arg);
   }
@@ -806,7 +806,7 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
 
 void IREmitter::visit(SetReadExpr::Ptr expr) {
   const ir::Expr set = emitExpr(expr->set);
-  iassert(set.type().isSet());
+  simit_iassert(set.type().isSet());
 
   std::vector<ir::Expr> indices;
   for (auto param : expr->indices) {
@@ -820,7 +820,7 @@ void IREmitter::visit(SetReadExpr::Ptr expr) {
 void IREmitter::visit(NamedTupleReadExpr::Ptr expr) {
   const ir::Expr tuple = emitExpr(expr->tuple);
   
-  iassert(tuple.type().isNamedTuple());
+  simit_iassert(tuple.type().isNamedTuple());
   retExpr = ir::NamedTupleRead::make(tuple, expr->elem->ident);
 }
 
@@ -828,7 +828,7 @@ void IREmitter::visit(UnnamedTupleReadExpr::Ptr expr) {
   const ir::Expr tuple = emitExpr(expr->tuple);
   const ir::Expr index = emitExpr(expr->index);
 
-  iassert(tuple.type().isUnnamedTuple());
+  simit_iassert(tuple.type().isUnnamedTuple());
   retExpr = ir::UnnamedTupleRead::make(tuple, index);
 }
 
@@ -836,8 +836,8 @@ void IREmitter::visit(FieldReadExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->setOrElem);
   const ir::Type type = lhs.type();
 
-  iassert(type.isElement() || type.isSet());
-  iassert(type.isElement() && type.toElement()->hasField(expr->field->ident) || 
+  simit_iassert(type.isElement() || type.isSet());
+  simit_iassert(type.isElement() && type.toElement()->hasField(expr->field->ident) || 
           type.isSet() && 
           type.toSet()->elementType.toElement()->hasField(expr->field->ident));
 
@@ -934,7 +934,7 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
       return;
     }
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
 }
@@ -978,12 +978,12 @@ void IREmitter::visit(Test::Ptr test) {
   
   const ir::Expr expected = emitExpr(test->expected);
 
-  iassert(calls.empty());
+  simit_iassert(calls.empty());
   ctx->addTest(new internal::FunctionTest(test->func->ident, args, {expected}));
 }
 
 void IREmitter::DenseTensorValues::addIntValues(const std::vector<int> &vals) {
-  iassert(type != Type::FLOAT);
+  simit_iassert(type != Type::FLOAT);
   type = Type::INT;
   
   intVals.insert(intVals.end(), vals.begin(), vals.end());
@@ -992,7 +992,7 @@ void IREmitter::DenseTensorValues::addIntValues(const std::vector<int> &vals) {
 
 void IREmitter::DenseTensorValues::addFloatValues(
     const std::vector<double> &vals) {
-  iassert(type == Type::FLOAT || type == Type::UNKNOWN);
+  simit_iassert(type == Type::FLOAT || type == Type::UNKNOWN);
   type = Type::FLOAT;
   
   floatVals.insert(floatVals.end(), vals.begin(), vals.end());
@@ -1001,7 +1001,7 @@ void IREmitter::DenseTensorValues::addFloatValues(
 
 void IREmitter::DenseTensorValues::addComplexValues(
     const std::vector<double_complex> &vals) {
-  iassert(type == Type::COMPLEX || type == Type::UNKNOWN);
+  simit_iassert(type == Type::COMPLEX || type == Type::UNKNOWN);
   type = Type::COMPLEX;
 
   // Flatten pairs
@@ -1014,8 +1014,8 @@ void IREmitter::DenseTensorValues::addComplexValues(
 
 void IREmitter::DenseTensorValues::merge(
     const IREmitter::DenseTensorValues &other) {
-  iassert(type == other.type);
-  iassert(dimSizes.size() - 1 == other.dimSizes.size());
+  simit_iassert(type == other.type);
+  simit_iassert(dimSizes.size() - 1 == other.dimSizes.size());
 
   switch (type) {
     case Type::INT:
@@ -1031,7 +1031,7 @@ void IREmitter::DenseTensorValues::merge(
                          other.complexVals.end());
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
   ++dimSizes[dimSizes.size() - 1];
@@ -1126,7 +1126,7 @@ IREmitter::Domain IREmitter::emitDomain(ForDomain::Ptr ptr) {
 }
  
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
-  iassert(decl->initVal || !isConst);
+  simit_iassert(decl->initVal || !isConst);
   
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
   const auto varType = decl->type ? emitType(decl->type) : initExpr.type();
@@ -1201,7 +1201,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       ir::to<ir::CallStmt>(topLevelStmt)->callee.getResults() :
       ir::to<ir::Map>(topLevelStmt)->function.getResults();
     
-    iassert(lhs.size() <= retVals.size());
+    simit_iassert(lhs.size() <= retVals.size());
 
     // If target of assignment is a variable, then have function call or map 
     // statement directly store into that variable. If target of assignment is 
@@ -1251,7 +1251,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     for (unsigned int i = 0; i < lhs.size(); ++i) {
       ir::Expr tmpExpr = ir::VarExpr::make(results[i]);
       ir::Type type = tmpExpr.type();
-      tassert(type.isTensor() || type.isOpaque())
+      simit_tassert(type.isTensor() || type.isOpaque())
           << "Copying only supported for tensor and opaque types"
           << " (not " << type << " types)";
 
@@ -1315,7 +1315,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       ctx->addStatement(ir::AssignStmt::make(var, expr));
     }
   } else {
-    iassert(lhs.size() == 0);
+    simit_iassert(lhs.size() == 0);
   }
 }
 

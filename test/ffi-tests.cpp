@@ -151,7 +151,7 @@ TEST(ffi, scalar_two) {
 
 template<typename Float>
 int vecadd(int aN, Float* a, int bN, Float* b, int cN, Float* c) {
-  iassert(aN == bN && bN == cN);
+  simit_iassert(aN == bN && bN == cN);
   for (int i=0; i<aN; ++i) {
     c[i] = a[i] + b[i];
   }
@@ -201,7 +201,7 @@ TEST(ffi, vector_arg) {
 template<typename Float>
 int gemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, Float* B,
          int cN, Float* c, int aN, Float* a) {
-  iassert(Bn == aN && Bm == cN);
+  simit_iassert(Bn == aN && Bm == cN);
 
   int* csrRowStart;
   int* csrColIdx;

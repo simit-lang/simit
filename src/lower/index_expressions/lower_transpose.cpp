@@ -9,8 +9,8 @@ namespace ir {
 
 Stmt lowerTranspose(Var target, const IndexExpr* iexpr,
                     Environment* env, Storage* storage) {
-  iassert(isa<IndexedTensor>(iexpr->value));
-  iassert(isa<VarExpr>(to<IndexedTensor>(iexpr->value)->tensor));
+  simit_iassert(isa<IndexedTensor>(iexpr->value));
+  simit_iassert(isa<VarExpr>(to<IndexedTensor>(iexpr->value)->tensor));
 
   Var source = to<VarExpr>(to<IndexedTensor>(iexpr->value)->tensor)->var;
   auto sourceIndex = storage->getStorage(source).getTensorIndex();
@@ -34,7 +34,7 @@ Stmt lowerTranspose(Var target, const IndexExpr* iexpr,
     body = Store::make(target, locVar, Load::make(source, ij));
   }
   else {  // Blocked
-    iassert(blockType.order() == 2);
+    simit_iassert(blockType.order() == 2);
     Var ii("ii", Int);
     Var jj("jj", Int);
     auto d1 = blockType.getOuterDimensions()[0];
@@ -48,7 +48,7 @@ Stmt lowerTranspose(Var target, const IndexExpr* iexpr,
     body = For::make(jj, ForDomain(d2), body);
     body = For::make(ii, ForDomain(d1), body);
   }
-  iassert(body.defined());
+  simit_iassert(body.defined());
 
   Expr start = Load::make(sourceIndex.getRowptrArray(), i);
   Expr stop  = Load::make(sourceIndex.getRowptrArray(), i+1);

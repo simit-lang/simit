@@ -38,7 +38,7 @@ public:
 
   /// Returns the size of the index set if kind is Range, otherwise undefined
   unsigned getSize() const {
-    iassert(kind == Range) << "Only Range index sets have a static size";
+    simit_iassert(kind == Range) << "Only Range index sets have a static size";
     return rangeSize;
   }
 

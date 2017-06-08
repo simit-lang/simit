@@ -30,13 +30,13 @@ std::ostream& operator<<(std::ostream& os, ComponentType componentType) {
 
 // class TensorType
 TensorType TensorType::getBlockType() const {
-  iassert(isBlocked());
+  simit_iassert(isBlocked());
   return *blockType;
 }
 
 ComponentType TensorType::getComponentType() const {
   // TODO: If it is blocked, then recurse to the component type
-  iassert(!isBlocked());
+  simit_iassert(!isBlocked());
   return componentType;
 }
 

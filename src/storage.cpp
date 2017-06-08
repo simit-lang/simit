@@ -43,22 +43,22 @@ bool TensorStorage::hasTensorIndex() const {
 }
 
 const TensorIndex& TensorStorage::getTensorIndex() const {
-  iassert((content->index.getKind() == TensorIndex::PExpr &&
+  simit_iassert((content->index.getKind() == TensorIndex::PExpr &&
            getKind() == TensorStorage::Indexed) ||
           (content->index.getKind() == TensorIndex::Sten &&
            getKind() == TensorStorage::Stencil))
       << "Expected Indexed tensor, but was " << *this;
-  iassert(content->index.defined());
+  simit_iassert(content->index.defined());
   return content->index;
 }
 
 TensorIndex& TensorStorage::getTensorIndex() {
-  iassert((content->index.getKind() == TensorIndex::PExpr &&
+  simit_iassert((content->index.getKind() == TensorIndex::PExpr &&
            getKind() == TensorStorage::Indexed) ||
           (content->index.getKind() == TensorIndex::Sten &&
            getKind() == TensorStorage::Stencil))
       << "Expected Indexed tensor, but was " << *this;
-  iassert(content->index.defined());
+  simit_iassert(content->index.defined());
   return content->index;
 }
 
@@ -87,7 +87,7 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
       os << "Diagonal";
       break;
     default:
-      unreachable;
+      simit_unreachable;
   }
   return os;
 }
@@ -117,7 +117,7 @@ bool Storage::hasStorage(const Var &tensor) const {
 }
 
 TensorStorage &Storage::getStorage(const Var &tensor) {
-  iassert(hasStorage(tensor))
+  simit_iassert(hasStorage(tensor))
       << " no tensor storage specified for " << util::quote(tensor);
   return content->storage.at(tensor);
 }
@@ -227,7 +227,7 @@ private:
 
   TensorIndex setStencilTensorIndex(const Var& var, std::string assemblyFunc,
                                     std::string targetVar) {
-    iassert(!env->hasTensorIndex(var));
+    simit_iassert(!env->hasTensorIndex(var));
     StencilContent *content = new StencilContent;
     content->assemblyFunc = assemblyFunc;
     content->targetVar = targetVar;
@@ -252,7 +252,7 @@ private:
     Type rhsType = op->value.type();
 
     if (!isScalar(type)) {
-      iassert(type.isTensor());
+      simit_iassert(type.isTensor());
       const TensorType *ttype = type.toTensor();
       
       // Element tensor and system vectors are dense.
@@ -309,12 +309,12 @@ private:
     // stencil, or diagonal. Otherwise, the matrices are indexed with a path
     // expression
     Type targetType = op->target.type();
-    iassert(targetType.isSet());
+    simit_iassert(targetType.isSet());
     if (targetType.isGridSet() ||
         (targetType.isUnstructuredSet() &&
          targetType.toUnstructuredSet()->getCardinality() == 0)) {
       for (const Var& var : op->vars) {
-        iassert(var.getType().isTensor());
+        simit_iassert(var.getType().isTensor());
         const TensorType* type = var.getType().toTensor();
 
         if (type->order() < 2) {
@@ -363,17 +363,17 @@ private:
               tensorStorage = TensorStorage(TensorStorage::Indexed, index);
 
               // Add path expression
-              tassert(tensorType->order() == 2)
+              simit_tassert(tensorType->order() == 2)
                   << "tensor has order " << tensorType->order()
                   << ", while we only currently supports sparse matrices";
             }
           }
-          iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+          simit_iassert(tensorStorage.getKind() != TensorStorage::Undefined);
           storage->add(var, tensorStorage);
         }
         else if (isScalar(type)) {
           TensorStorage tensorStorage = TensorStorage(TensorStorage::Dense);
-          iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+          simit_iassert(tensorStorage.getKind() != TensorStorage::Undefined);
           storage->add(var, tensorStorage);
         }
       }
@@ -381,13 +381,13 @@ private:
   }
 
   void inferStorage(Var var, Expr rhs) {
-    iassert(rhs.defined()) << "Cannot infer storage from an undefined expr";
+    simit_iassert(rhs.defined()) << "Cannot infer storage from an undefined expr";
 
     // Scalars don't need storage
     if (isScalar(var.getType())) return;
 
     Type type = var.getType();
-    iassert(type.isTensor());
+    simit_iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
 
     TensorStorage tensorStorage;
@@ -429,7 +429,7 @@ private:
           continue;
         }
 
-        iassert(storage->hasStorage(operand))
+        simit_iassert(storage->hasStorage(operand))
             << operand << "does not have a storage descriptor";
 
         auto operandStorage  = storage->getStorage(operand);
@@ -466,10 +466,10 @@ private:
               tensorStorage = TensorStorage(TensorStorage::Diagonal);
               break;
             case TensorStorage::Undefined:
-              unreachable;
+              simit_unreachable;
               break;
             default:
-              unreachable;
+              simit_unreachable;
           }
         }
       }

@@ -44,7 +44,7 @@ void createElements(Set *elements, unsigned num) {
 Box::Box(unsigned nX, unsigned nY, unsigned nZ,
     std::vector<ElementRef> refs, std::map<Box::Coord, ElementRef> coords2edges)
     : nX(nX), nY(nY), nZ(nZ), refs(refs), coords2edges(coords2edges) {
-  iassert(refs.size() == nX*nY*nZ);
+  simit_iassert(refs.size() == nX*nY*nZ);
 }
 
 ElementRef Box::getEdge(ElementRef p1, ElementRef p2) const {
@@ -65,7 +65,7 @@ std::vector<ElementRef> Box::getEdges() {
 
 Box createBox(Set *vertices, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ) {
-  uassert(numX >= 1 && numY >= 1 && numZ >= 1);
+  simit_uassert(numX >= 1 && numY >= 1 && numZ >= 1);
   vector<ElementRef> points(numX*numY*numZ);
 
   for(unsigned x = 0; x < numX; ++x) {

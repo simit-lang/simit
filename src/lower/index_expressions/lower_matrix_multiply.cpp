@@ -16,34 +16,34 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
                          Environment* env, Storage* storage) {
   auto tensorStorage = storage->getStorage(target);
 
-  iassert(isa<Mul>(indexExpression->value)) << "expr is not a multiplication";
+  simit_iassert(isa<Mul>(indexExpression->value)) << "expr is not a multiplication";
 
   if (!tensorStorage.getTensorIndex().getPathExpression().defined()) {
     Func spmm = Func("spmm", {Var(), Var()}, {Var()}, Stmt(), Func::External);
 
     auto mulExpr = to<Mul>(indexExpression->value);
-    iassert(isa<IndexedTensor>(mulExpr->a))
+    simit_iassert(isa<IndexedTensor>(mulExpr->a))
         << mulExpr->a << " is not an indexed tensor";
-    iassert(isa<IndexedTensor>(mulExpr->b))
+    simit_iassert(isa<IndexedTensor>(mulExpr->b))
         << mulExpr->b << " is not an indexed tensor";
 
     auto a = to<IndexedTensor>(mulExpr->a)->tensor;
     auto b = to<IndexedTensor>(mulExpr->b)->tensor;
-    iassert(isa<VarExpr>(a)) << a << " is not a var";
-    iassert(isa<VarExpr>(b)) << b << " is not a var";
+    simit_iassert(isa<VarExpr>(a)) << a << " is not a var";
+    simit_iassert(isa<VarExpr>(b)) << b << " is not a var";
 
     Stmt matmultCall = CallStmt::make({target}, spmm, {a, b});
     return matmultCall;
   }
 
-  iassert(target.getType().isTensor());
+  simit_iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
-  tassert(type->order() == 2)
+  simit_tassert(type->order() == 2)
       << "lowerMatrixMultiply does not support non-matrix tensors";
   Type targetBlockType = type->getBlockType();
 
   // Check no blocking or single blocking
-  tassert(targetBlockType.isTensor() &&
+  simit_tassert(targetBlockType.isTensor() &&
           (targetBlockType.toTensor()->order() == 0 ||
            targetBlockType.toTensor()->getBlockType().toTensor()->order() == 0))
       << "lowerMatrixMultiply does not support multiply levels of blocking";
@@ -74,7 +74,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // (i,j B(i,+k)*C(+k,j)) OR (i,j B(+k,j)*C(i,+k))
   // Thus we can assume that the first result var is the row index, and the
   // second is a column index
-  iassert(indexExpression->resultVars.size() == 2)
+  simit_iassert(indexExpression->resultVars.size() == 2)
     << "lowerMatrixMuliply does not support non-matrix output";
   const IndexVar& rowVar = indexExpression->resultVars[0];
 
@@ -83,7 +83,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   const IndexedTensor* secondTensor = nullptr;
   match(indexExpression->value,
     std::function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
-      iassert(op->indexVars.size() == 2)
+      simit_iassert(op->indexVars.size() == 2)
         << "lowerMatrixMultiple requires two-index tensors, but got: "
         << Expr(op);
       if (op->indexVars[0].isFreeVar()) {
@@ -93,13 +93,13 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
         secondTensor = op;
       }
       else {
-        ierror << "lowerMatrixMultiply requires one free index on tensors, "
+        simit_ierror << "lowerMatrixMultiply requires one free index on tensors, "
                << "but found none: " << Expr(op);
       }
     })
   );
-  iassert(firstTensor != nullptr && secondTensor != nullptr);
-  tassert(isa<VarExpr>(firstTensor->tensor) &&
+  simit_iassert(firstTensor != nullptr && secondTensor != nullptr);
+  simit_tassert(isa<VarExpr>(firstTensor->tensor) &&
           isa<VarExpr>(secondTensor->tensor));
   const Var& firstTensorVar = to<VarExpr>(firstTensor->tensor)->var;
   const Var& secondTensorVar = to<VarExpr>(secondTensor->tensor)->var;
@@ -126,7 +126,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   TensorIndex firstTi;
   if (!firstTs.hasTensorIndex()) {
     if (env->hasExtern(firstTensorVar.getName())) {
-      terror << "Extern matrix multiply currently not supported";
+      simit_terror << "Extern matrix multiply currently not supported";
     }
     else {
       firstTi = firstTs.getTensorIndex();
@@ -165,7 +165,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   TensorIndex secondTi;
   if (!secondTs.hasTensorIndex()) {
     if (env->hasExtern(secondTensorVar.getName())) {
-      terror << "Extern matrix multiply currently not supported";
+      simit_terror << "Extern matrix multiply currently not supported";
     }
     else {
       secondTi = secondTs.getTensorIndex();
@@ -191,7 +191,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   }
   else {
     // TODO: Remove this constraint. We can use this recursion more generally.
-    tassert(targetBlockType.toTensor()
+    simit_tassert(targetBlockType.toTensor()
             ->getBlockType().toTensor()->order() == 0);
     Expr first, second;
     const TensorType* blockTensorType = targetBlockType.toTensor();
@@ -202,7 +202,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
       first = Expr(firstVal);
     }
     else {
-      iassert(firstBlockTType->getDimensions()[0] ==
+      simit_iassert(firstBlockTType->getDimensions()[0] ==
               blockTensorType->getDimensions()[0]);
       w = IndexVar("w", firstBlockTType->getDimensions()[1],
                    ReductionOperator::Sum);
@@ -230,7 +230,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
                                (int)targetBlockType.toTensor()->size());
       secondBodyStmts.push_back(block);
       
-      iassert(w.defined());
+      simit_iassert(w.defined());
       second = Expr(innerValVar)(w,v);
       // HACK: Need to explicitly add storage now, instead of letting this be
       // handled by a backend on VarDecl
@@ -279,7 +279,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   TensorIndex outTi;
   if (!outTs.hasTensorIndex()) {
     if (env->hasExtern(target.getName())) {
-      terror << "Extern matrix multiply currently not supported";
+      simit_terror << "Extern matrix multiply currently not supported";
     }
     else {
       outTi = outTs.getTensorIndex();

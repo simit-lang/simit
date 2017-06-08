@@ -45,7 +45,7 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
         return TensorWrite::make(tensor, indices, value);
       }
     }
-    unreachable;
+    simit_unreachable;
     return Stmt();
   }
 
@@ -54,9 +54,9 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
   void visit(const TensorWrite *op) {
     // Rewrites the tensor write and assigns the result to stmt
     IRRewriter::visit(op);
-    iassert(isa<TensorWrite>(stmt));
+    simit_iassert(isa<TensorWrite>(stmt));
     const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
-    iassert(tensorWrite->value.type().isTensor());
+    simit_iassert(tensorWrite->value.type().isTensor());
 
     Var targetVar;
     match(op->tensor,
@@ -68,20 +68,20 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
         targetVar = v->var;
       })
     );
-    iassert(targetVar.defined());
+    simit_iassert(targetVar.defined());
 
     if (isResult(targetVar)) {
       Var mapVar = getMapVar(targetVar);
       auto tensorStorage = storage->getStorage(mapVar);
       if (clocs.size() > 0) {
-        iassert(op->indices.size() == 2);
+        simit_iassert(op->indices.size() == 2);
         // Row index must be normalized to zero
-        iassert((isa<VarExpr>(op->indices[0]) &&
+        simit_iassert((isa<VarExpr>(op->indices[0]) &&
                  to<VarExpr>(op->indices[0])->var == target) ||
                 (isa<SetRead>(op->indices[0]) && util::isAllZeros(
                     getOffsets(to<SetRead>(op->indices[0])->indices))));
         // Get col index
-        iassert(throughSet.type().isGridSet());
+        simit_iassert(throughSet.type().isGridSet());
         int dims = throughSet.type().toGridSet()->dimensions;
         Expr index;
         if (isa<VarExpr>(op->indices[1])) {
@@ -93,17 +93,17 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
           index = clocs[offsets];
         }
         else {
-          unreachable;
+          simit_unreachable;
         }
         stmt = makeCompoundTensorWrite(rewrite(op->tensor), {index},
                                        rewrite(op->value));
       }
       else if (tensorStorage.getKind() == TensorStorage::Indexed) {
         auto index = tensorStorage.getTensorIndex();
-        iassert(util::contains(locs, index));
+        simit_iassert(util::contains(locs, index));
 
-        iassert(op->indices.size() == 2);
-        iassert(endpoints.defined());
+        simit_iassert(op->indices.size() == 2);
+        simit_iassert(endpoints.defined());
         vector<Expr> indices;
         for (auto& index : op->indices) {
           if (isa<UnnamedTupleRead>(index)) {
@@ -122,7 +122,7 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
       else {
         stmt = makeCompoundTensorWrite(tensorWrite->tensor,tensorWrite->indices,
                                        tensorWrite->value);
-        iassert(stmt.defined());
+        simit_iassert(stmt.defined());
       }
     }
   }
@@ -140,7 +140,7 @@ private:
   using IRRewriter::visit;
 
   void visit(const Map *op) {
-    iassert(hasStorage(op->vars, *storage))
+    simit_iassert(hasStorage(op->vars, *storage))
         << "Every assembled tensor should have a storage descriptor (" << util::join(op->vars) << ")";
 
     LowerMapFunctionRewriter mapFunctionRewriter;

@@ -40,7 +40,7 @@ public:
   virtual llvm::Value* getSize(unsigned i);
   virtual llvm::Value* getTotalSize();
 
-  inline virtual llvm::Value* getEpsArray() {unreachable; return nullptr;}
+  inline virtual llvm::Value* getEpsArray() {simit_unreachable; return nullptr;}
 
   virtual int getFieldsOffset();
 
@@ -49,7 +49,7 @@ public:
 
   UnstructuredSetLayout(ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder)
       : set(set), value(value), builder(builder) {
-    iassert(set.type().isUnstructuredSet());
+    simit_iassert(set.type().isUnstructuredSet());
   }
 private:
   ir::Expr set;
@@ -73,7 +73,7 @@ public:
                             LLVMIRBuilder *builder)
       : UnstructuredSetLayout(set, value, builder),
         set(set), value(value), builder(builder) {
-    iassert(set.type().isUnstructuredSet());
+    simit_iassert(set.type().isUnstructuredSet());
   }
 private:
   ir::Expr set;

@@ -28,7 +28,7 @@ public:
   GPUSharding() {}
 
   bool isSharded() {
-    iassert((xSharded || !ySharded)
+    simit_iassert((xSharded || !ySharded)
          && (xSharded || !zSharded)
          && (ySharded || !zSharded));
     return xSharded;

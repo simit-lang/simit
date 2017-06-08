@@ -26,9 +26,9 @@ struct SparseMatrix {
   SparseMatrix(string name, size_t M, size_t N,
                vector<int> rowPtr, vector<int> colInd, vector<simit_float> vals)
       : name(name), M(M), N(N), rowPtr(rowPtr), colInd(colInd), vals(vals) {
-    iassert(rowPtr.size() == M+1);
-    iassert(colInd.size() == (unsigned)rowPtr[rowPtr.size()-1]);
-    iassert(vals.size()%colInd.size() == 0);
+    simit_iassert(rowPtr.size() == M+1);
+    simit_iassert(colInd.size() == (unsigned)rowPtr[rowPtr.size()-1]);
+    simit_iassert(vals.size()%colInd.size() == 0);
   }
 
   friend ostream& operator<<(ostream& os, const SparseMatrix& m) {
@@ -93,7 +93,7 @@ TEST_P(IndexExpression, Matrix) {
 
   map<string,const SparseMatrix*> operandsFromNames;
   for (const SparseMatrix& operand : GetParam().operands) {
-    iassert(!util::contains(operandsFromNames, operand.name));
+    simit_iassert(!util::contains(operandsFromNames, operand.name));
     operandsFromNames.insert({operand.name, &operand});
   }
 
@@ -103,21 +103,21 @@ TEST_P(IndexExpression, Matrix) {
   match(expr,
     std::function<void(const VarExpr*)>([&](const VarExpr* op) {
       const Var& var = op->var;
-      iassert(util::contains(operandsFromNames, var.getName()));
+      simit_iassert(util::contains(operandsFromNames, var.getName()));
       const SparseMatrix* operand = operandsFromNames.at(var.getName());
-      iassert(var.getType().isTensor());
+      simit_iassert(var.getType().isTensor());
       vector<IndexDomain> dims = var.getType().toTensor()->getDimensions();
       for (const IndexDomain& dim : dims) {
         int currDim = 0;
         for (const IndexSet& is : dim.getIndexSets()) {
           if (is.getKind() == IndexSet::Set) {
             Expr setExpr = is.getSet();
-            iassert(isa<VarExpr>(setExpr));
+            simit_iassert(isa<VarExpr>(setExpr));
             const Var& setVar = to<VarExpr>(setExpr)->var;
             string setName = setVar.getName();
             size_t setSize = (currDim==0) ? operand->M : operand->N;
             if (util::contains(setSizes, setName)) {
-              iassert(setSizes.at(setName) == setSize)
+              simit_iassert(setSizes.at(setName) == setSize)
                   << "inconsistent dimension size"  ;
             }
             else {

@@ -15,7 +15,7 @@ enum class ComponentType {Float, Double, Int, Boolean, FloatComplex, DoubleCompl
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {
-  ierror << "Unsupported type";
+  simit_ierror << "Unsupported type";
   return ComponentType::Int; // TODO XXX gcc warning suppression
 }
 
@@ -58,7 +58,7 @@ inline std::size_t componentSize(ComponentType ct) {
     case ComponentType::DoubleComplex:
       return sizeof(double_complex);
   }
-  unreachable;
+  simit_unreachable;
   return 0;
 }
 
@@ -81,7 +81,7 @@ public:
 
   size_t getOrder() const { return dimensions.size(); }
   size_t getDimension(size_t i) const {
-    iassert(i<getOrder());
+    simit_iassert(i<getOrder());
     return dimensions[i];
   }
 

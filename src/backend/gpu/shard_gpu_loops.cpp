@@ -14,7 +14,7 @@ static bool isShardable(const ir::For *loop) {
 namespace backend {
 
 void GPUSharding::shardFor(const ir::For *op) {
-  iassert(isShardable(op));
+  simit_iassert(isShardable(op));
   // TODO(jrk) these repeats should never happen
   // iassert (op->domain.indexSet != xDomain &&
   //          op->domain.indexSet != yDomain &&
@@ -30,7 +30,7 @@ void GPUSharding::shardFor(const ir::For *op) {
     ySharded = true;
   }
   else {
-    iassert(!zSharded);
+    simit_iassert(!zSharded);
     zDomain = op->domain.indexSet;
     zVar = op->var;
     zSharded = true;
@@ -84,12 +84,12 @@ private:
 
     // TODO(jrk) enforce that no logic comes between kernel loops?
     currentKernelSharding->shardFor(loop);
-    iassert(filledLevel == level-1);
+    simit_iassert(filledLevel == level-1);
     filledLevel = level;
 
     // Split apart body into before and after for shardable loops
     std::vector<Stmt> split = splitOnPredicate(loop->body, shardablePred);
-    iassert(split.size() == 3);
+    simit_iassert(split.size() == 3);
     Stmt bodyFirst, bodyRest;
     bodyFirst = split[1];
     bodyRest = split[2];

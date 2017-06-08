@@ -134,7 +134,7 @@ void FIRPrinter::visit(ScalarType::Ptr type) {
       oss << "string";
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
 }
@@ -476,7 +476,7 @@ void FIRPrinter::visit(EqExpr::Ptr expr) {
         oss << " != ";
         break;
       default:
-        unreachable;
+        simit_unreachable;
         break;
     }
 
@@ -803,7 +803,7 @@ void FIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
         oss << "+";
         break;
       default:
-        unreachable;
+        simit_unreachable;
         break;
     }
   }

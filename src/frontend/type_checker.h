@@ -138,12 +138,12 @@ private:
           type(type), access(access), defined(true) {}
 
       bool isVoid() const {
-        iassert(defined);
+        simit_iassert(defined);
         return type.empty();
       }
 
       bool isSingleValue() const {
-        iassert(defined);
+        simit_iassert(defined);
         return type.size() == 1;
       }
 
@@ -240,7 +240,7 @@ private:
       }
 
       FuncDecl::Ptr getFunction(const std::string& name) const {
-        iassert(hasFunction(name));
+        simit_iassert(hasFunction(name));
         return funcDecls.at(name);
       }
 
@@ -253,7 +253,7 @@ private:
       }
 
       FuncDecl::Ptr getFunctionReplacement(const std::string& sig) const {
-        iassert(hasFunctionReplacement(sig));
+        simit_iassert(hasFunctionReplacement(sig));
         return funcReplace.at(sig);
       }
 
@@ -267,14 +267,14 @@ private:
 
       bool hasElementField(const std::string& elemName, 
                            const std::string& fieldName) const {
-        iassert(hasElementType(elemName));
+        simit_iassert(hasElementType(elemName));
         const auto &elemDecl = elementDecls.at(elemName);
         return elemDecl.find(fieldName) != elemDecl.end();
       }
 
       Type::Ptr getElementField(const std::string& elemName, 
                                 const std::string& fieldName) const {
-        iassert(hasElementField(elemName, fieldName));
+        simit_iassert(hasElementField(elemName, fieldName));
         return elementDecls.at(elemName).at(fieldName);
       }
 
@@ -286,13 +286,13 @@ private:
 
       Type::Ptr getSymbolType(const std::string& name, 
                               Scope scope = Scope::All) const {
-        iassert(hasSymbol(name, scope));
+        simit_iassert(hasSymbol(name, scope));
         return symbolTable.get(name, scope).type;
       }
 
       Access getSymbolAccess(const std::string& name, 
                              Scope scope = Scope::All) const {
-        iassert(hasSymbol(name, scope));
+        simit_iassert(hasSymbol(name, scope));
         return symbolTable.get(name, scope).access;
       }
 
@@ -313,12 +313,12 @@ private:
       }
 
       SetType::Ptr getSetDefinition(SetIndexSet::Ptr set) const {
-        iassert(hasSetDefinition(set));
+        simit_iassert(hasSetDefinition(set));
         return set->setDef;
       }
 
       SetType::Ptr getSetDefinition(GenericParam::Ptr set) const {
-        iassert(hasSetDefinition(set));
+        simit_iassert(hasSetDefinition(set));
         return setDefs.at(set);
       }
 
