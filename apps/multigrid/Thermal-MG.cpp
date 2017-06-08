@@ -1,6 +1,7 @@
 #include "graph.h"
 #include "program.h"
 #include "mesh.h"
+#include "timers.h"
 #include <cmath>
 #include <time.h>
 #include <sys/time.h>
@@ -85,10 +86,11 @@ int main(int argc, char **argv)
   double elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
   elapsed_time = elapsed_time*1000;
   printf("\nElapsed time         = %10.2f (ms)\n", elapsed_time);
-  FieldRef<double> T = Pan.quads_MG[1]->getField<double>("T");
-  for (auto quad = Pan.quads_MG[1]->begin(); quad != Pan.quads_MG[1]->end(); ++quad) {
-    std::cout << float(T.get(*quad)) << std::endl;
-  }
+//  FieldRef<double> T = Pan.quads_MG[1]->getField<double>("T");
+//  for (auto quad = Pan.quads_MG[1]->begin(); quad != Pan.quads_MG[1]->end(); ++quad) {
+//    std::cout << float(T.get(*quad)) << std::endl;
+//  }
+//  simit::ir::printTimes();
   if (PM.get(TPM::dumpVisit)) {
     DumpToVisit("Pan_L1",iter, time, Pan.Xsize[1], Pan.Ysize[1],
                 Pan.quads_MG[1], Pan.points_MG[1]);

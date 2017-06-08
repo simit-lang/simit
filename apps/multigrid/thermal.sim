@@ -530,6 +530,7 @@ export func solve_thermal()
             Du_0 = (map boundary_conditions(bc_types(3),1) to bcup_MG0 reduce +);
             D_0 = Di_0 + Dl_0 + Dr_0 + Db_0 + Du_0;
             b_0 = b_0 + D_0*quads_MG0.T;  
+            A_0=-D_0;
             for q in quads_MG0
                 A_0(q,q) = 1.0 + A_0(q,q);
             end
