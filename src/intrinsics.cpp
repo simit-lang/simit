@@ -483,6 +483,20 @@ const Func& lusolve() {
   return lusolveVar;
 }
 
+static Func triangularSolveVar;
+void triangularSolveInit() {
+  triangularSolveVar = Func("triangularSolve",
+                 {Var("A", Type()), Var("b", Type())},
+                 {Var("x", Type())},
+                 Func::External);
+}
+const Func& triangularSolve() {
+  if (!triangularSolveVar.defined()) {
+    triangularSolveInit();
+  }
+  return triangularSolveVar;
+}
+
 static Func lumatsolveVar;
 void lumatsolveInit() {
   lumatsolveVar = Func("lumatsolve",
@@ -716,6 +730,7 @@ const std::map<std::string,Func> &byNames() {
     luInit();
     lufreeInit();
     lusolveInit();
+    triangularSolveInit();
     lumatsolveInit();
     cholInit();
     cholfreeInit();
@@ -763,7 +778,8 @@ const std::map<std::string,Func> &byNames() {
                       {"lu", luVar},
                       {"lufree", lufreeVar},
                       {"lusolve", lusolveVar},
-                      {"lumatsolve", lumatsolveVar},
+                      {"triangularSolve", triangularSolveVar},
+					  {"lumatsolve", lumatsolveVar},
                       {"chol", cholVar},
                       {"cholfree", cholfreeVar},
                       {"lltsolve", lltsolveVar},

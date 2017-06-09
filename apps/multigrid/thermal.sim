@@ -1,0 +1,729 @@
+element Point
+  xy    : vector[2](float);
+end
+
+element Quad
+  T  : float;
+  K  : float;
+  rho: float;
+  cv : float;
+  dxy: vector[2](float);
+  gamma: float;
+end
+
+element Face
+  dir    : int;
+  Khalf  : float;
+  dxyhalf: float;
+end
+
+element BoundCond
+  qwin : float;
+  qwout : float;
+  Twin : float;
+  Twout : float;
+end
+
+element Link
+end
+
+extern points_MG1   : set{Point};
+extern quads_MG1    : set{Quad}(points_MG1,points_MG1,points_MG1,points_MG1);
+extern faces_MG1    : set{Face}(quads_MG1,quads_MG1);
+extern bcleft_MG1   : set{BoundCond}(quads_MG1,quads_MG1);
+extern bcright_MG1  : set{BoundCond}(quads_MG1,quads_MG1);
+extern bcup_MG1     : set{BoundCond}(quads_MG1,quads_MG1);
+extern bcbottom_MG1 : set{BoundCond}(quads_MG1,quads_MG1);
+
+extern points_MG0   : set{Point};
+extern quads_MG0    : set{Quad}(points_MG0,points_MG0,points_MG0,points_MG0);
+extern faces_MG0    : set{Face}(quads_MG0,quads_MG0);
+extern bcleft_MG0   : set{BoundCond}(quads_MG0,quads_MG0);
+extern bcright_MG0  : set{BoundCond}(quads_MG0,quads_MG0);
+extern bcup_MG0     : set{BoundCond}(quads_MG0,quads_MG0);
+extern bcbottom_MG0 : set{BoundCond}(quads_MG0,quads_MG0);
+
+extern links        : set{Link}(quads_MG0,quads_MG1,
+                                          quads_MG1,quads_MG1,quads_MG1,quads_MG1,
+                                          quads_MG1,quads_MG1,quads_MG1,quads_MG1);
+
+extern dt : vector[2](float);
+extern cfl : vector[2](float);
+extern coupling_direction : vector[2](int);
+extern solver_type : vector[2](int);
+extern solver_itermax : vector[2](int);
+extern solver_tolerance : vector[2](float);
+extern solver_assembly : vector[2](int);
+extern smoother_iter : vector[2](int);
+extern bc_types : vector[4](int);   % vector of boundary conditions types : left, right, bottom, up
+
+const cg_tolerance = 0.001;
+
+%%%%%%%%%%%%%%% Future Intrinsics Functions %%%%%%%%%%%%%%%%%%
+func eye<Q>(q:Quad)->I:matrix[Q,Q](float)
+    I(q,q)=1.0;
+end
+%%%%%%%%%%%%%%%%% Print Functions %%%%%%%%%%%%%%%%%%%%%%%
+func printPoints_MG1()
+    for p in points_MG1
+        print p.xy(0), " ", p.xy(1), "\n";
+    end
+    print "\n";
+end
+func printPoints_MG0()
+    for p in points_MG0
+        print p.xy(0), " ", p.xy(1), "\n";
+    end
+    print "\n";
+end
+
+func printb<Q>(b:vector[Q](float))
+    print " b = \n";
+    var i=1;
+    for q in Q
+       % print i, " -- ", b(q), "\n";
+        print "b(",i,") = ", b(q), "\n ";
+        i = i + 1;
+    end
+    print "\n";
+end
+
+func printMatrix(A:matrix[quads_MG0,quads_MG1](float))
+    var i=0;
+    var j=0;
+    for p in quads_MG0
+        j=0;
+        for q in quads_MG1
+            println "A(",i,",",j,") = ",A(p,q);
+            j=j+1;
+        end
+        i=i+1;
+    end
+end
+
+%%%%%%%%%%%%%% Solvers %%%%%%%%%%%%%%%%%%%
+
+% intrinsic lusolve
+func intrLU<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float))
+    solver = lu(A);
+    x = lusolve<Q,Q>(solver, b);
+   lufree(solver);
+end
+
+% Jacobi
+func jacobi_iter(R:matrix[quads_MG1,quads_MG1](float),D:matrix[quads_MG1,quads_MG1](float),dd:vector[quads_MG1](float),
+                 b:vector[quads_MG1](float),inout x:vector[quads_MG1](float),inout r:vector[quads_MG1](float),
+                 tolerance:float,max_iter:int,trace:bool)
+    var iter=0;
+    var n=r'*r;
+    var rr:vector[quads_MG1](float);
+    while (iter < max_iter) and (n > tolerance)
+       iter = iter + 1;
+       rr= b - R*x;
+       if mod(iter,50)==0
+           r = rr - dd.*x;
+           n = r'*r;
+       end
+       x = D*rr;
+    end
+    r = b - R*x - dd.*x;
+    if trace
+        print " Jacobi Iters : ",iter," \n";
+    end
+end
+
+func jacobi_assembly(A:matrix[quads_MG1,quads_MG1](float))->(R:matrix[quads_MG1,quads_MG1](float),D:matrix[quads_MG1,quads_MG1](float),dd:vector[quads_MG1](float))
+    var D = map eye() to quads_MG1 ;
+    var dd:vector[quads_MG1](float);
+    for q in quads_MG1
+        D(q,q) = 1.0 / A(q,q);
+        dd(q) = A(q,q);
+    end
+    var R:matrix[quads_MG1,quads_MG1](float);
+    R=A;
+    for q in quads_MG1
+        R(q,q) = 0.0;
+    end
+end
+
+func jacobi(A:matrix[quads_MG1,quads_MG1](float),b:vector[quads_MG1](float),
+            inout x:vector[quads_MG1](float),inout r:vector[quads_MG1](float),
+            max_iter:int,trace:bool)
+   % R,D,dd = jacobi_assembly(A);
+    var D = map eye() to quads_MG1 ;
+    var dd:vector[quads_MG1](float);
+    for q in quads_MG1
+        D(q,q) = 1.0 / A(q,q);
+        dd(q) = A(q,q);
+    end
+    var R:matrix[quads_MG1,quads_MG1](float);
+    R=A;
+    for q in quads_MG1
+        R(q,q) = 0.0;
+    end
+    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    jacobi_iter(R,D,dd,b,x,r,tol,max_iter,trace);
+end
+
+% Gauss-Seidel
+func GS_iter(A:matrix[quads_MG1,quads_MG1](float),L:matrix[quads_MG1,quads_MG1](float),U:matrix[quads_MG1,quads_MG1](float),
+                 b:vector[quads_MG1](float),inout x:vector[quads_MG1](float),inout r:vector[quads_MG1](float),
+                 tolerance:float,max_iter:int,trace:bool)
+    var iter=0;
+    var n=r'*r;
+    while (iter < max_iter) and (n > tolerance)
+       iter = iter + 1;
+       y = b - U*x;
+       x = triangularSolve(L,y);
+       if mod(iter,50)==0
+           n = r'*r;
+           r = b - A*x;
+       end
+    end
+    r = b - A*x;
+    if trace
+        print " Gauss-Seidel Iters : ",iter," \n";
+    end
+end
+
+func GS(A:matrix[quads_MG1,quads_MG1](float),L:matrix[quads_MG1,quads_MG1](float),U:matrix[quads_MG1,quads_MG1](float),
+        b:vector[quads_MG1](float),inout x:vector[quads_MG1](float),inout r:vector[quads_MG1](float),
+        max_iter:int,trace:bool)
+    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    GS_iter(A,L,U,b,x,r,tol,max_iter,true);
+end
+
+% Conjugate gradient
+func conjgrad<Q>(A:matrix[Q,Q](float),b:vector[Q](float),inout x:vector[Q](float),
+                 tolerance:float,max_iter:int,trace:bool)
+    var r=b-A*x;
+    var p=r;
+    var iter = 0;
+    var rsold = r'*r;
+    var tol = tolerance*tolerance*b'*b;
+    while (rsold > tol) and (iter < max_iter)
+        iter = iter + 1;
+        Ap = A * p;
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+        % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r = r - alpha*Ap;
+        else
+            r = b - A*x;
+        end
+        rsnew = r'*r;
+        p = r + (rsnew/rsold)*p;
+        rsold = rsnew;
+    end
+    if trace
+        print " conjGrad Iters : ",iter," \n";
+    end
+end
+
+% Preconditioned Conjugate gradient
+func pre_conjgrad<Q>(M:matrix[Q,Q](float),A:matrix[Q,Q](float),b:vector[Q](float),
+                     inout x:vector[Q](float),inout r:vector[Q](float),
+                     tolerance:float,trace:bool)
+    var z=M*r;
+    var p=z;
+    var iter = 0;
+    var rsold = z'*r;
+    tol = tolerance*tolerance*b'*b;
+    var n = r'*r;
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        Ap = A * p;
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+       % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r = r - alpha*Ap;
+        else
+            r = b - A*x;
+        end
+        z = M*r;
+        rsnew = z'*r;
+        p = z + (rsnew/rsold)*p;
+        rsold = rsnew;
+        n = r'*r;
+    end
+    if trace
+        print " pre_conjGrad Iters : ",iter," \n";
+    end
+end
+
+func MG_iter(R:matrix[quads_MG1,quads_MG1](float),D:matrix[quads_MG1,quads_MG1](float),dd:vector[quads_MG1](float),
+             b_1:vector[quads_MG1](float), A_0:matrix[quads_MG0,quads_MG0](float),
+             inout x_1:vector[quads_MG1](float), inout r_1:vector[quads_MG1](float),
+             Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float),
+             tolerance:float)
+%    jacobi(A_1,b_1,x_1,r_1,smoother_iter(0),false);
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    jacobi_iter(R,D,dd,b_1,x_1,r_1,tol,smoother_iter(0),false);
+    r_0 = Reduc*r_1;
+    var e_0:vector[quads_MG0](float);
+    conjgrad(A_0,r_0,e_0,tolerance,solver_itermax(0),false);
+    x_1 = x_1 + Interp*e_0;
+    jacobi_iter(R,D,dd,b_1,x_1,r_1,tol,smoother_iter(0),false);
+%    jacobi(A_1,b_1,x_1,r_1,smoother_iter(0),false);
+end
+
+func MG_iter_GS(A_1:matrix[quads_MG1,quads_MG1](float),L:matrix[quads_MG1,quads_MG1](float),U:matrix[quads_MG1,quads_MG1](float),
+             b_1:vector[quads_MG1](float), A_0:matrix[quads_MG0,quads_MG0](float),
+             inout x_1:vector[quads_MG1](float), inout r_1:vector[quads_MG1](float),
+             Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float),
+             tolerance:float)
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    GS_iter(A_1,L,U,b_1,x_1,r_1,tol,smoother_iter(0),false);
+    r_0 = Reduc*r_1;
+    var e_0:vector[quads_MG0](float);
+    conjgrad(A_0,r_0,e_0,tolerance,solver_itermax(0),false);
+    x_1 = x_1 + Interp*e_0;
+    GS_iter(A_1,L,U,b_1,x_1,r_1,tol,smoother_iter(0),false);
+end
+
+func MG(A_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+        A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+        inout x_1:vector[quads_MG1](float), inout r_1:vector[quads_MG1](float),
+        Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    var iter = 0;
+    var n = r_1'*r_1;
+    var x_0:vector[quads_MG0](float);
+    var D = map eye() to quads_MG1 ;
+    var dd:vector[quads_MG1](float);
+    for q in quads_MG1
+        D(q,q) = 1.0 / A_1(q,q);
+        dd(q) = A_1(q,q);
+    end
+    var R:matrix[quads_MG1,quads_MG1](float);
+    R=A_1;
+    for q in quads_MG1
+        R(q,q) = 0.0;
+    end
+    
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        MG_iter(R,D,dd,b_1,A_0,x_1,r_1,Interp,Reduc,cg_tolerance);
+        n = r_1'*r_1;
+    end
+    print " MG Jacobi Iters : ",iter," \n";
+end
+
+func MG_GS(A_1:matrix[quads_MG1,quads_MG1](float),L_1:matrix[quads_MG1,quads_MG1](float),U_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+        A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+        inout x_1:vector[quads_MG1](float), inout r_1:vector[quads_MG1](float),
+        Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    var iter = 0;
+    var n = r_1'*r_1;
+    var x_0:vector[quads_MG0](float);
+
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        MG_iter_GS(A_1,L_1,U_1,b_1,A_0,x_1,r_1,Interp,Reduc,cg_tolerance);
+        n = r_1'*r_1;
+    end
+    print " MG GS Iters : ",iter," \n";
+end
+
+% Preconditioned MG Conjugate gradient
+func pre_conjgradMG(A_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+                    A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+                    inout x:vector[quads_MG1](float), inout r_1:vector[quads_MG1](float),
+                    Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    var r_0:vector[quads_MG0](float);
+    var z:vector[quads_MG1](float);
+    var rz=r_1;
+    var D = map eye() to quads_MG1 ;
+    var dd:vector[quads_MG1](float);
+    for q in quads_MG1
+        D(q,q) = 1.0 / A_1(q,q);
+        dd(q) = A_1(q,q);
+    end
+    var R:matrix[quads_MG1,quads_MG1](float);
+    R=A_1;
+    for q in quads_MG1
+        R(q,q) = 0.0;
+    end
+    
+    MG_iter(R,D,dd,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+    var p=z;
+    var iter = 0;
+    var rsold = z'*r_1;
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    var n = r_1'*r_1;
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        Ap = A_1 * p;
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+       % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r_1 = r_1 - alpha*Ap;    
+        else
+            r_1 = b_1 - A_1*x;
+        end
+        z=0.0;
+        rz=r_1;
+        MG_iter(R,D,dd,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+        rsnew = z'*r_1;
+        p = z + (rsnew/rsold)*p;
+        rsold = rsnew;
+        n = r_1'*r_1;
+    end
+    print " pre_conjGrad MG Jacobi Iters : ",iter," \n";
+end
+
+func pre_conjgradMG_GS(L:matrix[quads_MG1,quads_MG1](float),U:matrix[quads_MG1,quads_MG1](float),
+                    A_1:matrix[quads_MG1,quads_MG1](float),b_1:vector[quads_MG1](float),
+                    A_0:matrix[quads_MG0,quads_MG0](float),b_0:vector[quads_MG0](float),
+                    inout x:vector[quads_MG1](float), inout r_1:vector[quads_MG1](float),
+                    Interp:matrix[quads_MG1,quads_MG0](float),Reduc:matrix[quads_MG0,quads_MG1](float))
+    var r_0:vector[quads_MG0](float);
+    var z:vector[quads_MG1](float);
+    var rz=r_1;
+    
+    MG_iter_GS(A_1,L,U,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+    MG_iter_GS(A_1,L,U,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+    MG_iter_GS(A_1,L,U,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+    var p=z;
+    var iter = 0;
+    var rsold = z'*r_1;
+    tol = solver_tolerance(0)*solver_tolerance(0)*b_1'*b_1;
+    var n = r_1'*r_1;
+    while (n > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        Ap = A_1 * p;
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+       % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r_1 = r_1 - alpha*Ap;    
+        else
+            r_1 = b_1 - A_1*x;
+        end
+        z=0.0;
+        rz=r_1;
+        MG_iter_GS(A_1,L,U,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+        MG_iter_GS(A_1,L,U,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+        MG_iter_GS(A_1,L,U,r_1,A_0,z,rz,Interp,Reduc,cg_tolerance);
+        rsnew = z'*r_1;
+        p = z + (rsnew/rsold)*p;
+        rsold = rsnew;
+        n = r_1'*r_1;
+    end
+    print " pre_conjGrad MG GS Iters : ",iter," \n";
+end
+
+%%%%%%%%%%%%%%%% Thermal Solve %%%%%%%%%%%%%%%%%%%%%
+
+func boundary_conditions_b<Q>(type:int, dir:int, way:float, bc:BoundCond, q:(Quad*2))
+                        -> b:vector[Q](float)
+    % dir  : 0 if x , 1 if y
+    % type : 0 if neuman, 1 if dirichlet
+    if type==0
+        b(q(0)) = way*(bc.qwin*q(0).gamma)/q(0).dxy(dir);
+    else
+        b(q(0)) = (2.0*q(0).K*bc.Twin*q(0).gamma)/(q(0).dxy(dir)*q(0).dxy(dir));
+    end
+end
+
+func boundary_conditions<Q>(type:int, dir:int, bc:BoundCond, q:(Quad*2))
+                        -> D:matrix[Q,Q](float)
+    % dir  : 0 if x , 1 if y
+    % type : 0 if neuman, 1 if dirichlet
+    if type==1
+        D(q(0),q(0)) = -2.0*q(0).K*q(0).gamma / (q(0).dxy(dir)*q(0).dxy(dir));
+    end
+end
+
+func assemble_diffusion<Q>(f:Face,q:(Quad*2))->D:matrix[Q,Q](float)
+    D(q(0),q(0))=-(q(0).gamma*f.Khalf)/(q(0).dxy(f.dir)*f.dxyhalf);
+    D(q(1),q(1))=-(q(1).gamma*f.Khalf)/(q(1).dxy(f.dir)*f.dxyhalf);
+    D(q(0),q(1))= (q(0).gamma*f.Khalf)/(q(0).dxy(f.dir)*f.dxyhalf);
+    D(q(1),q(0))= (q(1).gamma*f.Khalf)/(q(1).dxy(f.dir)*f.dxyhalf);
+end
+
+func assemble_diffusionGS<Q>(f:Face,q:(Quad*2))->(L:matrix[Q,Q](float),U:matrix[Q,Q](float))
+    L(q(0),q(0))=-(q(0).gamma*f.Khalf)/(q(0).dxy(f.dir)*f.dxyhalf);
+    L(q(1),q(1))=-(q(1).gamma*f.Khalf)/(q(1).dxy(f.dir)*f.dxyhalf);
+    U(q(0),q(1))= (q(0).gamma*f.Khalf)/(q(0).dxy(f.dir)*f.dxyhalf);
+    L(q(1),q(0))= (q(1).gamma*f.Khalf)/(q(1).dxy(f.dir)*f.dxyhalf);
+end
+
+func assemble_Interpolation(l:Link,q:(l0:Quad,l1_0:Quad,
+                                      l1_1:Quad,l1_2:Quad,l1_3:Quad,l1_4:Quad,
+                                      l1_5:Quad,l1_6:Quad,l1_7:Quad,l1_8:Quad))
+                        ->In:matrix[quads_MG1,quads_MG0](float)
+    In(q.l1_7,q.l0) = 1.0/4.0;   In(q.l1_4,q.l0) = 1.0/2.0;  In(q.l1_8,q.l0) = 1.0/4.0;
+    In(q.l1_2,q.l0) = 1.0/2.0;   In(q.l1_0,q.l0) = 1.0;      In(q.l1_3,q.l0) = 1.0/2.0;
+    In(q.l1_5,q.l0) = 1.0/4.0;   In(q.l1_1,q.l0) = 1.0/2.0;  In(q.l1_6,q.l0) = 1.0/4.0;
+end
+
+func assemble_Reduction(l:Link,q:(l0:Quad,l1_0:Quad,
+                                  l1_1:Quad,l1_2:Quad,l1_3:Quad,l1_4:Quad,
+                                  l1_5:Quad,l1_6:Quad,l1_7:Quad,l1_8:Quad))
+                        ->In:matrix[quads_MG0,quads_MG1](float)
+    In(q.l0,q.l1_7) = 1.0/16.0;  In(q.l0,q.l1_4) = 1.0/8.0;  In(q.l0,q.l1_8) = 1.0/16.0;
+    In(q.l0,q.l1_2) = 1.0/8.0;   In(q.l0,q.l1_0) = 1.0/4.0;  In(q.l0,q.l1_3) = 1.0/8.0;
+    In(q.l0,q.l1_5) = 1.0/16.0;  In(q.l0,q.l1_1) = 1.0/8.0;  In(q.l0,q.l1_6) = 1.0/16.0;
+end
+
+export func init_MG()
+    Interp = (map assemble_Interpolation to links reduce +);
+    Reduc  = (map assemble_Reduction to links reduce +);
+end
+
+export func solve_thermal()
+%% Problem : A(Tn+1 -Tn)=Tn - ATn + BC
+
+    % assemble diffusion matrix A
+    %var A : matrix[quads_MG1,quads_MG1](float);
+    Di_1 = map assemble_diffusion to faces_MG1 reduce +;
+
+    % compute second member by adding boundary conditions
+    % b:vector[quads_MG1](float) = D*Tn + BC
+    var b_1:vector[quads_MG1](float);
+    b_1 = (map boundary_conditions_b(bc_types(0),0,1.0) to bcleft_MG1 reduce +);
+    b_1 = b_1 + (map boundary_conditions_b(bc_types(1),0,-1.0) to bcright_MG1 reduce +);
+    b_1 = b_1 + (map boundary_conditions_b(bc_types(2),1,1.0) to bcbottom_MG1 reduce +);
+    b_1 = b_1 + (map boundary_conditions_b(bc_types(3),1,-1.0) to bcup_MG1 reduce +);
+    
+    Dl_1 = (map boundary_conditions(bc_types(0),0) to bcleft_MG1 reduce +);
+    Dr_1 = (map boundary_conditions(bc_types(1),0) to bcright_MG1 reduce +);
+    Db_1 = (map boundary_conditions(bc_types(2),1) to bcbottom_MG1 reduce +);
+    Du_1 = (map boundary_conditions(bc_types(3),1) to bcup_MG1 reduce +);
+
+    D_1 = Di_1 + Dl_1 + Dr_1 + Db_1 + Du_1;
+    b_1 = b_1 + D_1*quads_MG1.T;
+
+   % I = map eye to quads_MG1 reduce +;
+    var A_1=-D_1;
+    for q in quads_MG1
+        A_1(q,q) = 1.0 + A_1(q,q);
+    end
+    
+    % solve and find Tn+1
+    var TNN:vector[quads_MG1](float);
+    TNN = 0.0;
+
+    % Multigrid variables
+    var A_0:matrix[quads_MG0,quads_MG0](float);
+    var b_0:vector[quads_MG0](float);
+    var Reduc:matrix[quads_MG0,quads_MG1](float);
+    var Interp:matrix[quads_MG1,quads_MG0](float);    
+
+    if solver_type(0)==4 or solver_type(0)==5
+        Interp = (map assemble_Interpolation to links reduce +);
+        Reduc  = (map assemble_Reduction to links reduce +);
+        if solver_assembly(0)==1
+            Di_0 = map assemble_diffusion to faces_MG0 reduce +;
+            b_0 = (map boundary_conditions_b(bc_types(0),0,1.0) to bcleft_MG0 reduce +);
+            b_0 = b_0 + (map boundary_conditions_b(bc_types(1),0,-1.0) to bcright_MG0 reduce +);
+            b_0 = b_0 + (map boundary_conditions_b(bc_types(2),1,1.0) to bcbottom_MG0 reduce +);
+            b_0 = b_0 + (map boundary_conditions_b(bc_types(3),1,-1.0) to bcup_MG0 reduce +);
+            Dl_0 = (map boundary_conditions(bc_types(0),0) to bcleft_MG0 reduce +);
+            Dr_0 = (map boundary_conditions(bc_types(1),0) to bcright_MG0 reduce +);
+            Db_0 = (map boundary_conditions(bc_types(2),1) to bcbottom_MG0 reduce +);
+            Du_0 = (map boundary_conditions(bc_types(3),1) to bcup_MG0 reduce +);
+            D_0 = Di_0 + Dl_0 + Dr_0 + Db_0 + Du_0;
+            b_0 = b_0 + D_0*quads_MG0.T;  
+            A_0=-D_0;
+            for q in quads_MG0
+                A_0(q,q) = 1.0 + A_0(q,q);
+            end
+        else
+            A_0 = Reduc*A_1*Interp;
+            b_0 = Reduc*b_1;
+        end
+    end
+    
+    var r_1:vector[quads_MG1](float);
+    if solver_type(0)>1
+        r_1 = b_1 - A_1*TNN;
+    end
+    if solver_type(0)==0
+        conjgrad(A_1,b_1,TNN,solver_tolerance(0),solver_itermax(0),true);
+    elif solver_type(0)==1
+        intrLU(A_1,b_1,TNN);
+    elif solver_type(0)==2
+        jacobi(A_1,b_1,TNN,r_1,solver_itermax(0),true);
+    elif solver_type(0)==3
+        var Diag = map eye() to quads_MG1 ;
+        for q in quads_MG1
+            Diag(q,q) = 1.0 / A_1(q,q);
+        end
+        pre_conjgrad(Diag,A_1,b_1,TNN,r_1,solver_tolerance(0),true);
+    elif solver_type(0)==4
+        pre_conjgradMG(A_1,b_1,A_0,b_0,TNN,r_1,Interp,Reduc);
+    elif solver_type(0)==5
+        MG(A_1,b_1,A_0,b_0,TNN,r_1,Interp,Reduc);
+    end
+    quads_MG1.T=TNN+quads_MG1.T;
+end
+
+export func solve_thermalGS()
+%% Problem : A(Tn+1 -Tn)=Tn - ATn + BC
+
+    % assemble diffusion matrix A
+    %var A : matrix[quads_MG1,quads_MG1](float);
+    Di_1 = map assemble_diffusion to faces_MG1 reduce +;
+    Li_1,Ui_1 = map assemble_diffusionGS to faces_MG1 reduce +;
+
+    % compute second member by adding boundary conditions
+    % b:vector[quads_MG1](float) = D*Tn + BC
+    var b_1:vector[quads_MG1](float);
+    b_1 = (map boundary_conditions_b(bc_types(0),0,1.0) to bcleft_MG1 reduce +);
+    b_1 = b_1 + (map boundary_conditions_b(bc_types(1),0,-1.0) to bcright_MG1 reduce +);
+    b_1 = b_1 + (map boundary_conditions_b(bc_types(2),1,1.0) to bcbottom_MG1 reduce +);
+    b_1 = b_1 + (map boundary_conditions_b(bc_types(3),1,-1.0) to bcup_MG1 reduce +);
+    
+    Dl_1 = (map boundary_conditions(bc_types(0),0) to bcleft_MG1 reduce +);
+    Dr_1 = (map boundary_conditions(bc_types(1),0) to bcright_MG1 reduce +);
+    Db_1 = (map boundary_conditions(bc_types(2),1) to bcbottom_MG1 reduce +);
+    Du_1 = (map boundary_conditions(bc_types(3),1) to bcup_MG1 reduce +);
+
+    D_1 = Di_1 + Dl_1 + Dr_1 + Db_1 + Du_1;
+    var L_1 = -Li_1 - Dl_1 - Dr_1 - Db_1 - Du_1;
+    var U_1 = -Ui_1;
+    b_1 = b_1 + D_1*quads_MG1.T;
+
+   % I = map eye to quads_MG1 reduce +;
+    var A_1=-D_1;
+    for q in quads_MG1
+        A_1(q,q) = 1.0 + A_1(q,q);
+        L_1(q,q) = 1.0 + L_1(q,q);
+    end
+    
+    % solve and find Tn+1
+    var TNN:vector[quads_MG1](float);
+    TNN = 0.0;
+
+    % Multigrid variables
+    var b_0:vector[quads_MG0](float);
+    var A_0:matrix[quads_MG0,quads_MG0](float);
+    var Reduc:matrix[quads_MG0,quads_MG1](float);
+    var Interp:matrix[quads_MG1,quads_MG0](float);
+    if solver_type(0)==7 or solver_type(0)==8
+        Interp = (map assemble_Interpolation to links reduce +);
+        Reduc  = (map assemble_Reduction to links reduce +);
+        if solver_assembly(0)==1
+            Di_0 = map assemble_diffusion to faces_MG0 reduce +;
+            Li_0,Ui_0 = map assemble_diffusionGS to faces_MG0 reduce +;
+            b_0 = (map boundary_conditions_b(bc_types(0),0,1.0) to bcleft_MG0 reduce +);
+            b_0 = b_0 + (map boundary_conditions_b(bc_types(1),0,-1.0) to bcright_MG0 reduce +);
+            b_0 = b_0 + (map boundary_conditions_b(bc_types(2),1,1.0) to bcbottom_MG0 reduce +);
+            b_0 = b_0 + (map boundary_conditions_b(bc_types(3),1,-1.0) to bcup_MG0 reduce +);
+            Dl_0 = (map boundary_conditions(bc_types(0),0) to bcleft_MG0 reduce +);
+            Dr_0 = (map boundary_conditions(bc_types(1),0) to bcright_MG0 reduce +);
+            Db_0 = (map boundary_conditions(bc_types(2),1) to bcbottom_MG0 reduce +);
+            Du_0 = (map boundary_conditions(bc_types(3),1) to bcup_MG0 reduce +);
+            D_0 = Di_0 + Dl_0 + Dr_0 + Db_0 + Du_0;
+            b_0 = b_0 + D_0*quads_MG0.T;  
+            var L_0 = -Li_0 - Dl_0 - Dr_0 - Db_0 - Du_0;
+        	var U_0 = -Ui_0;
+            A_0 = -D_0;
+            for q in quads_MG0
+                A_0(q,q) = 1.0 + A_0(q,q);
+                L_0(q,q) = 1.0 + L_0(q,q);            
+            end
+        else
+            A_0 = Reduc*A_1*Interp;
+            b_0 = Reduc*b_1;
+        end
+    end
+    
+    var r_1 = b_1 - A_1*TNN;
+    if solver_type(0)==6
+        GS(A_1,L_1,U_1,b_1,TNN,r_1,solver_itermax(0),true);
+    elif solver_type(0)==7
+        MG_GS(A_1,L_1,U_1,b_1,A_0,b_0,TNN,r_1,Interp,Reduc);
+    elif solver_type(0)==8
+        pre_conjgradMG_GS(L_1,U_1,A_1,b_1,A_0,b_0,TNN,r_1,Interp,Reduc);
+    end
+    quads_MG1.T=TNN+quads_MG1.T;
+end
+
+
+%%%%%%%%%%%%%%%%  Compute TimeStep %%%%%%%%%%%%%%%%%%%%
+
+func compute_dxy(inout q:Quad,p:(Point*4))
+    q.dxy(0)=max(abs(p(1).xy(0)-p(0).xy(0)),abs(p(2).xy(0)-p(3).xy(0)));
+    q.dxy(1)=max(abs(p(3).xy(1)-p(0).xy(1)),abs(p(2).xy(1)-p(1).xy(1)));
+end
+
+func compute_halfValues(inout f:Face,q:(Quad*2))
+    f.Khalf   = 2.0*(q(0).K*q(1).K)/(q(0).K+q(1).K);
+    f.dxyhalf = (q(0).dxy(f.dir)+q(1).dxy(f.dir))/2.0;
+end
+
+func compute_coeff(q:Quad, p:(Point*4))-> c:vector[quads_MG1](float)
+    % coeff = 2*K/(rho*cv*(max(dx²,dy²)))
+    dxy2 = q.dxy.*q.dxy;
+    c(q) = 2.0*q.K / (q.rho*q.cv*max(dxy2(0),dxy2(1)));
+end
+
+export func compute_dt()
+    % start by computing all delta_x and delta_y for each quad
+    apply compute_dxy to quads_MG0;
+    apply compute_dxy to quads_MG1;
+    
+    % dt = cfl / max( 2*K/(rho*cv*(max(dx²,dy²))) )
+    coeff_dt = map compute_coeff to quads_MG1 reduce +;
+    var m=0.0;
+    for q in quads_MG1
+        if coeff_dt(q) >= m
+            m = coeff_dt(q);
+        end
+    end
+    dt(0) = cfl(0) / m;
+    %print " dt = ", dt(0), "\n";
+
+    % compute gamma to quads_MG1;
+    quads_MG0.gamma=dt(0)/(quads_MG0.rho.*quads_MG0.cv);
+    quads_MG1.gamma=dt(0)/(quads_MG1.rho.*quads_MG1.cv);
+    apply compute_halfValues to faces_MG0;
+    apply compute_halfValues to faces_MG1;
+end
+
+%%%%%%%%%%%%%% Determine Flux on interface %%%%%%%%%%%%%%%%%%%
+
+func flux_onBC(dir:int,inout bc:BoundCond,q:(Quad*2))
+    % Linear extrapolation
+%    flux1 = (q(1).K+q(0).K)*(q(1).T-q(0).T)/(q(1).dxy(dir)+q(0).dxy(dir));
+%    flux2 = (q(2).K+q(1).K)*(q(2).T-q(1).T)/(q(2).dxy(dir)+q(1).dxy(dir));
+%    bc.qwout = flux1 - q(0).dxy(dir)*(flux2-flux1)/q(1).dxy(dir);
+end
+
+export func flux_interface()
+    if coupling_direction(0)==0
+        apply flux_onBC(0) to bcleft_MG1;
+    elif coupling_direction(0)==1
+        apply flux_onBC(0) to bcright_MG1;
+    elif coupling_direction(0)==2
+        apply flux_onBC(1) to bcbottom_MG1;
+    elif coupling_direction(0)==3
+        apply flux_onBC(1) to bcup_MG1;
+    end
+end
+
+func temperature_onBC(dir:int,way:float,inout bc:BoundCond,q:(Quad*2))
+    % Linear extrapolation
+    bc.Twout = q(0).T + way*q(0).dxy(dir)*(q(1).T-q(0).T)/(q(1).dxy(dir)+q(0).dxy(dir));
+    bc.qwout = way*2.0*q(0).K*(q(0).T-bc.Twout)/q(0).dxy(dir);
+end
+
+export func temperature_interface()
+    if coupling_direction(0)==0
+        apply temperature_onBC(0,1.0) to bcleft_MG1;
+    elif coupling_direction(0)==1
+        apply temperature_onBC(0,-1.0) to bcright_MG1;
+    elif coupling_direction(0)==2
+        apply temperature_onBC(1,1.0) to bcbottom_MG1;
+    elif coupling_direction(0)==3
+        apply temperature_onBC(1,-1.0) to bcup_MG1;
+    end
+end
+

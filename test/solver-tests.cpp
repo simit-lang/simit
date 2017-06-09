@@ -110,6 +110,32 @@ TEST(solver, lu) {
   SIMIT_ASSERT_FLOAT_EQ(18.75, x(v2));
 }
 
+TEST(solver, triangular) {
+  Set V;
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  FieldRef<simit_float> x = V.addField<simit_float>("x");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 10.0;
+  b(v1) = 20.0;
+  b(v2) = 30.0;
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v1,v2);
+
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
+  func.runSafe();
+
+  SIMIT_ASSERT_FLOAT_EQ(5.0, x(v0));
+  SIMIT_ASSERT_FLOAT_EQ(3.75, x(v1));
+  SIMIT_ASSERT_FLOAT_EQ(13.125, x(v2));
+}
+
 TEST(DISABLED_solver, lu_blocked) {
   Set V;
   auto b = V.addField<simit_float,2>("b");

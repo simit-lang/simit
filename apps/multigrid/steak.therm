@@ -1,0 +1,5 @@
+cfl 100
+T_init 300
+coupling_direction 2
+solver_type 3
+solver_tolerance 0.0000000001

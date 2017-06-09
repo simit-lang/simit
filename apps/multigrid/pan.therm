@@ -1,0 +1,10 @@
+cfl 100
+T_init 350
+coupling_direction 1
+qwb 500000
+solver_type 0
+solver_itermax 10000
+solver_tolerance 0.000001
+smoother_iter 2
+solver_assembly 1
+

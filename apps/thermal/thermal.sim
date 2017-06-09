@@ -1,0 +1,319 @@
+element Point
+  xy    : vector[2](float);
+end
+
+element Quad
+  T  : float;
+  K  : float;
+  rho: float;
+  cv : float;
+  dxy: vector[2](float);
+  gamma: float;
+end
+
+element Face
+  dir    : int;
+  Khalf  : float;
+  dxyhalf: float;
+end
+
+element BoundCond
+  qwin : float;
+  qwout : float;
+  Twin : float;
+  Twout : float;
+end
+
+extern points   : set{Point};
+extern quads    : set{Quad}(points,points,points,points);
+extern faces    : set{Face}(quads,quads);
+extern bcleft   : set{BoundCond}(quads,quads);
+extern bcright  : set{BoundCond}(quads,quads);
+extern bcup     : set{BoundCond}(quads,quads);
+extern bcbottom : set{BoundCond}(quads,quads);
+
+extern dt : vector[2](float);
+extern cfl : vector[2](float);
+extern coupling_direction : vector[2](int);
+extern solver_type : vector[2](int);
+extern solver_itermax : vector[2](int);
+extern solver_tolerance : vector[2](float);
+extern bc_types : vector[4](int);   % vector of boundary conditions types : left, right, bottom, up
+
+%%%%%%%%%%%%%%% Future Intrinsics Functions %%%%%%%%%%%%%%%%%%
+func eye(q:Quad)->I:matrix[quads,quads](float)
+    I(q,q)=1.0;
+end
+
+%%%%%%%%%%%%%%%%% Print Functions %%%%%%%%%%%%%%%%%%%%%%%
+func printPoints()
+    for p in points
+        print p.xy(0), " ", p.xy(1), "\n";
+    end
+    print "\n";
+end
+
+func printb(b:vector[quads](float))
+    print " b = \n";
+    var i=1;
+    for q in quads
+       % print i, " -- ", b(q), "\n";
+        print "b(",i,") = ", b(q), "\n ";
+        i = i + 1;
+    end
+    print "\n";
+end
+
+%%%%%%%%%%%%%% Solvers %%%%%%%%%%%%%%%%%%%
+
+% Preconditionners
+func assemble_jacobi(A:matrix[quads,quads](float),q:Quad)->D:matrix[quads,quads](float)
+    D(q,q)=1.0/A(q,q);
+end
+
+% Conjugate gradient
+func conjgrad(A:matrix[quads,quads](float),b:vector[quads](float),inout x:vector[quads](float))
+    var r=b-A*x;
+    var p=r;
+    var iter = 0;
+    var rsold = r'*r;
+    r0=sqrt(rsold);
+    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    while (rsold > tol) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        Ap = A * p;
+        %println(sqrt(rsold)/r0);
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+        % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r = r - alpha*Ap;
+        else
+            r = b - A*x;
+        end
+        rsnew = r'*r;
+        p = r + (rsnew/rsold)*p;
+        rsold = rsnew;
+    end
+    print " conjGrad Iters : ",iter," \n";
+end
+
+% Preconditioned Conjugate gradient
+func pre_conjgrad(M:matrix[quads,quads](float),A:matrix[quads,quads](float),b:vector[quads](float),inout x:vector[quads](float))
+    var r=b-A*x;
+    var z=M*r;
+    var p=z;
+    var iter = 0;
+    var rsold = z'*r;
+    tol = solver_tolerance(0)*solver_tolerance(0)*b'*b;
+    var n = r'*r;
+    r0=sqrt(n);
+    while ((n > tol) and (rsold > tol)) and (iter < solver_itermax(0))
+        iter = iter + 1;
+        %println sqrt(n)/r0;
+        Ap = A * p;
+        alpha = rsold / (Ap'*p);
+        x = x + alpha*p;
+       % to avoid numeric error propagation
+        if mod(iter,50)!=0
+            r = r - alpha*Ap;
+        else
+            r = b - A*x;
+        end
+        z = M*r;
+        rsnew = z'*r;
+        p = z + (rsnew/rsold)*p;
+        rsold = rsnew;
+        n = r'*r;
+    end
+    print " pre_conjGrad Iters : ",iter," \n";
+end
+
+% intrinsic lusolve
+func intrLU(A:matrix[quads,quads](float),b:vector[quads](float),inout x:vector[quads](float))
+    solver = lu(A);
+    x = lusolve<quads,quads>(solver, b);
+    lufree(solver);
+end
+
+% Jacobi
+func jacobi(A:matrix[quads,quads](float),b:vector[quads](float),inout x:vector[quads](float))
+    var D = map eye() to quads ;
+    for q in quads
+        D(q,q) = 1.0 / A(q,q);
+    end
+    var R:matrix[quads,quads](float);
+    R=A;
+    var iter=0;
+    for q in quads
+        R(q,q) = 0.0;
+    end
+%    D = map assemble_jacobi(A) to quads reduce +;
+    while (iter < solver_itermax(0)) and (norm(A*x-b) > 1.0e-6)
+       x = D*(b - R*x);
+       iter = iter + 1;
+       %print norm(A*x-b),"\n";
+    end
+    print " Jacobi Iters : ",iter," \n";
+end
+
+
+
+%%%%%%%%%%%%%%%% Thermal Solve %%%%%%%%%%%%%%%%%%%%%
+
+func boundary_conditions_b(type:int, dir:int, way:float, bc:BoundCond, q:(Quad*2))
+                        -> b:vector[quads](float)
+    % dir  : 0 if x , 1 if y
+    % type : 0 if neuman, 1 if dirichlet
+    if type==0
+        b(q(0)) = way*(bc.qwin*q(0).gamma)/q(0).dxy(dir);
+    else
+        b(q(0)) = (2.0*q(0).K*bc.Twin*q(0).gamma)/(q(0).dxy(dir)*q(0).dxy(dir));
+    end
+end
+
+func boundary_conditions(type:int, dir:int, bc:BoundCond, q:(Quad*2))
+                        -> D:matrix[quads,quads](float)
+    % dir  : 0 if x , 1 if y
+    % type : 0 if neuman, 1 if dirichlet
+    if type==1
+        D(q(0),q(0)) = -2.0*q(0).K*q(0).gamma / (q(0).dxy(dir)*q(0).dxy(dir));
+    end
+end
+
+func assemble_diffusion(f:Face,q:(Quad*2))->D:matrix[quads,quads](float)
+    D(q(0),q(0))=-(q(0).gamma*f.Khalf)/(q(0).dxy(f.dir)*f.dxyhalf);
+    D(q(1),q(1))=-(q(1).gamma*f.Khalf)/(q(1).dxy(f.dir)*f.dxyhalf);
+    D(q(0),q(1))= (q(0).gamma*f.Khalf)/(q(0).dxy(f.dir)*f.dxyhalf);
+    D(q(1),q(0))= (q(1).gamma*f.Khalf)/(q(1).dxy(f.dir)*f.dxyhalf);
+end
+
+export func solve_thermal()
+%% Problem : A(Tn+1 -Tn)=Tn - ATn + BC
+
+    % assemble diffusion matrix A
+    %var A : matrix[quads,quads](float);
+    Di = map assemble_diffusion to faces reduce +;
+
+    % compute second member by adding boundary conditions
+    % b:vector[quads](float) = D*Tn + BC
+    var b:vector[quads](float);
+    b = (map boundary_conditions_b(bc_types(0),0,1.0) to bcleft reduce +);
+    b = b + (map boundary_conditions_b(bc_types(1),0,-1.0) to bcright reduce +);
+    b = b + (map boundary_conditions_b(bc_types(2),1,1.0) to bcbottom reduce +);
+    b = b + (map boundary_conditions_b(bc_types(3),1,-1.0) to bcup reduce +);
+
+    Dl = (map boundary_conditions(bc_types(0),0) to bcleft reduce +);
+    Dr = (map boundary_conditions(bc_types(1),0) to bcright reduce +);
+    Db = (map boundary_conditions(bc_types(2),1) to bcbottom reduce +);
+    Du = (map boundary_conditions(bc_types(3),1) to bcup reduce +);
+    D = Di + Dl + Dr + Db + Du;
+    b = b + D*quads.T;
+
+   % I = map eye to quads reduce +;
+    var A = -D;
+    for q in quads
+        A(q,q) = 1.0 + A(q,q);
+    end
+   
+    % solve and find Tn+1
+    var TNN:vector[quads](float);
+    TNN = 0.0;
+     if solver_type(0)==0
+        conjgrad(A,b,TNN);
+    elif solver_type(0)==1
+        intrLU(A,b,TNN);
+    elif solver_type(0)==2
+        jacobi(A,b,TNN);
+    elif solver_type(0)==3
+        var Diag = map eye() to quads ;
+        for q in quads
+            Diag(q,q) = 1.0 / A(q,q);
+        end
+         pre_conjgrad(Diag,A,b,TNN);
+    end
+     quads.T=TNN+quads.T;
+    
+end
+
+
+%%%%%%%%%%%%%%%%  Compute TimeStep %%%%%%%%%%%%%%%%%%%%
+
+func compute_dxy(inout q:Quad,p:(Point*4))
+    q.dxy(0)=max(abs(p(1).xy(0)-p(0).xy(0)),abs(p(2).xy(0)-p(3).xy(0)));
+    q.dxy(1)=max(abs(p(3).xy(1)-p(0).xy(1)),abs(p(2).xy(1)-p(1).xy(1)));
+end
+
+func compute_halfValues(inout f:Face,q:(Quad*2))
+    f.Khalf   = 2.0*(q(0).K*q(1).K)/(q(0).K+q(1).K);
+    f.dxyhalf = (q(0).dxy(f.dir)+q(1).dxy(f.dir))/2.0;
+end
+
+func compute_coeff(q:Quad, p:(Point*4))-> c:vector[quads](float)
+    % coeff = 2*K/(rho*cv*(max(dx²,dy²)))
+    dxy2 = q.dxy.*q.dxy;
+    c(q) = 2.0*q.K / (q.rho*q.cv*max(dxy2(0),dxy2(1)));
+end
+
+export func compute_dt()
+    % start by computing all delta_x and delta_y for each quad
+    apply compute_dxy to quads;
+    
+    % dt = cfl / max( 2*K/(rho*cv*(max(dx²,dy²))) )
+    coeff_dt = map compute_coeff to quads reduce +;
+    var m=0.0;
+    for q in quads
+        if coeff_dt(q) >= m
+            m = coeff_dt(q);
+        end
+    end
+    dt(0) = cfl(0) / m;
+    %print " dt = ", dt(0), "\n";
+
+    % compute gamma to quads;
+    quads.gamma=dt(0)/(quads.rho.*quads.cv);
+   
+    apply compute_halfValues to faces;
+
+end
+
+
+%%%%%%%%%%%%%% Determine Flux on interface %%%%%%%%%%%%%%%%%%%
+
+func flux_onBC(dir:int,inout bc:BoundCond,q:(Quad*2))
+    % Linear extrapolation
+%    flux1 = (q(1).K+q(0).K)*(q(1).T-q(0).T)/(q(1).dxy(dir)+q(0).dxy(dir));
+%    flux2 = (q(2).K+q(1).K)*(q(2).T-q(1).T)/(q(2).dxy(dir)+q(1).dxy(dir));
+%    bc.qwout = flux1 - q(0).dxy(dir)*(flux2-flux1)/q(1).dxy(dir);
+end
+
+export func flux_interface()
+    if coupling_direction(0)==0
+        apply flux_onBC(0) to bcleft;
+    elif coupling_direction(0)==1
+        apply flux_onBC(0) to bcright;
+    elif coupling_direction(0)==2
+        apply flux_onBC(1) to bcbottom;
+    elif coupling_direction(0)==3
+        apply flux_onBC(1) to bcup;
+    end
+end
+
+func temperature_onBC(dir:int,way:float,inout bc:BoundCond,q:(Quad*2))
+    % Linear extrapolation
+    bc.Twout = q(0).T + way*q(0).dxy(dir)*(q(1).T-q(0).T)/(q(1).dxy(dir)+q(0).dxy(dir));
+    bc.qwout = way*2.0*q(0).K*(q(0).T-bc.Twout)/q(0).dxy(dir);
+end
+
+export func temperature_interface()
+    if coupling_direction(0)==0
+        apply temperature_onBC(0,1.0) to bcleft;
+    elif coupling_direction(0)==1
+        apply temperature_onBC(0,-1.0) to bcright;
+    elif coupling_direction(0)==2
+        apply temperature_onBC(1,1.0) to bcbottom;
+    elif coupling_direction(0)==3
+        apply temperature_onBC(1,-1.0) to bcup;
+    end
+end
+
