@@ -1727,7 +1727,8 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
   const ScalarType::Type initComponentType = getComponentType(initTensorType);
 
   // Check if attempting to initialize a local tensor with a scalar.
-  if (isa<ScalarType>(initTensorType) && varComponentType == initComponentType) {
+  if (isa<ScalarType>(initTensorType)
+      && varComponentType == initComponentType) {
     // TODO: It might be useful to be able to initialize non-scalar global 
     //       tensors by scalar values. We prohibit this for now because it 
     //       is not supported by the backend.

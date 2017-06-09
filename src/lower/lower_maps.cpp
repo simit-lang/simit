@@ -141,7 +141,8 @@ private:
 
   void visit(const Map *op) {
     simit_iassert(hasStorage(op->vars, *storage))
-        << "Every assembled tensor should have a storage descriptor (" << util::join(op->vars) << ")";
+        << "Every assembled tensor should have a storage descriptor ("
+        << util::join(op->vars) << ")";
 
     LowerMapFunctionRewriter mapFunctionRewriter;
     stmt = inlineMap(op, mapFunctionRewriter, storage);

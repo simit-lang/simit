@@ -68,8 +68,8 @@ void Function::bind(const std::string& name, simit::Set *set) {
         name + "." + fieldData->name + " type does not match Simit type " +
         util::quote(*elemFieldType);
 
-    simit_uassert(setFieldTypeComponentType == elemFieldType->getComponentType() &&
-            setFieldType->getOrder() == elemFieldType->order())
+    simit_uassert(setFieldTypeComponentType == elemFieldType->getComponentType()
+                  && setFieldType->getOrder() == elemFieldType->order())
         << fieldTypeErrorString;
 
     const vector<ir::IndexDomain> &fieldDims = elemFieldType->getDimensions();

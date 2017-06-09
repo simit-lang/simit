@@ -177,7 +177,8 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
 
   Func kernel = map->function;
   // TODO: revise this assert given map functions can have many params
-  //iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
+  //iassert(kernel.getArguments().size() == 1
+  //        || kernel.getArguments().size() == 2)
   //    << "mapped functions must have exactly two arguments";
 
   simit_iassert(map->vars.size() == kernel.getResults().size());
@@ -370,7 +371,8 @@ void MapFunctionRewriter::visit(const NamedTupleRead *op) {
     Expr endpoints = IndexRead::make(targetSet, IndexRead::Endpoints);
     Expr indexExpr;
     if (cardinality==1) {
-        indexExpr = Add::make(targetLoopVar, (int)tupleType->elementIndex(op->elementName));
+        indexExpr = Add::make(targetLoopVar,
+                              (int)tupleType->elementIndex(op->elementName));
     }
     else {
     	indexExpr = Add::make(Mul::make(targetLoopVar, cardinality),
@@ -783,10 +785,10 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
       auto res = map->function.getResults()[i];
       if (storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil) {
         simit_iassert(!stencilVar.defined());
-        simit_iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
-                .getStencilFunc() == map->function.getName());
-        simit_iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
-                .getStencilVar() == var.getName());
+        simit_iassert(storage->getStorage(var).getTensorIndex()
+               .getStencilLayout().getStencilFunc() == map->function.getName());
+        simit_iassert(storage->getStorage(var).getTensorIndex()
+                      .getStencilLayout().getStencilVar() == var.getName());
         mapVar = var;
         stencilVar = res;
       }

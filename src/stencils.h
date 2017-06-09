@@ -27,7 +27,8 @@ struct StencilContent {
 
   mutable long ref = 0;
   friend inline void aquire(const StencilContent *v) {++v->ref;}
-  friend inline void release(const StencilContent *v) {if (--v->ref==0) delete v;}
+  friend inline void release(const StencilContent *v)
+    {if (--v->ref==0) delete v;}
 };
 
 class StencilLayout : public util::IntrusivePtr<StencilContent> {

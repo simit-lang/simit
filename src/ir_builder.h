@@ -68,7 +68,8 @@ private:
   std::vector<ir::Stmt> *stmts = nullptr;
   IndexVarFactory factory;
 
-  void addStmt(Stmt stmt) {simit_iassert(stmts != nullptr); stmts->push_back(stmt);}
+  void addStmt(Stmt stmt)
+    {simit_iassert(stmts != nullptr); stmts->push_back(stmt);}
 };
 
 }} // namespace simit::internal

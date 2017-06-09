@@ -28,7 +28,8 @@ std::vector<std::string> split(const std::string &str, const std::string &delim,
 
   while ((next = str.find(delim, prev)) != std::string::npos) {
     if (next - prev != 0) {
-      std::string substr = ((keepDelim) ? delim : "") + str.substr(prev, next-prev);
+      std::string substr = ((keepDelim) ? delim : "")
+                         + str.substr(prev, next-prev);
       results.push_back(substr);
     }
     prev = next + delim.size();

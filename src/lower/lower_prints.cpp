@@ -248,7 +248,7 @@ private:
           printSmallTensor = ForRange::make(
             to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
             Length::make(dimensions[order - 1]), 
-            Block::make({maybePrintIndent, printElementFormatted, printSpace})); 
+            Block::make({maybePrintIndent, printElementFormatted, printSpace}));
           if (order >= 2) {
             printSmallTensor = ForRange::make(
               to<VarExpr>(tensorReadIndices[order - 2])->var, 

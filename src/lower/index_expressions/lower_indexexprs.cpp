@@ -43,7 +43,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     using IRRewriter::visit;
 
     void visit(const AssignStmt *op) {
-      simit_iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      simit_iassert(isa<IndexExpr>(op->value))
+          << "Can only specialize IndexExpr stmts";
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
       Var var = op->var;
@@ -58,7 +59,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     }
 
     void visit(const FieldWrite *op) {
-      simit_iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      simit_iassert(isa<IndexExpr>(op->value))
+          << "Can only specialize IndexExpr stmts";
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
       Expr elementOrSet = rewrite(op->elementOrSet);
@@ -75,7 +77,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     }
 
     void visit(const TensorWrite *op) {
-      simit_iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      simit_iassert(isa<IndexExpr>(op->value))
+          << "Can only specialize IndexExpr stmts";
 
       Expr tensor = rewrite(op->tensor);
 

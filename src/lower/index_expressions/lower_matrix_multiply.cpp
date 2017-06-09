@@ -16,7 +16,8 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
                          Environment* env, Storage* storage) {
   auto tensorStorage = storage->getStorage(target);
 
-  simit_iassert(isa<Mul>(indexExpression->value)) << "expr is not a multiplication";
+  simit_iassert(isa<Mul>(indexExpression->value))
+      << "expr is not a multiplication";
 
   if (!tensorStorage.getTensorIndex().getPathExpression().defined()) {
     Func spmm = Func("spmm", {Var(), Var()}, {Var()}, Stmt(), Func::External);
@@ -93,8 +94,9 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
         secondTensor = op;
       }
       else {
-        simit_ierror << "lowerMatrixMultiply requires one free index on tensors, "
-               << "but found none: " << Expr(op);
+        simit_ierror
+          << "lowerMatrixMultiply requires one free index on tensors, "
+          << "but found none: " << Expr(op);
       }
     })
   );

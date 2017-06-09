@@ -33,7 +33,8 @@ struct ArrayType;
 
 class Type {
 public:
-  enum Kind {Undefined, Tensor, Element, Set, UnnamedTuple, NamedTuple, Array, Opaque};
+  enum Kind {Undefined, Tensor, Element, Set,
+             UnnamedTuple, NamedTuple, Array, Opaque};
   Type() : _kind(Undefined), ptr(nullptr) {}
   Type(Kind kind) : _kind(kind) {}
   Type(TensorType* tensor);

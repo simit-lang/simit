@@ -101,7 +101,8 @@ class NormalizeRowIndices : public IRRewriter {
 
     // Replace our set reads, and rewrite the whole statement
     vector<Expr> newIndices = {rewrite(rowRead), rewrite(colRead)};
-    stmt = TensorWrite::make(op->tensor, newIndices, rewrite(op->value), op->cop);
+    stmt = TensorWrite::make(op->tensor, newIndices,
+                             rewrite(op->value), op->cop);
     rowNormOff.clear();
   }
 

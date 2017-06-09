@@ -173,7 +173,8 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     }
 
     // Write set values and pointers to the relevant extern
-    simit_iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    simit_iassert(util::contains(externPtrs, name)
+                  && externPtrs.at(name).size()==1);
     void *externPtr = externPtrs.at(name)[0];
     writeSet(set, globalType, externPtr);
   }
@@ -187,7 +188,8 @@ void LLVMFunction::bind(const std::string& name, void* data) {
   }
   else if (hasGlobal(name)) {
     globals[name] = std::unique_ptr<Actual>(new TensorActual(data));
-    simit_iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    simit_iassert(util::contains(externPtrs, name)
+                  && externPtrs.at(name).size()==1);
     *externPtrs.at(name)[0] = data;
   }
 }
@@ -343,7 +345,8 @@ Function::FuncType LLVMFunction::init() {
       ++llvmArgIt;
       Actual* actual = arguments.at(formal).get();
       ir::Type type = getArgType(formal);
-      simit_iassert(type.kind() == ir::Type::Set || type.kind() == ir::Type::Tensor);
+      simit_iassert(type.kind() == ir::Type::Set
+                    || type.kind() == ir::Type::Tensor);
 
       class InitActual : public ActualVisitor {
       public:

@@ -15,8 +15,9 @@ IndexSet::IndexSet(const Expr &set, Kind kind) : kind(kind), rangeSize(-1),
                                       set(new Expr(set)) {}
 
 const Expr &IndexSet::getSet() const {
-  simit_iassert(kind==Set || kind==Single) << "Wrong kind (not a Set or Single) for "
-    << *this << " which is " << kind;
+  simit_iassert(kind==Set || kind==Single)
+      << "Wrong kind (not a Set or Single) for "
+      << *this << " which is " << kind;
   return *set;
 }
 

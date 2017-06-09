@@ -69,7 +69,8 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
     }
 
     if (type->order() >= 2) {
-      simit_tassert(type->order()==2)<<"path expressions only supported for matrices";
+      simit_tassert(type->order()==2)
+          << "path expressions only supported for matrices";
       pe::Var v = peVars[0];
       pe::Var u = peVars[1];
 
@@ -161,7 +162,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
 
       simit_iassert(op->tensor.type().isTensor());
       const TensorType* type = op->tensor.type().toTensor();
-      simit_tassert(type->order()<=2) << "we do not support higher-order tensors yet";
+      simit_tassert(type->order()<=2)
+          << "we do not support higher-order tensors yet";
 
       if (type->order() == 2) {
         // Perhaps continue the traversal into op->tensor and match on VarExpr,
@@ -177,7 +179,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
 
           // We must check for, and add to the map, any reduction variables
           for (const IndexVar& indexVar : op->indexVars) {
-            if (indexVar.isReductionVar() && !util::contains(peVarMap,indexVar)) {
+            if (indexVar.isReductionVar()
+                && !util::contains(peVarMap,indexVar)) {
               pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
               peVarMap.insert({indexVar, peVar});
               qvars.push_back(QuantifiedVar(QuantifiedVar::Exist, peVar));
@@ -260,7 +263,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
     })
   );
 
-  simit_iassert(peStack.size() == 1) << "incorrect stack size " << peStack.size();
+  simit_iassert(peStack.size() == 1)
+      << "incorrect stack size " << peStack.size();
   addPathExpression(target, peStack.top());
 }
 

@@ -11,7 +11,8 @@
 namespace simit {
 
 /** The types of supported tensor components. */
-enum class ComponentType {Float, Double, Int, Boolean, FloatComplex, DoubleComplex};
+enum class ComponentType {Float, Double, Int,
+                          Boolean, FloatComplex, DoubleComplex};
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {

@@ -219,8 +219,8 @@ private:
         if (ac != CompoundOperator::None || bc != CompoundOperator::None) {
           // TODO: Handle (B+C)(D-E) = BD-BE+CD-CE
           //       In this case CE will have two compound operators but +- = -
-          simit_tassert(ac == CompoundOperator::None || bc== CompoundOperator::None ||
-                  ac==bc);
+          simit_tassert(ac == CompoundOperator::None
+                        || bc== CompoundOperator::None || ac==bc);
           cs.setCompoundOperator(ac);
         }
 

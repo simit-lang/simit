@@ -112,7 +112,8 @@ Func LLVMBackend::makeSystemTensorsGlobal(Func func) {
 Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
-  simit_iassert(func.getBody().defined()) << "cannot compile an undefined function";
+  simit_iassert(func.getBody().defined())
+      << "cannot compile an undefined function";
 
   this->dataLayout.reset(new llvm::DataLayout(module));
 
@@ -251,14 +252,16 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 }
 
 void LLVMBackend::compile(const ir::Literal& literal) {
-  simit_iassert(literal.type.isTensor()) << "Only tensor literals supported for now";
+  simit_iassert(literal.type.isTensor())
+      << "Only tensor literals supported for now";
   const TensorType *type = literal.type.toTensor();
 
   if (type->order() == 0) {
     ScalarType ctype = type->getComponentType();
     switch (ctype.kind) {
       case ScalarType::Int: {
-        simit_iassert(ctype.bytes() == 4) << "Only 4-byte ints currently supported";
+        simit_iassert(ctype.bytes() == 4)
+            << "Only 4-byte ints currently supported";
         val = llvmInt(((int*)literal.data)[0]);
         break;
       }
@@ -555,9 +558,9 @@ void LLVMBackend::compile(const ir::Not& notExpr) {
 
 #define LLVMBACKEND_VISIT_COMPARE_OP(Type, op, float_cmp, int_cmp)             \
 void LLVMBackend::compile(Type op) {                                           \
-  simit_iassert(isBoolean(op.type));                                                 \
-  simit_iassert(isScalar(op.a.type()));                                              \
-  simit_iassert(isScalar(op.b.type()));                                              \
+  simit_iassert(isBoolean(op.type));                                           \
+  simit_iassert(isScalar(op.a.type()));                                        \
+  simit_iassert(isScalar(op.b.type()));                                        \
                                                                                \
   llvm::Value *a = compile(op.a);                                              \
   llvm::Value *b = compile(op.b);                                              \
@@ -868,10 +871,10 @@ void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
 
 void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   // ensure it is called with the correct number of arguments.
-  simit_uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
-      "External function '" << callStmt.callee.getName() << "' called with " <<
-      callStmt.actuals.size() << " arguments, but expected " <<
-      callStmt.callee.getArguments().size() << " arguments.";
+  simit_uassert(callStmt.actuals.size()== callStmt.callee.getArguments().size())
+      << "External function '" << callStmt.callee.getName() << "' called with "
+      << callStmt.actuals.size() << " arguments, but expected "
+      << callStmt.callee.getArguments().size() << " arguments.";
 
   // Arguments
   auto args = emitArguments(callStmt.actuals, false);
@@ -907,7 +910,8 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   llvm::Function *fun = nullptr;
   Func callee = callStmt.callee;
 
-  simit_iassert(callee != ir::intrinsics::norm() && callee != ir::intrinsics::dot())
+  simit_iassert(callee != ir::intrinsics::norm()
+                && callee != ir::intrinsics::dot())
       << "norm and dot should have been lowered";
 
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
@@ -959,7 +963,8 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   }
   else if (callStmt.callee == ir::intrinsics::free()) {
     auto arg = args[args.size()-1];
-    arg = builder->CreateCast(llvm::Instruction::CastOps::BitCast, arg, LLVM_INT8_PTR);
+    arg = builder->CreateCast(llvm::Instruction::CastOps::BitCast,
+                              arg, LLVM_INT8_PTR);
     call = emitCall("free", {arg}, LLVM_VOID);
   }
   else if (callStmt.callee == ir::intrinsics::malloc()) {
@@ -1101,7 +1106,8 @@ void LLVMBackend::compile(const ir::Store& store) {
   simit_iassert(value != nullptr);
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
-  llvm::Value *bufferLoc = llvmCreateInBoundsGEP(builder.get(), buffer, index, locName);
+  llvm::Value *bufferLoc = llvmCreateInBoundsGEP(builder.get(),
+                                                 buffer, index, locName);
   builder->CreateStore(value, bufferLoc);
 }
 
@@ -1186,7 +1192,8 @@ void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(ifThenElse.condition);
-  llvm::Value *condEval = llvmCreateICmpEQ(builder.get(), builder->getTrue(), cond);
+  llvm::Value *condEval = llvmCreateICmpEQ(builder.get(),
+                                           builder->getTrue(), cond);
 
 
   llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CTX, "then",
@@ -1229,7 +1236,8 @@ void LLVMBackend::compile(const ir::ForRange& forLoop) {
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CTX,
                                                        iName+"_loop_end",
                                                        llvmFunc);
-  llvm::Value *firstCmp = llvmCreateICmpSLT(builder.get(), rangeStart, rangeEnd);
+  llvm::Value *firstCmp = llvmCreateICmpSLT(builder.get(),
+                                            rangeStart, rangeEnd);
   builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopBodyStart);
 
@@ -1290,7 +1298,8 @@ void LLVMBackend::compile(const ir::For& forLoop) {
   llvm::BasicBlock *loopBodyStart =
       llvm::BasicBlock::Create(LLVM_CTX, iName+"_loop_body", llvmFunc);
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CTX,
-                                                       iName+"_loop_end", llvmFunc);
+                                                       iName+"_loop_end",
+                                                       llvmFunc);
   llvm::Value *firstCmp = llvmCreateICmpSLT(builder.get(), llvmInt(0), iNum);
   builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopBodyStart);
@@ -1308,7 +1317,8 @@ void LLVMBackend::compile(const ir::For& forLoop) {
                                           iName+"_nxt", false, true);
   i->addIncoming(i_nxt, loopBodyEnd);
 
-  llvm::Value *exitCond = llvmCreateICmpSLT(builder.get(), i_nxt, iNum, iName+"_cmp");
+  llvm::Value *exitCond = llvmCreateICmpSLT(builder.get(), i_nxt,
+                                            iNum, iName+"_cmp");
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 }
@@ -1317,7 +1327,8 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(whileLoop.condition);
-  llvm::Value *condEval = llvmCreateICmpEQ(builder.get(), builder->getTrue(), cond);
+  llvm::Value *condEval = llvmCreateICmpEQ(builder.get(),
+                                           builder->getTrue(), cond);
 
 
   llvm::BasicBlock *bodyBlock = llvm::BasicBlock::Create(LLVM_CTX, "body",
@@ -1339,7 +1350,8 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
   llvmFunc->getBasicBlockList().push_back(checkBlock);
   builder->SetInsertPoint(checkBlock);
   llvm::Value *cond2 = compile(whileLoop.condition);
-  llvm::Value *condEval2 = llvmCreateICmpEQ(builder.get(), builder->getTrue(), cond2);
+  llvm::Value *condEval2 = llvmCreateICmpEQ(builder.get(),
+                                            builder->getTrue(), cond2);
 
   builder->CreateCondBr(condEval2, priorBodyBlock, exitBlock);
   
@@ -1770,7 +1782,8 @@ llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
   // TODO: We should allocate small local dense tensors on the stack
   simit_iassert(var.getType().isTensor());
   llvm::Type *ctype = llvmType(var.getType().toTensor()->getComponentType());
-  llvm::PointerType *globalType = llvm::PointerType::get(ctype, globalAddrspace());
+  llvm::PointerType *globalType = llvm::PointerType::get(ctype,
+                                                         globalAddrspace());
 
   llvm::GlobalVariable* buffer =
       new llvm::GlobalVariable(*module, globalType,

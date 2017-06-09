@@ -352,7 +352,8 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           // If the index set we are traversing over is fixed,
           // we construct the corresponding domain & index set
           if (indexVar.isFixed()) {
-            domain = ForDomain(IndexSet(*indexVar.ptr->fixedExpr, IndexSet::Single));
+            domain = ForDomain(IndexSet(*indexVar.ptr->fixedExpr,
+                                        IndexSet::Single));
           }
 
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
@@ -456,7 +457,8 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
             //     j = springs.neighbors[ij];
             //     pointsi = (pointsi + (A[ij] * points.b[j]));
             //   points.c[i] = pointsi;
-            addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
+            addCoordVar({link, var},
+                        Var(link.getName()+indexVar.getName(), Int));
           }
           visitedVertices.insert(veps);
         }

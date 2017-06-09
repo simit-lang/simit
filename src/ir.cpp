@@ -275,7 +275,8 @@ Expr Literal::make(double_complex val) {
 }
 
 Expr Literal::make(Type type, void* values, size_t bufSize) {
-  simit_iassert(type.isTensor()) << "only tensor literals are supported for now";
+  simit_iassert(type.isTensor())
+      << "only tensor literals are supported for now";
   const TensorType *ttype = type.toTensor();
 
   size_t size = 0;
@@ -292,7 +293,8 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
     case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
-      simit_iassert(false) << "only tensor and scalar literals currently supported";
+      simit_iassert(false)
+          << "only tensor and scalar literals currently supported";
       break;
     case Type::Undefined:
       simit_ierror << "attempting to create literal of undefined type";
@@ -346,10 +348,10 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
 }
 
 Expr Literal::make(Type type, std::vector<double> values) {
-  simit_iassert(isScalar(type) || type.toTensor()->getComponentType().isFloat() && 
-          type.toTensor()->size() == values.size() || 
-          type.toTensor()->getComponentType().isComplex() && 
-          2 * type.toTensor()->size() == values.size());
+  simit_iassert(isScalar(type) || type.toTensor()->getComponentType().isFloat()
+                && type.toTensor()->size() == values.size()
+                || type.toTensor()->getComponentType().isComplex()
+                && 2 * type.toTensor()->size() == values.size());
   simit_iassert(type.toTensor()->getComponentType().isFloat() || 
           type.toTensor()->getComponentType().isComplex())
       << "Float array constructor must use float or complex component type";
@@ -728,7 +730,7 @@ Stmt Store::make(Expr buf, Expr index, Expr value, CompoundOperator cop) {
   simit_iassert(buf.type().isArray() || buf.type().isTensor())
       << "Can only store to arrays and tensors";
   simit_iassert(!buf.type().isTensor() ||
-          TensorType::make(buf.type().toTensor()->getComponentType())==value.type())
+      TensorType::make(buf.type().toTensor()->getComponentType())==value.type())
       << "Stored value type " << util::quote(value.type())
       << " does not match the component type of tensor "
       << util::quote(buf.type().toTensor()->getBlockType()) ;

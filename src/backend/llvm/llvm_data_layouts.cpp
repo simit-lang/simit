@@ -15,11 +15,13 @@ namespace backend {
 
 llvm::Value* UnstructuredSetLayout::getSize(unsigned i) {
   simit_iassert(i == 0) << "Only 1 explicit dimension for unstructured sets";
-  return llvmCreateExtractValue(builder, value, {0}, util::toString(set)+".size()");
+  return llvmCreateExtractValue(builder, value, {0},
+                                util::toString(set)+".size()");
 }
 
 llvm::Value* UnstructuredSetLayout::getTotalSize() {
-  return llvmCreateExtractValue(builder, value, {0}, util::toString(set)+".size()");
+  return llvmCreateExtractValue(builder, value, {0},
+                                util::toString(set)+".size()");
 }
 
 int UnstructuredSetLayout::getFieldsOffset() {
@@ -65,7 +67,8 @@ void UnstructuredSetLayout::writeSet(
 }
 
 llvm::Value* UnstructuredEdgeSetLayout::getEpsArray() {
-  return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
+  return llvmCreateExtractValue(builder, value, {1},
+                                util::toString(set)+".eps()");
 }
 
 int UnstructuredEdgeSetLayout::getFieldsOffset() {
@@ -141,7 +144,8 @@ llvm::Value* GridSetLayout::getTotalSize() {
 llvm::Value* GridSetLayout::getEpsArray() {
   simit_iassert(!kIndexlessStencils)
       << "Endpoints array undefined when in indexless mode";
-  return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
+  return llvmCreateExtractValue(builder, value, {1},
+                                util::toString(set)+".eps()");
 }
 
 int GridSetLayout::getFieldsOffset() {

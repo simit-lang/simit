@@ -144,7 +144,8 @@ bool Environment::hasTensorIndex(const Var& var) const {
 }
 
 const TensorIndex& Environment::getTensorIndex(const Var& var) const {
-  simit_iassert(hasTensorIndex(var)) << var << " has no tensor index in environment";
+  simit_iassert(hasTensorIndex(var)) << var
+      << " has no tensor index in environment";
   return content->tensorIndexOfVar.at(var);
 }
 

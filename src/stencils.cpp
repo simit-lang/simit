@@ -95,9 +95,10 @@ StencilContent* buildStencil(Func kernel, Var stencilVar, Var gridSet) {
                 simit_iassert(edges.getType().isGridSet());
                 int dims = edges.getType().toGridSet()->dimensions;
                 // We assume row index normalization has been performed already
-                simit_iassert((isa<VarExpr>(row) && to<VarExpr>(row)->var == origin) ||
-                        (isa<SetRead>(row) && util::isAllZeros(
-                            getOffsets(to<SetRead>(row)->indices))));
+                simit_iassert((isa<VarExpr>(row)
+                               && to<VarExpr>(row)->var == origin)
+                              || (isa<SetRead>(row) && util::isAllZeros(
+                                  getOffsets(to<SetRead>(row)->indices))));
                 // col index determines stencil structure
                 vector<int> offsets;
                 if (isa<VarExpr>(col)) {

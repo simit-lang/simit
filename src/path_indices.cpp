@@ -208,7 +208,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
 
           const int cardinality = edgeSet.getCardinality();
-          simit_iassert(cardinality > 0) << "not an edge set" << edgeSet.getName();
+          simit_iassert(cardinality > 0)
+              << "not an edge set" << edgeSet.getName();
 
           const simit::Set& vertexSet =
               *builder->getBinding(link->getVertexSet());
@@ -218,8 +219,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
             nnzPerRow += (&vertexSet == edgeSet.getEndpointSet(i));
           }
 
-          // TODO: Replace rest of this case with this when we want to support a
-          //       mix of segmented and set endpoint indices.
+          // TODO: Replace rest of this case with this when we want to support
+          //       a mix of segmented and set endpoint indices.
           // pi = new SetEndpointPathIndex(edgeSet);
 
           size_t n   = edgeSet.getSize();

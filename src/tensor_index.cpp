@@ -28,8 +28,10 @@ TensorIndex::TensorIndex(std::string name, pe::PathExpression pexpr)
   content->kind = PExpr;
 
   string prefix = (name == "") ? name : name + ".";
-  content->coordArray = Var(prefix + "coords", ArrayType::make(ScalarType::Int));
-  content->sinkArray  = Var(prefix + "sinks",  ArrayType::make(ScalarType::Int));
+  content->coordArray = Var(prefix + "coords",
+                            ArrayType::make(ScalarType::Int));
+  content->sinkArray  = Var(prefix + "sinks",
+                            ArrayType::make(ScalarType::Int));
 }
 
 TensorIndex::TensorIndex(std::string name, StencilLayout stencil)

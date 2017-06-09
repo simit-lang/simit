@@ -89,7 +89,8 @@ bool Function::hasGlobal(std::string name) const {
 }
 
 const ir::Type& Function::getGlobalType(std::string name) const {
-  simit_uassert(hasGlobal(name)) << "No global called " << name << " in function";
+  simit_uassert(hasGlobal(name)) << "No global called "
+      << name << " in function";
   return environment->getExtern(name).getVar().getType();
 }
 

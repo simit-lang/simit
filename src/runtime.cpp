@@ -633,12 +633,14 @@ int triangularSolve(int An,  int Am,  int* Arowptr, int* Acolidx,
 extern "C" int striangularSolve(int An,  int Am,  int* Arowptr, int* Acolidx,
                    int Ann, int Amm, float* Avals,
 				   int nb, float *bvals, int nx, float *xvals) {
-  return triangularSolve(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, nb, bvals, nx, xvals);
+  return triangularSolve(An, Am, Arowptr, Acolidx, Ann, Amm,
+                         Avals, nb, bvals, nx, xvals);
 }
 extern "C" int dtriangularSolve(int An,  int Am,  int* Arowptr, int* Acolidx,
                    int Ann, int Amm, double* Avals,
 				   int nb, double *bvals, int nx, double *xvals) {
-  return triangularSolve(An, Am, Arowptr, Acolidx, Ann, Amm, Avals, nb, bvals, nx, xvals);
+  return triangularSolve(An, Am, Arowptr, Acolidx, Ann, Amm,
+                         Avals, nb, bvals, nx, xvals);
 }
 
 

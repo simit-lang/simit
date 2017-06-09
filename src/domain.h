@@ -22,7 +22,8 @@ public:
   enum Kind {Range, Set, Dynamic, Single};
 
   /// Create an index set consisting of the items in the given range.
-  IndexSet(unsigned rangeSize) : kind(Range), rangeSize(rangeSize), set(nullptr){}
+  IndexSet(unsigned rangeSize) : kind(Range),
+      rangeSize(rangeSize), set(nullptr){}
 
   /// Create an index set over the given set.
   IndexSet(const Expr &set);

@@ -267,10 +267,12 @@ public:
     simit_uassert(fieldNames.find(name) != fieldNames.end())
         << "Invalid field name setting spatial field";
     FieldData *fieldData = fields[fieldNames[name]];
-    simit_uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. \
-      Currently order:" << fieldData->type->getOrder();
-    simit_uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D \
-      in order 1. Currently: " << fieldData->type->getDimension(0); 
+    simit_uassert(fieldData->type->getOrder() == 1)
+        << "Spatial Data must be order 1. Currently order:"
+        << fieldData->type->getOrder();
+    simit_uassert(fieldData->type->getDimension(0) == 3)
+        << "Spatial Data must be 3D in order 1. Currently: "
+        << fieldData->type->getDimension(0);
     spatialFieldName = name;
   }
 
@@ -291,8 +293,8 @@ public:
   /// The endpoints refer to the respective Sets they come from.
   template <typename ...Endpoints>
   ElementRef add(Endpoints... endpoints) {
-    simit_iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of \
-      endpoints.";
+    simit_iassert(sizeof...(endpoints) == getCardinality())
+        <<"Wrong number of endpoints.";
     if (numElements > capacity-1) {
       increaseEdgeCapacity();
     }

@@ -54,7 +54,8 @@ std::ostream &operator<<(std::ostream &os, const Var &var) {
 }
 
 std::ostream &operator<<(std::ostream &os, const LoopVar &lv) {
-  return os << lv.getVar() << lv.getReductionOperator() << " in " << lv.getDomain();
+  return os << lv.getVar() << lv.getReductionOperator()
+            << " in " << lv.getDomain();
 }
 
 }}
