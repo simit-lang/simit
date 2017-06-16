@@ -920,7 +920,8 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
        {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
        {ir::intrinsics::log(), llvm::Intrinsic::log},
        {ir::intrinsics::exp(), llvm::Intrinsic::exp},
-       {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
+       {ir::intrinsics::pow(), llvm::Intrinsic::pow},
+       {ir::intrinsics::abs(), llvm::Intrinsic::fabs}};
 
   std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
@@ -943,8 +944,7 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
            callStmt.callee == ir::intrinsics::max()  ||
            callStmt.callee == ir::intrinsics::min()  ||
            callStmt.callee == ir::intrinsics::acos()  ||
-           callStmt.callee == ir::intrinsics::cbrt()  ||
-           callStmt.callee == ir::intrinsics::abs()) {
+           callStmt.callee == ir::intrinsics::cbrt()) {
     std::string fname = callStmt.callee.getName() + floatTypeName;
     call = emitCall(fname, args, llvmFloatType());
   }
