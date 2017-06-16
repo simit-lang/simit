@@ -79,6 +79,24 @@ float min_f32(float a, float b) {
   return (float)min(d_a,d_b);
 }
 
+double cbrt_f64(double x) {
+  return cbrt(x);
+}
+
+float cbrt_f32(float x) {
+  double d_x = x;
+  return (float)cbrt(d_x);
+}
+
+double abs_f64(double x) {
+  return fabs(x);
+}
+
+float abs_f32(float x) {
+  double d_x = x;
+  return (float)fabs(d_x);
+}
+
 double det3_f64(double * a){
   return a[0] * (a[4]*a[8]-a[5]*a[7])
        - a[1] * (a[3]*a[8]-a[5]*a[6])
