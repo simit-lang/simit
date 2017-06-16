@@ -77,7 +77,7 @@ namespace simit {
 
     static void createIdTranslationMapping(vertex_t * reorderedNodes, 
         vector<int>& vertexOrdering, int cntNodes) {
-      iassert(vertexOrdering.size() == 0);
+      simit_iassert(vertexOrdering.size() == 0);
       vertexOrdering.resize(cntNodes);
 
       for (int i = 0; i < cntNodes; ++i) {
@@ -204,7 +204,7 @@ namespace simit {
   }
   
   void reorderEdgeSet(Set& edgeSet, const vector<int>& edgeOrdering) {
-    iassert(edgeOrdering.size() == (unsigned int) edgeSet.getSize()) << "Edge \
+    simit_iassert(edgeOrdering.size() == (unsigned int) edgeSet.getSize()) << "Edge \
       Mapping must be the same size as the edge set" << edgeOrdering.size() <<
       " != " << edgeSet.getSize(); int* endpoints = edgeSet.getEndpointsPtr();
     const unsigned int size = edgeSet.getSize();
@@ -215,8 +215,8 @@ namespace simit {
     memcpy(newEndpoints, endpoints, size * cardinality * sizeof(int));
 
     for (unsigned int edgeIndex=0; edgeIndex < size; ++edgeIndex) {
-      iassert(edgeIndex < edgeOrdering.size());
-      iassert(edgeOrdering[edgeIndex] < (int) ((size - 1) * cardinality * 
+      simit_iassert(edgeIndex < edgeOrdering.size());
+      simit_iassert(edgeOrdering[edgeIndex] < (int) ((size - 1) * cardinality * 
             sizeof(int)));
       memcpy(newEndpoints + edgeIndex * cardinality, endpoints + 
           edgeOrdering[edgeIndex] * cardinality, cardinality * sizeof(int));
@@ -236,7 +236,7 @@ namespace simit {
     
   void reorderVertexSet(Set& edgeSet, Set& vertexSet, vector<int>& 
       vertexOrdering) {
-    iassert(vertexOrdering.size() == (unsigned int) vertexSet.getSize()) << 
+    simit_iassert(vertexOrdering.size() == (unsigned int) vertexSet.getSize()) << 
       "Vertex Mapping must be the same size as the vertex set" << 
       vertexOrdering.size() << " != " << vertexSet.getSize(); 
     // Reset Endpoints to reflect reordering
@@ -244,14 +244,14 @@ namespace simit {
     // translating from old to new
     reorderEdgeSetByVertexOrdering(edgeSet, vertexOrdering); 
 
-    iassert(vertexOrdering.size() == (unsigned int) vertexSet.getSize()) << 
+    simit_iassert(vertexOrdering.size() == (unsigned int) vertexSet.getSize()) << 
       vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderFields(vertexSet.getFields(), vertexOrdering);
   }
   
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& edgeOrdering, 
       vector<int>& vertexOrdering) {
-    iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial \
+    simit_iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial \
       field set prior to reordering";
     vertexOrdering.clear();
     edgeOrdering.clear();

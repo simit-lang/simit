@@ -15,7 +15,7 @@ FuncContent::~FuncContent() {
 Func::Func(const std::string& name, const std::vector<Var>& arguments,
            const std::vector<Var>& results, Kind kind)
     : Func(name, arguments, results, Stmt(), kind) {
-  iassert(kind != Internal);
+  simit_iassert(kind != Internal);
 }
 
 Func::Func(const std::string& name, const std::vector<Var>& arguments,

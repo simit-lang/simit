@@ -12,7 +12,7 @@ std::string ReductionOperator::getName() {
     case Undefined:
       return "";
   }
-  unreachable;
+  simit_unreachable;
   return "";
 }
 

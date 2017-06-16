@@ -168,10 +168,10 @@ struct ErrorReport {
 
 // internal asserts
 #ifdef SIMIT_ASSERTS
-  #define iassert(c)                                                           \
+  #define simit_iassert(c)                                                     \
     simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,    \
                                simit::internal::ErrorReport::Internal, false)
-  #define ierror                                                               \
+  #define simit_ierror                                                         \
     simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,\
                                simit::internal::ErrorReport::Internal, false)
 #else
@@ -186,49 +186,49 @@ struct ErrorReport {
     }
   };
 
-  #define iassert(c) simit::internal::Dummy()
-  #define ierror simit::internal::Dummy()
+  #define simit_iassert(c) simit::internal::Dummy()
+  #define simit_ierror simit::internal::Dummy()
 #endif
 
-#define unreachable                                                            \
-  ierror << "reached unreachable location"
+#define simit_unreachable                                                      \
+  simit_ierror << "reached simit_unreachable location"
 
 // internal assert helpers
-#define iassert_scalar(a)                                                      \
-  iassert(isScalar(a.type())) << a << ": " << a.type()
+#define simit_iassert_scalar(a)                                                \
+  simit_iassert(isScalar(a.type())) << a << ": " << a.type()
 
-#define iassert_types_equal(a,b)                                               \
-  iassert(a.type() == b.type()) << a.type() << " != " << b.type() << "\n"      \
+#define simit_iassert_types_equal(a,b)                                         \
+  simit_iassert(a.type() == b.type()) << a.type() << " != " << b.type() << "\n"\
                                 << #a << ": " << a << "\n" << #b << ": " << b
 
-#define iassert_int_scalar(a)                                                  \
-  iassert(isScalar(a.type()) && isInt(a.type()))                               \
+#define simit_iassert_int_scalar(a)                                            \
+  simit_iassert(isScalar(a.type()) && isInt(a.type()))                         \
       << a << "must be an int scalar but is a" << a.type()
 
-#define iassert_boolean_scalar(a)                                              \
-  iassert(isScalar(a.type()) && isBoolean(a.type()))                           \
+#define simit_iassert_boolean_scalar(a)                                        \
+  simit_iassert(isScalar(a.type()) && isBoolean(a.type()))                     \
       << a << "must be a boolean scalar but is a" << a.type()
 
 // User asserts
-#define uassert(c)                                                             \
+#define simit_uassert(c)                                                       \
   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__, (c), #c,        \
                                simit::internal::ErrorReport::User, false)
-#define uerror                                                                 \
+#define simit_uerror                                                           \
   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__, false, nullptr, \
                                simit::internal::ErrorReport::User, false)
-#define uwarning                                                               \
+#define simit_uwarning                                                         \
   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__, false, nullptr, \
                                simit::internal::ErrorReport::User, true)
 
 // Temporary assertions (planned for the future)
-#define tassert(c)                                                             \
+#define simit_tassert(c)                                                       \
   simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,      \
                                simit::internal::ErrorReport::Temporary, false)
-#define terror                                                                 \
+#define simit_terror                                                           \
   simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,  \
                                simit::internal::ErrorReport::Temporary, false)
 
-#define not_supported_yet terror
+#define not_supported_yet simit_terror
 
 }}
 

@@ -85,7 +85,7 @@ bool Environment::hasExtern(const std::string& name) const {
 }
 
 const VarMapping& Environment::getExtern(const std::string& name) const {
-  iassert(hasExtern(name));
+  simit_iassert(hasExtern(name));
   return content->externs[content->externLocationByName.at(name)];
 }
 
@@ -95,7 +95,7 @@ std::vector<Var> Environment::getExternVars() const {
   for (const VarMapping& externMapping : getExterns()) {
     if (externMapping.getMappings().size() == 0) {
       const Var& ext = externMapping.getVar();
-      iassert(!util::contains(included, ext));
+      simit_iassert(!util::contains(included, ext));
       externVars.push_back(ext);
       included.insert(ext);
     }
@@ -132,9 +132,9 @@ bool Environment::hasTensorIndex(const pe::PathExpression& pexpr) const {
 
 const TensorIndex&
 Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
-  iassert(pexpr.defined())
+  simit_iassert(pexpr.defined())
       << "Tensors in the environment have defined path expressions";
-  iassert(util::contains(content->locationOfTensorIndex, pexpr))
+  simit_iassert(util::contains(content->locationOfTensorIndex, pexpr))
       << "Could not find " << pexpr << " in environment";
   return content->tensorIndices[content->locationOfTensorIndex.at(pexpr)];
 }
@@ -144,7 +144,8 @@ bool Environment::hasTensorIndex(const Var& var) const {
 }
 
 const TensorIndex& Environment::getTensorIndex(const Var& var) const {
-  iassert(hasTensorIndex(var)) << var << " has no tensor index in environment";
+  simit_iassert(hasTensorIndex(var)) << var
+      << " has no tensor index in environment";
   return content->tensorIndexOfVar.at(var);
 }
 
@@ -154,7 +155,7 @@ bool Environment::hasTensorIndex(const StencilLayout& stencil) const {
 
 const TensorIndex& Environment::getTensorIndex(
     const StencilLayout& stencil) const {
-  iassert(util::contains(content->locationOfTensorIndexStencil, stencil))
+  simit_iassert(util::contains(content->locationOfTensorIndexStencil, stencil))
       << "Could not find " << stencil << " in environment";
   return content->tensorIndices[
       content->locationOfTensorIndexStencil.at(stencil)];
@@ -165,7 +166,7 @@ void Environment::addConstant(const Var& var, const Expr& initializer) {
 }
 
 void Environment::addExtern(const Var& var) {
-  iassert(!hasExtern(var.getName())) << var << " already in environment";
+  simit_iassert(!hasExtern(var.getName())) << var << " already in environment";
 
   content->externs.push_back(var);
   size_t loc = content->externs.size()-1;
@@ -177,13 +178,13 @@ void Environment::addExtern(const Var& var) {
 }
 
 void Environment::addExternMapping(const Var& var, const Var& mapping) {
-  iassert(hasExtern(var.getName()));
+  simit_iassert(hasExtern(var.getName()));
   size_t loc = content->externLocationByName.at(var.getName());
   content->externs.at(loc).addMapping(mapping);
 }
 
 void Environment::addTemporary(const Var& var) {
-  iassert(!hasExtern(var.getName())) << var << " already in environment";
+  simit_iassert(!hasExtern(var.getName())) << var << " already in environment";
   content->temporaries.push_back(var);
   content->temporarySet.insert(var);
 }
@@ -194,10 +195,10 @@ Var Environment::createTemporary(const Type &type, const std::string name) {
 
 void Environment::addTensorIndex(const pe::PathExpression& pexpr,
                                  const Var& var) {
-  iassert(pexpr.defined())
+  simit_iassert(pexpr.defined())
       << "Attempting to add tensor " << util::quote(var)
       << " index with an undefined path expression";
-  iassert(var.defined())
+  simit_iassert(var.defined())
       << "attempting to add a tensor index to an undefined var";
 
   string name = var.getName();
@@ -214,7 +215,7 @@ void Environment::addTensorIndex(const pe::PathExpression& pexpr,
 }
 
 void Environment::addTensorIndex(const StencilLayout& stencil, const Var& var) {
-  iassert(var.defined())
+  simit_iassert(var.defined())
       << "attempting to add a tensor index to an undefined var";
 
   string name = var.getName();

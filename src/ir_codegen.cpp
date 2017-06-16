@@ -23,7 +23,7 @@ Expr getZeroVal(const TensorType *type) {
     case ScalarType::Complex:
       return Literal::make(double_complex(0.0, 0.0));
     default:
-      unreachable;
+      simit_unreachable;
       return Expr();
   }
 }
@@ -90,7 +90,7 @@ Stmt initializeTensorToZero(Stmt stmt) {
 
 Stmt find(const Var &result, const std::vector<Expr> &exprs, string name,
           function<Expr(Expr,Expr)> compare) {
-  iassert(exprs.size() > 0);
+  simit_iassert(exprs.size() > 0);
 
   Stmt resultStmt;
   if (exprs.size() == 1) {
@@ -126,7 +126,7 @@ Stmt max(const Var &result, const std::vector<Expr> &exprs) {
 }
 
 Expr compare(const vector<Expr> &expressions) {
-  iassert(expressions.size() > 0);
+  simit_iassert(expressions.size() > 0);
 
   Expr result;
   if (expressions.size() == 1) {
@@ -138,7 +138,7 @@ Expr compare(const vector<Expr> &expressions) {
       result = And::make(result, Eq::make(expressions[i-1], expressions[i]));
     }
   }
-  iassert(result.defined());
+  simit_iassert(result.defined());
   return result;
 }
 

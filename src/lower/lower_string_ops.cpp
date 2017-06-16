@@ -20,8 +20,8 @@ class LowerStringOps : public IRRewriter {
   enum class CompareOp {EQ, NE, LE, LT, GE, GT};
 
   void lowerStringCompare(CompareOp op, Expr a, Expr b) {
-    iassert(isString(a.type()));
-    iassert(isString(b.type()));
+    simit_iassert(isString(a.type()));
+    simit_iassert(isString(b.type()));
 
     a = rewrite(a);
     b = rewrite(b);
@@ -53,7 +53,7 @@ class LowerStringOps : public IRRewriter {
         expr = Gt::make(tmpExpr, zero);
         break;
       default:
-        unreachable;
+        simit_unreachable;
     }
   }
 
@@ -155,7 +155,7 @@ class LowerStringOps : public IRRewriter {
 
   void visit(const Add *op) {
     if (isString(op->a.type())) {
-      iassert(isString(op->b.type()));
+      simit_iassert(isString(op->b.type()));
 
       Var tmp("tmp", String);
       stringVars.top().insert(tmp);
@@ -169,7 +169,7 @@ class LowerStringOps : public IRRewriter {
 
   void visit(const AssignStmt *op) {
     if (isString(op->var.getType())) {
-      iassert(isString(op->value.type()));
+      simit_iassert(isString(op->value.type()));
       lowerStringConcat(op->var, op->value);
     } else {
       IRRewriter::visit(op);

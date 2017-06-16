@@ -65,7 +65,7 @@ inline bool doesOperandsHaveSameStructureOrIsDiagonal(const IndexExpr* iexpr,
   pe::PathExpression pexpr;
   match(iexpr->value,
     std::function<void(const VarExpr*)>([&](const VarExpr* op) {
-      iassert(storage.hasStorage(op->var));
+      simit_iassert(storage.hasStorage(op->var));
       auto tensorStorage = storage.getStorage(op->var);
     
       if (tensorStorage.getKind() != TensorStorage::Diagonal) {
@@ -222,7 +222,7 @@ Func lowerIndexExpressions(Func func) {
                  MatrixTranspose, MatrixMultiply};
       Kind kind = Unknown;
 
-      iassert(iexpr->type.isTensor());
+      simit_iassert(iexpr->type.isTensor());
       const Var& var = op->var;
       const TensorType* type = iexpr->type.toTensor();
 
@@ -245,7 +245,7 @@ Func lowerIndexExpressions(Func func) {
         kind = MatrixMultiply;
       }
 
-      iassert(kind != Unknown)
+      simit_iassert(kind != Unknown)
           << "Index expression lowering does not know how to lower: "
           << Stmt(op);
 
@@ -265,10 +265,10 @@ Func lowerIndexExpressions(Func func) {
           stmt = lowerMatrixMultiply(op->var, iexpr, &environment, storage);
           break;
         case Unknown:
-          unreachable << "unknown matrix expression";
+          simit_unreachable << "unknown matrix expression";
           break;
       }
-      iassert(stmt.defined());
+      simit_iassert(stmt.defined());
       stmt = Comment::make(util::toString(*op), stmt, false, true);
     }
 
@@ -296,7 +296,7 @@ Func lowerIndexExpressions(Func func) {
     }
 
     void visit(const IndexExpr *op) {
-      iassert_scalar(Expr(op));
+      simit_iassert_scalar(Expr(op));
       expr = rewrite(op->value);
     }
   };

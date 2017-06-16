@@ -43,7 +43,7 @@ std::string printToString(const llvm::SMDiagnostic &diag) {
 
 VoidFuncPtr getGlobalFunc(llvm::Function *func, llvm::ExecutionEngine *ee) {
   uint64_t addr = ee->getFunctionAddress(func->getName());
-  iassert(addr != 0)
+  simit_iassert(addr != 0)
       << "MCJIT prevents modifying the module after ExecutionEngine code "
       << "generation. Ensure all functions are created before fetching "
       << "function addresses.";

@@ -27,7 +27,7 @@ static Expr createLengthComputation(const IndexSet &indexSet) {
 }
 
 static Expr createLengthComputation(const IndexDomain &dimensions) {
-  iassert(dimensions.getIndexSets().size() > 0);
+  simit_iassert(dimensions.getIndexSets().size() > 0);
   const vector<IndexSet> &indexSets = dimensions.getIndexSets();
   Expr len = createLengthComputation(indexSets[0]);
   for (size_t i=1; i < indexSets.size(); ++i) {
@@ -37,7 +37,7 @@ static Expr createLengthComputation(const IndexDomain &dimensions) {
 }
 
 static Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
-  iassert(dimensions.size()>0)
+  simit_iassert(dimensions.size()>0)
       << "attempting to compute the length of a scalar";
   Expr len = createLengthComputation(dimensions[0]);
   for (size_t i=1; i < dimensions.size(); ++i) {
@@ -47,14 +47,14 @@ static Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
 }
 
 static Expr createLoadExpr(Expr tensor, Expr index) {
-  iassert(tensor.type().isTensor())
+  simit_iassert(tensor.type().isTensor())
       << "attempting to load from a non-tensor:" << tensor;
 
   // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
-    iassert(load->buffer.type().isTensor());
+    simit_iassert(load->buffer.type().isTensor());
 
     index = Add::make(load->index, index);
     return Load::make(load->buffer, index);
@@ -66,14 +66,14 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
 
 static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
                             CompoundOperator cop) {
-  iassert(tensor.type().isTensor())
+  simit_iassert(tensor.type().isTensor())
       << "attempting to store to a non-tensor:" << tensor;
 
   // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
-    iassert(load->buffer.type().isTensor());
+    simit_iassert(load->buffer.type().isTensor());
 
     index = Add::make(load->index, index);
     return Store::make(load->buffer, index, value, cop);
@@ -111,14 +111,14 @@ private:
   }
 
   static int getDimSize(int i, const vector<IndexDomain> &dimensions) {
-    tassert(canComputeSize(dimensions[i]))
+    simit_tassert(canComputeSize(dimensions[i]))
         << "only currently support dense tensors with static size";
     int dimsize = dimensions[i].getSize();
     return dimsize;
   }
 
   Expr flattenIndices(Expr tensor, std::vector<Expr> indices) {
-    iassert(tensor.type().isTensor());
+    simit_iassert(tensor.type().isTensor());
 
     TensorStorage tensorStorage;
     if (isa<VarExpr>(tensor)) {
@@ -132,7 +132,7 @@ private:
     Expr index;
     switch (tensorStorage.getKind()) {
       case TensorStorage::Kind::Dense: {
-        iassert(indices.size() > 0);
+        simit_iassert(indices.size() > 0);
         const TensorType *type = tensor.type().toTensor();
         vector<IndexSet> outerDims = type->getOuterDimensions();
         Type blockType = type->getBlockType();
@@ -149,7 +149,7 @@ private:
         // It simplifies the logic to generate the inner index first
         reverse(indices.begin(), indices.end());
         reverse(outerSizes.begin(), outerSizes.end());
-        iassert(indices.size() == outerSizes.size())
+        simit_iassert(indices.size() == outerSizes.size())
             << "Incorrect number of indices";
 
         index = rewrite(indices[0]);
@@ -162,16 +162,16 @@ private:
         break;
       }
       case TensorStorage::Kind::Indexed: {
-        iassert(tensor.type().isTensor());
+        simit_iassert(tensor.type().isTensor());
         size_t order = tensor.type().toTensor()->order();
-        tassert(order == 2)
+        simit_tassert(order == 2)
             << "Only currently supports matrices in reduced form. "
             << quote(tensor) << " has " << indices.size() << " dimensions";
-        iassert(indices.size() == 1 || indices.size() == order)
+        simit_iassert(indices.size() == 1 || indices.size() == order)
             << "Must either supply one index per dimension or a single "
             << "index (flattened)";
 
-        iassert(isa<VarExpr>(tensor));
+        simit_iassert(isa<VarExpr>(tensor));
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
@@ -192,16 +192,16 @@ private:
         break;
       }
       case TensorStorage::Kind::Stencil: {
-        iassert(tensor.type().isTensor());
+        simit_iassert(tensor.type().isTensor());
         size_t order = tensor.type().toTensor()->order();
-        tassert(order == 2)
+        simit_tassert(order == 2)
             << "Only currently supports matrices in reduced form. "
             << quote(tensor) << " has " << indices.size() << " dimensions";
-        iassert(indices.size() == 1 || indices.size() == order)
+        simit_iassert(indices.size() == 1 || indices.size() == order)
             << "Must either supply one index per dimension or a single "
             << "index (flattened)";
 
-        iassert(isa<VarExpr>(tensor));
+        simit_iassert(isa<VarExpr>(tensor));
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
@@ -210,7 +210,7 @@ private:
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
-          iassert(tensorStorage.hasTensorIndex());
+          simit_iassert(tensorStorage.hasTensorIndex());
           TensorIndex tensorIndex = tensorStorage.getTensorIndex();
           StencilLayout stencil = tensorIndex.getStencilLayout();
 
@@ -223,13 +223,13 @@ private:
         index = rewrite(indices[0]);
         break;
       case TensorStorage::Kind::Undefined:
-        ierror;
+        simit_ierror;
         break;
       default:
-        unreachable;
+        simit_unreachable;
         break;
     }
-    iassert(index.defined());
+    simit_iassert(index.defined());
 
     // Multiply in inner block size
     Type blockType = tensor.type().toTensor()->getBlockType();
@@ -240,19 +240,19 @@ private:
       index = Mul::make(index, blockSize);
     }
 
-    iassert(index.defined());
+    simit_iassert(index.defined());
     return index;
   }
 
   void visit(const TensorRead *op) {
-    iassert(op->type.isTensor() && op->tensor.type().toTensor());
+    simit_iassert(op->type.isTensor() && op->tensor.type().toTensor());
     Expr tensor = rewrite(op->tensor);
     Expr index = flattenIndices(op->tensor, op->indices);
     expr = createLoadExpr(tensor, index);
   }
 
   void visit(const TensorWrite *op) {
-    iassert(op->tensor.type().isTensor());
+    simit_iassert(op->tensor.type().isTensor());
     Expr tensor = rewrite(op->tensor);
     Expr value = rewrite(op->value);
     Expr index = flattenIndices(op->tensor, op->indices);

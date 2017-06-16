@@ -34,7 +34,7 @@ bool StencilLayout::hasGridSet() const {
 }
 
 Var StencilLayout::getGridSet() const {
-  iassert(ptr->gridSet.defined());
+  simit_iassert(ptr->gridSet.defined());
   return ptr->gridSet;
 }
 
@@ -63,7 +63,7 @@ std::ostream& operator<<(std::ostream& os, const StencilLayout& stencil) {
 vector<int> getOffsets(vector<Expr> offsets) {
   vector<int> out;
   for (Expr off : offsets) {
-    iassert(isa<Literal>(off));
+    simit_iassert(isa<Literal>(off));
     out.push_back(to<Literal>(off)->getIntVal(0));
   }
   return out;
@@ -80,32 +80,33 @@ StencilContent* buildStencil(Func kernel, Var stencilVar, Var gridSet) {
               ctx->match(op->tensor);
               // Found a write to the stencil-assembled variable
               if (tensorVar.defined() && tensorVar == stencilVar) {
-                tassert(op->indices.size() == 2)
+                simit_tassert(op->indices.size() == 2)
                     << "Stencil assembly must be of matrix";
                 auto row = op->indices[0];
                 auto col = op->indices[1];
-                iassert(row.type().isElement() &&
+                simit_iassert(row.type().isElement() &&
                         col.type().isElement());
-                iassert(kernel.getArguments().size() >= 2)
+                simit_iassert(kernel.getArguments().size() >= 2)
                     << "Kernel must have element and grid edge set "
                     << "as arguments";
                 // The first argument to the kernel is an alias for points[0,0,...]
                 Var origin = kernel.getArguments()[0];
                 Var edges = kernel.getArguments()[kernel.getArguments().size()-1];
-                iassert(edges.getType().isGridSet());
+                simit_iassert(edges.getType().isGridSet());
                 int dims = edges.getType().toGridSet()->dimensions;
                 // We assume row index normalization has been performed already
-                iassert((isa<VarExpr>(row) && to<VarExpr>(row)->var == origin) ||
-                        (isa<SetRead>(row) && util::isAllZeros(
-                            getOffsets(to<SetRead>(row)->indices))));
+                simit_iassert((isa<VarExpr>(row)
+                               && to<VarExpr>(row)->var == origin)
+                              || (isa<SetRead>(row) && util::isAllZeros(
+                                  getOffsets(to<SetRead>(row)->indices))));
                 // col index determines stencil structure
                 vector<int> offsets;
                 if (isa<VarExpr>(col)) {
-                  iassert(to<VarExpr>(col)->var == origin);
+                  simit_iassert(to<VarExpr>(col)->var == origin);
                   offsets = vector<int>(dims);
                 }
                 else {
-                  iassert(isa<SetRead>(col));
+                  simit_iassert(isa<SetRead>(col));
                   offsets = getOffsets(to<SetRead>(col)->indices);
                 }
                 // Add new offset to stencil

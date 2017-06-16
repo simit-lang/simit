@@ -16,7 +16,7 @@ private:
 
   bool isMemset(Type targetType, Expr value) {
     if (!targetType.isTensor()) return false;
-    iassert(value.type().isTensor());
+    simit_iassert(value.type().isTensor());
 
     const TensorType *ttype = targetType.toTensor();
     const TensorType *vtype = value.type().toTensor();
@@ -29,7 +29,7 @@ private:
       return false;
     }
     const TensorStorage& ts = storage.getStorage(tensor);
-    tassert(ts.getKind() != TensorStorage::Stencil)
+    simit_tassert(ts.getKind() != TensorStorage::Stencil)
         << "Don't know how to deal with Stencil storage yet";
     return (ts.getKind() == TensorStorage::Indexed);
   }

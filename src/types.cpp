@@ -24,12 +24,12 @@ bool Type::isGridSet() const {
 }
 
 const UnstructuredSetType* Type::toUnstructuredSet() const {
-  iassert(isUnstructuredSet());
+  simit_iassert(isUnstructuredSet());
   return dynamic_cast<UnstructuredSetType*>(set);
 }
 
 const GridSetType* Type::toGridSet() const {
-  iassert(isGridSet());
+  simit_iassert(isGridSet());
   return dynamic_cast<GridSetType*>(set);
 }
 
@@ -37,7 +37,7 @@ const GridSetType* Type::toGridSet() const {
 unsigned ScalarType::floatBytes = sizeof(double);
 
 bool ScalarType::singleFloat() {
-  iassert(floatBytes == sizeof(float) || floatBytes == sizeof(double))
+  simit_iassert(floatBytes == sizeof(float) || floatBytes == sizeof(double))
       << "Invalid float size: " << floatBytes;
   return floatBytes == sizeof(float);
 }
@@ -82,7 +82,7 @@ Type TensorType::getBlockType() const {
   std::vector<IndexDomain> blockDimensions;
 
   size_t numNests = dimensions[0].getIndexSets().size();
-  iassert(numNests > 0);
+  simit_iassert(numNests > 0);
 
   Type blockType;
   if (numNests == 1) {
@@ -111,7 +111,7 @@ Type TensorType::getBlockType() const {
     blockType = TensorType::make(componentType, blockDimensions, 
                                  isColumnVector);
   }
-  iassert(blockType.defined());
+  simit_iassert(blockType.defined());
 
   return blockType;
 }
@@ -165,7 +165,7 @@ SetType::~SetType() {}
 // struct UnstructuredSetType
 Type UnstructuredSetType::make(Type elementType,
                                const std::vector<Expr>& endpointSets) {
-  iassert(elementType.isElement());
+  simit_iassert(elementType.isElement());
   UnstructuredSetType *type = new UnstructuredSetType;
   type->elementType = elementType;
   for (auto& eps : endpointSets) {
@@ -183,10 +183,10 @@ UnstructuredSetType::~UnstructuredSetType() {
 // struct GridSetType
 Type GridSetType::make(Type elementType, IndexSet underlyingPointSet,
                        size_t dimensions) {
-  iassert(elementType.isElement());
-  iassert(underlyingPointSet.getKind() == IndexSet::Kind::Set);
-  iassert(underlyingPointSet.getSet().type().isUnstructuredSet());
-  iassert(underlyingPointSet.getSet().type()
+  simit_iassert(elementType.isElement());
+  simit_iassert(underlyingPointSet.getKind() == IndexSet::Kind::Set);
+  simit_iassert(underlyingPointSet.getSet().type().isUnstructuredSet());
+  simit_iassert(underlyingPointSet.getSet().type()
           .toUnstructuredSet()->getCardinality() == 0);
   GridSetType *type = new GridSetType;
   type->elementType = elementType;
@@ -219,7 +219,7 @@ bool operator==(const Type& l, const Type& r) {
         }
         return false;
       }
-      unreachable;
+      simit_unreachable;
     case Type::UnnamedTuple:
       return *l.toUnnamedTuple() == *r.toUnnamedTuple();
     case Type::NamedTuple:
@@ -231,7 +231,7 @@ bool operator==(const Type& l, const Type& r) {
     case Type::Undefined:
       return r.kind() == Type::Undefined;
   }
-  unreachable;
+  simit_unreachable;
   return false;
 }
 
@@ -361,7 +361,7 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
         return os << *type.toGridSet();
       }
       else {
-        unreachable;
+        simit_unreachable;
         return os;
       }
     case Type::UnnamedTuple:
@@ -375,7 +375,7 @@ std::ostream& operator<<(std::ostream& os, const Type& type) {
     case Type::Undefined:
       return os << "undefined type";
   }
-  unreachable;
+  simit_unreachable;
   return os;
 }
 

@@ -22,7 +22,7 @@ map<Var, pe::PathExpression> getPathExpressions(const Func& func) {
 }
 
 void PathExpressionBuilder::computePathExpression(const Map* map) {
-  iassert(isa<VarExpr>(map->target))
+  simit_iassert(isa<VarExpr>(map->target))
       << "can't compute path expressions from dynamic sets (yet?)";
 
   const Var& targetSet = to<VarExpr>(map->target)->var;
@@ -39,7 +39,7 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
       if (!res.getType().isTensor()) continue;
       const TensorType *ttype = res.getType().toTensor();
       if (ttype->order() >= 2) {
-        tassert(!stencilVar.defined())
+        simit_tassert(!stencilVar.defined())
             << "Cannot handle multiple matrix outputs from a stencil map";
         stencilVar = map->vars[count];
         stencil = buildStencil(map->function, res,
@@ -50,14 +50,14 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
   }
 
   for (const Var& var : map->vars) {
-    iassert(var.getType().isTensor());
+    simit_iassert(var.getType().isTensor());
     const TensorType* type = var.getType().toTensor();
 
     std::vector<IndexSet> dims = type->getOuterDimensions();
     std::vector<pe::Var> peVars;
     for (const IndexSet& dim : dims) {
-      iassert(dim.getKind() == IndexSet::Set);
-      iassert(isa<VarExpr>(dim.getSet()))
+      simit_iassert(dim.getKind() == IndexSet::Set);
+      simit_iassert(isa<VarExpr>(dim.getSet()))
           << "can't compute path expressions from dynamic sets (yet?)";
 
       ir::Var dimensionSet = to<VarExpr>(dim.getSet())->var;
@@ -69,7 +69,8 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
     }
 
     if (type->order() >= 2) {
-      tassert(type->order()==2)<<"path expressions only supported for matrices";
+      simit_tassert(type->order()==2)
+          << "path expressions only supported for matrices";
       pe::Var v = peVars[0];
       pe::Var u = peVars[1];
 
@@ -100,7 +101,7 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
           addPathExpression(var, ve);
         }
         else {
-          unreachable;
+          simit_unreachable;
         }
       }
     }
@@ -159,25 +160,27 @@ void PathExpressionBuilder::computePathExpression(Var target,
     function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
       auto indexVars = op->indexVars;
 
-      iassert(op->tensor.type().isTensor());
+      simit_iassert(op->tensor.type().isTensor());
       const TensorType* type = op->tensor.type().toTensor();
-      tassert(type->order()<=2) << "we do not support higher-order tensors yet";
+      simit_tassert(type->order()<=2)
+          << "we do not support higher-order tensors yet";
 
       if (type->order() == 2) {
         // Perhaps continue the traversal into op->tensor and match on VarExpr,
         // literal, FieldRead, etc, to get op->tensor's path expression.
-        tassert(isa<VarExpr>(op->tensor))
+        simit_tassert(isa<VarExpr>(op->tensor))
             << "generalize to work with indexed literals, field reads, etc.";
 
         // Retrieve the indexed tensor's path expression
         PathExpression pe = getPathExpression(to<VarExpr>(op->tensor)->var);
         if (pe.defined()) {
-          tassert(op->indexVars.size() == 2)
+          simit_tassert(op->indexVars.size() == 2)
               << "only matrices are currently supported";
 
           // We must check for, and add to the map, any reduction variables
           for (const IndexVar& indexVar : op->indexVars) {
-            if (indexVar.isReductionVar() && !util::contains(peVarMap,indexVar)) {
+            if (indexVar.isReductionVar()
+                && !util::contains(peVarMap,indexVar)) {
               pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
               peVarMap.insert({indexVar, peVar});
               qvars.push_back(QuantifiedVar(QuantifiedVar::Exist, peVar));
@@ -260,7 +263,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
     })
   );
 
-  iassert(peStack.size() == 1) << "incorrect stack size " << peStack.size();
+  simit_iassert(peStack.size() == 1)
+      << "incorrect stack size " << peStack.size();
   addPathExpression(target, peStack.top());
 }
 

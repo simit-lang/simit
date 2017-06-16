@@ -167,8 +167,8 @@ private:
   }
 
   void visit(const Sub *op) {
-    iassert(isScalar(op->a.type()));
-    iassert(isScalar(op->b.type()));
+    simit_iassert(isScalar(op->a.type()));
+    simit_iassert(isScalar(op->b.type()));
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
@@ -177,8 +177,8 @@ private:
   }
 
   void visit(const Add *op) {
-    iassert(isScalar(op->a.type()));
-    iassert(isScalar(op->b.type()));
+    simit_iassert(isScalar(op->a.type()));
+    simit_iassert(isScalar(op->b.type()));
 
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
@@ -188,8 +188,8 @@ private:
   }
   
   void visit(const Mul *op) {
-    iassert(isScalar(op->a.type()));
-    iassert(isScalar(op->b.type()));
+    simit_iassert(isScalar(op->a.type()));
+    simit_iassert(isScalar(op->b.type()));
 
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
@@ -199,8 +199,8 @@ private:
   }
 
   void visit(const Div *op) {
-    iassert(isScalar(op->a.type()));
-    iassert(isScalar(op->b.type()));
+    simit_iassert(isScalar(op->a.type()));
+    simit_iassert(isScalar(op->b.type()));
 
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
@@ -240,7 +240,7 @@ private:
 
     if (isa<IndexExpr>(tensor)) {
       const IndexExpr *indexExpr = to<IndexExpr>(tensor);
-      iassert(indexExpr->resultVars.size() == op->indexVars.size());
+      simit_iassert(indexExpr->resultVars.size() == op->indexVars.size());
 
       bool containsReduction = false;
       map<IndexVar,IndexVar> substitutions;
@@ -284,9 +284,9 @@ class NormAndDotRewriter : public ir::IRRewriter {
   IRBuilder builder;
   void visit(const ir::CallStmt *op) {
     if (op->callee.getName() == "norm") {
-      iassert(op->actuals.size() == 1);
-      iassert(op->results.size() == 1);
-      uassert(op->actuals[0].type().isTensor());
+      simit_iassert(op->actuals.size() == 1);
+      simit_iassert(op->results.size() == 1);
+      simit_uassert(op->actuals[0].type().isTensor());
       
       auto dot = builder.innerProduct(op->actuals[0], op->actuals[0]);
       auto tmpvar = builder.temporary(op->results[0].getType(), "normrewrite");
@@ -295,9 +295,9 @@ class NormAndDotRewriter : public ir::IRRewriter {
                                               {VarExpr::make(tmpvar)}));
     }
     else if (op->callee.getName() == "dot") {
-      iassert(op->actuals.size() == 2);
-      iassert(op->results.size() == 1);
-      iassert(op->actuals[0].type() == op->actuals[1].type());
+      simit_iassert(op->actuals.size() == 2);
+      simit_iassert(op->results.size() == 1);
+      simit_iassert(op->actuals[0].type() == op->actuals[1].type());
 
       Expr l = op->actuals[0];
       Expr r = op->actuals[1];

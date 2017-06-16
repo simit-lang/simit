@@ -80,7 +80,7 @@ void IRPrinter::visit(const Literal *op) {
       size_t size;
       ScalarType::Kind componentType;
 
-      iassert(op->type.kind() == Type::Tensor);
+      simit_iassert(op->type.kind() == Type::Tensor);
       const TensorType *type = op->type.toTensor();
       size = type->size();
       componentType = type->getComponentType().kind;

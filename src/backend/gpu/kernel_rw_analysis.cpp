@@ -43,7 +43,7 @@ public:
   }
 
   void visit(const GPUKernel *op) {
-    iassert(!curKernel);
+    simit_iassert(!curKernel);
     curKernel = op;
     IRVisitor::visit(op);
     curKernel = nullptr;
@@ -87,15 +87,15 @@ public:
     // as long as it's a kernel dimension, since in this case each thread
     // only has access to its piece of the set.
     std::vector<Var> domainSets;
-    iassert(op->sharding.xSharded);
-    iassert(isa<VarExpr>(op->sharding.xDomain.getSet()));
+    simit_iassert(op->sharding.xSharded);
+    simit_iassert(isa<VarExpr>(op->sharding.xDomain.getSet()));
     domainSets.push_back(to<VarExpr>(op->sharding.xDomain.getSet())->var);
     if (op->sharding.ySharded) {
-      iassert(isa<VarExpr>(op->sharding.yDomain.getSet()));
+      simit_iassert(isa<VarExpr>(op->sharding.yDomain.getSet()));
       domainSets.push_back(to<VarExpr>(op->sharding.yDomain.getSet())->var);
     }
     if (op->sharding.zSharded) {
-      iassert(isa<VarExpr>(op->sharding.zDomain.getSet()));
+      simit_iassert(isa<VarExpr>(op->sharding.zDomain.getSet()));
       domainSets.push_back(to<VarExpr>(op->sharding.zDomain.getSet())->var);
     }
     for (auto &v : maybeUnsafe) {

@@ -7,8 +7,8 @@ using namespace std;
 namespace simit {
 
 // class Error
-ParseError::ParseError(int firstLine, int firstColumn, int lastLine, int lastColumn,
-             std::string msg)
+ParseError::ParseError(int firstLine, int firstColumn, int lastLine,
+                       int lastColumn, std::string msg)
     : firstLine(firstLine), firstColumn(firstColumn),
       lastLine(lastLine), lastColumn(lastColumn),
       msg(msg) {}

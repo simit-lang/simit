@@ -54,8 +54,8 @@ public:
   /// Return the tensor index's defining stencil.
   const StencilLayout& getStencilLayout() const;
 
-  /// Replace the StencilLayout of the TensorIndex. Used during compile to assign
-  /// the index locations of the stencil layout.
+  /// Replace the StencilLayout of the TensorIndex.
+  /// Used during compile to assign the index locations of the stencil layout.
   void setStencilLayout(StencilLayout);
 
   /// Return the tensor index's rowptr array.  A rowptr array contains the

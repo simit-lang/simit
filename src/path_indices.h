@@ -186,7 +186,7 @@ public:
   const unsigned* getSinkData() const {return sinksData;}
 
   unsigned numNeighbors(unsigned elemID) const {
-    iassert(numElems > elemID);
+    simit_iassert(numElems > elemID);
     return coordsData[elemID+1]-coordsData[elemID];
   }
 
@@ -219,7 +219,7 @@ inline bool isa(PathIndex pi) {
 
 template <typename PI>
 inline const PI* to(PathIndex pi) {
-  iassert(isa<PI>(pi)) << "Wrong PathIndex type " << pi;
+  simit_iassert(isa<PI>(pi)) << "Wrong PathIndex type " << pi;
   return static_cast<const PI*>(pi.ptr);
 }
 

@@ -128,7 +128,7 @@ class CreateSubsetLoopVisitor : public IRVisitor {
 public:
   CreateSubsetLoopVisitor(IndexVariableLoop loop, Environment* environment,
                           Storage* storage) {
-    iassert(loop.isLinked());
+    simit_iassert(loop.isLinked());
     this->indexVar = loop.getIndexVar();
     this->inductionVar = loop.getInductionVar();
     this->linkedIndexVar = loop.getLinkedLoop().getIndexVar();
@@ -219,8 +219,8 @@ private:
         if (ac != CompoundOperator::None || bc != CompoundOperator::None) {
           // TODO: Handle (B+C)(D-E) = BD-BE+CD-CE
           //       In this case CE will have two compound operators but +- = -
-          tassert(ac == CompoundOperator::None || bc== CompoundOperator::None ||
-                  ac==bc);
+          simit_tassert(ac == CompoundOperator::None
+                        || bc== CompoundOperator::None || ac==bc);
           cs.setCompoundOperator(ac);
         }
 
@@ -266,7 +266,7 @@ private:
   }
 
   void visit(const IndexedTensor *indexedTensor) {
-    iassert(isa<VarExpr>(indexedTensor->tensor))
+    simit_iassert(isa<VarExpr>(indexedTensor->tensor))
         << "at this point the index expressions should have been flattened";
     Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
 
