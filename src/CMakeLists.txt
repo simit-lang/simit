@@ -36,6 +36,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${SIMIT_LIBRARIES})
 # Handle no RTTI sources
 set_source_files_properties(${SIMIT_SOURCES_NO_RTTI} PROPERTIES COMPILE_FLAGS "-fno-rtti")
 
+# TACO
+find_library(taco taco ${TACO_LIBRARY_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${taco})
+include_directories(${TACO_INCLUDE_DIR} ${TACO_SRC_DIR})
 
 # LLVM
 if (DEFINED ENV{LLVM_CONFIG})
