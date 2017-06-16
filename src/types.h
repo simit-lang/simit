@@ -424,6 +424,20 @@ inline bool isElementTensorType(Type type) {
   return !isSystemTensorType(type);
 }
 
+inline bool isFixedSizeTensor(Type type) {
+  if (!type.isTensor()) {
+    return false;
+  }
+  for (auto&& dimension : type.toTensor()->getDimensions()) {
+    for (auto&& indexSet : dimension.getIndexSets()) {
+      if (indexSet.getKind() != IndexSet::Range) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool operator==(const Type&, const Type&);
 bool operator!=(const Type&, const Type&);
 

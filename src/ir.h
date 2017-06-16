@@ -439,7 +439,7 @@ struct Kernel : public StmtNode {
 };
 
 struct Block : public StmtNode {
-  Stmt first, rest;
+  vector<Stmt> stmts;
   static Stmt make(Stmt first, Stmt rest);
   static Stmt make(std::vector<Stmt> stmts);
   void accept(IRVisitorStrict *v) const {v->visit((const Block*)this);}

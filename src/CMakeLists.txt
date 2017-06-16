@@ -27,6 +27,7 @@ add_subdirectory(backend)
 add_subdirectory(frontend)
 add_subdirectory(lower)
 add_subdirectory(visualizer)
+add_subdirectory(program_analysis)
 
 add_definitions(${SIMIT_DEFINITIONS})
 include_directories(${SIMIT_INCLUDE_DIRS})
