@@ -1,0 +1,3 @@
+[submodule "external/taco"]
+	path = external/taco
+	url = https://github.com/tensor-compiler/taco.git
