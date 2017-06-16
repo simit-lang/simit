@@ -37,6 +37,3 @@ else()
 
   #include_directories(${OPENGL_INCLUDE_DIRS}  ${GLUT_INCLUDE_DIRS})
 endif()
-
-# TACO
-include_directories(${TACO_INCLUDE_DIR} ${TACO_SRC_DIR})

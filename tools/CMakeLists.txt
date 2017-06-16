@@ -28,6 +28,3 @@ endforeach()
 if (CUDA_FOUND)
   add_definitions(-DGPU)
 endif ()
-
-# TACO
-include_directories(${TACO_INCLUDE_DIR} ${TACO_SRC_DIR})

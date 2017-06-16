@@ -38,6 +38,3 @@ if ($ENV{SIMIT_TEST_VIZ})
     target_link_libraries(${TESTS_F32} ${PROJECT_NAME}viz)
   endif ()
 endif ()
-
-# TACO
-include_directories(${TACO_INCLUDE_DIR} ${TACO_SRC_DIR})
