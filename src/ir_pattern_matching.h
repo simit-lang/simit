@@ -16,27 +16,31 @@ struct HandleCallbackArguments {
   }
 
 #if __cplusplus < 201700L
-  template <typename T, typename U, typename = typename std::enable_if<std::is_same<bool,
-                                                                                    typename std::result_of<U(const T*)>::type>::value>::type>
+  template <typename T, typename U, typename =
+                typename std::enable_if<std::is_same<bool,
+                    typename std::result_of<U(const T*)>::type>::value>::type>
   static bool call(const T* node, U&& func) {
     return func(node);
   }
 
-  template <typename T, typename U, typename = typename std::enable_if<std::is_same<void,
-                                                                                    typename std::result_of<U(const T*)>::type>::value>::type>
+  template <typename T, typename U, typename =
+                typename std::enable_if<std::is_same<void,
+                    typename std::result_of<U(const T*)>::type>::value>::type>
   static bool call(const T* node, U&& func, int* dummy = 0) {
     func(node);
     return true;
   }
 #else
-  template <typename T, typename U, typename = typename std::enable_if<std::is_same<bool,
-                                                                                    typename std::invoke_result<U(const T*)>::type>::value>::type>
+  template <typename T, typename U, typename =
+                typename std::enable_if<std::is_same<bool,
+                    typename std::invoke_result<U(const T*)>::type>::value>::type>
   static bool call(const T* node, U&& func) {
     return func(node);
   }
 
-  template <typename T, typename U, typename = typename std::enable_if<std::is_same<void,
-                                                                                    typename std::invoke_result<U(const T*)>::type>::value>::type>
+  template <typename T, typename U, typename =
+                typename std::enable_if<std::is_same<void,
+                    typename std::invoke_result<U(const T*)>::type>::value>::type>
   static bool call(const T* node, U&& func, int* dummy = 0) {
     func(node);
     return true;
@@ -99,7 +103,8 @@ public:
     }\
     \
     template <typename ExprOrStmt, typename Callback, typename Sub1>\
-    static bool match(ExprOrStmt expr, const std::tuple<Callback, Sub1>& callbacks) {\
+    static bool match(ExprOrStmt expr,\
+                      const std::tuple<Callback, Sub1>& callbacks) {\
       if (isa<TYPE>(expr)) {\
         const TYPE* node = to<TYPE>(expr);\
         return HandleCallbackArguments::call(node, std::get<0>(callbacks)) &&\
@@ -123,8 +128,10 @@ public:
       return isa<TYPE>(expr);\
     }\
     \
-    template <typename ExprOrStmt, typename Callback, typename Sub1, typename Sub2>\
-    static bool match(ExprOrStmt expr, const std::tuple<Callback,Sub1, Sub2>& callbacks) {\
+    template <typename ExprOrStmt, typename Callback,\
+              typename Sub1, typename Sub2>\
+    static bool match(ExprOrStmt expr,\
+                const std::tuple<Callback,Sub1, Sub2>& callbacks) {\
       if (isa<TYPE>(expr)) {\
         const TYPE* node = to<TYPE>(expr);\
         return HandleCallbackArguments::call(node, std::get<0>(callbacks)) &&\
@@ -149,8 +156,10 @@ public:
       return isa<TYPE>(expr);\
     }\
     \
-    template <typename ExprOrStmt, typename Callback, typename Sub1, typename Sub2, typename Sub3>\
-    static bool match(ExprOrStmt expr, const std::tuple<Callback, Sub1, Sub2, Sub3>& callbacks) {\
+    template <typename ExprOrStmt, typename Callback,\
+              typename Sub1, typename Sub2, typename Sub3>\
+    static bool match(ExprOrStmt expr,\
+                      const std::tuple<Callback, Sub1, Sub2, Sub3>& callbacks) {\
       if (isa<TYPE>(expr)) {\
         const TYPE* node = to<TYPE>(expr);\
         return HandleCallbackArguments::call(node, std::get<0>(callbacks)) &&\
@@ -183,7 +192,8 @@ public:
   }
 
   template <typename ExprOrStmt, typename Callback, typename Sub1>
-  static bool match(ExprOrStmt expr, const std::tuple<Callback, Sub1>& callbacks) {
+  static bool match(ExprOrStmt expr,
+                    const std::tuple<Callback, Sub1>& callbacks) {
     if (isa<UnaryExpr>(expr)) {
       const UnaryExpr* node = to<UnaryExpr>(expr);
       return HandleCallbackArguments::call(node, std::get<0>(callbacks)) &&
@@ -207,7 +217,8 @@ public:
   }
 
   template <typename ExprOrStmt, typename Callback, typename Sub1, typename Sub2>
-  static bool match(ExprOrStmt expr, const std::tuple<Callback,Sub1, Sub2>& callbacks) {
+  static bool match(ExprOrStmt expr,
+                    const std::tuple<Callback,Sub1, Sub2>& callbacks) {
     if (isa<BinaryExpr>(expr)) {
       const BinaryExpr* node = to<BinaryExpr>(expr);
       return HandleCallbackArguments::call(node, std::get<0>(callbacks)) &&

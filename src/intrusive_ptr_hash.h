@@ -22,8 +22,6 @@ struct hash<simit::util::IntrusivePtr<T>> {
     }\
   };
 
-// SFINAE on detecting base class doesn't work with clang, need to wait for C++17. Workaround here
-
 HASH_INTRUSIVE_PTR(simit::ir::Var)
 HASH_INTRUSIVE_PTR(simit::ir::IndexVar)
 HASH_INTRUSIVE_PTR(simit::ir::Expr)
@@ -31,7 +29,6 @@ HASH_INTRUSIVE_PTR(simit::ir::Stmt)
 HASH_INTRUSIVE_PTR(simit::ir::Func)
 
 #undef HASH_INTRUSIVE_PTR
-
 }
 
 #endif

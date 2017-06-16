@@ -10,6 +10,9 @@ Expr IRRewriter::rewrite(Expr e) {
     e.accept(this);
     e = expr;
   }
+  else {
+    e = Expr();
+  }
   expr = Expr();
   stmt = Stmt();
   func = Func();
@@ -25,6 +28,9 @@ Stmt IRRewriter::rewrite(Stmt s) {
     }
     s = stmt;
   }
+  else {
+    s = Stmt();
+  }
   expr = Expr();
   stmt = Stmt();
   func = Func();
@@ -35,6 +41,9 @@ Func IRRewriter::rewrite(Func f) {
   if (f.defined()) {
     f.accept(this);
     f = func;
+  }
+  else {
+    f = Func();
   }
   expr = Expr();
   stmt = Stmt();
