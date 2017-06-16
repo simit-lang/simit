@@ -27,7 +27,7 @@ BackendImpl* getBackendImpl(const std::string &type) {
   }
 #endif
 
-  ierror << "Invalid backend choice: " << type << ". "
+  simit_ierror << "Invalid backend choice: " << type << ". "
          << "Did you forget to call simit::init()?";
   return nullptr;
 }

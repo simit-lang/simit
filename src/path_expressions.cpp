@@ -114,7 +114,7 @@ std::map<Var,Set> PathExpression::getSets() const {
 PathExpression PathExpression::reverse() {
   class ReverseRewriter : public PathExpressionRewriter {
     virtual void visit(const Link *pe) {
-      tassert(!pe->getStencil().defined())
+      simit_tassert(!pe->getStencil().defined())
           << "Transposing stencil matrices not supported yet.";
       switch (pe->getType()) {
         case Link::ev:
@@ -127,7 +127,7 @@ PathExpression PathExpression::reverse() {
           expr = Link::make(pe->getRhs(), pe->getLhs(), Link::vv);
           break;
         default:
-          unreachable;
+          simit_unreachable;
           break;
       }
     }
@@ -186,7 +186,7 @@ Set Link::getEdgeSet() const   {
 }
 
 const Var &Link::getPathEndpoint(unsigned i) const {
-  iassert(i < 2) << "attempting to retrieve non-existing path endpoint";
+  simit_iassert(i < 2) << "attempting to retrieve non-existing path endpoint";
   return (i==0) ? lhs : rhs;
 }
 
@@ -229,9 +229,9 @@ QuantifiedConnective::QuantifiedConnective(const vector<Var> &freeVars,
                                            const PathExpression &rhs)
     : freeVars(freeVars), quantifiedVars(qvars), lhs(lhs), rhs(rhs) {
   // TODO: Remove these restrictions
-  iassert(freeVars.size() == 2)
+  simit_iassert(freeVars.size() == 2)
       << "For now, we only support matrix path expressions";
-  iassert(quantifiedVars.size() < 2)
+  simit_iassert(quantifiedVars.size() < 2)
       << "For now, we only support one quantified variable";
 }
 
@@ -299,11 +299,11 @@ void Or::accept(PathExpressionVisitor *visitor) const {
 
 // class RenamedPathExpression
 const Var &RenamedPathExpression::getPathEndpoint(unsigned i) const {
-  iassert(i < pe.getNumPathEndpoints())
+  simit_iassert(i < pe.getNumPathEndpoints())
       << "path expression does not have requested endpoint";
-  iassert(renames.find(pe.getPathEndpoint(i)) != renames.end())
+  simit_iassert(renames.find(pe.getPathEndpoint(i)) != renames.end())
       << "no mapping exist for endpoint " << pe.getPathEndpoint(i);
-  iassert(util::contains(renames, pe.getPathEndpoint(i)));
+  simit_iassert(util::contains(renames, pe.getPathEndpoint(i)));
   return renames.at(pe.getPathEndpoint(i));
 }
 
@@ -412,7 +412,7 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
 
 // class PathExpressionPrinter
 void PathExpressionPrinter::print(const Var &v) {
-  iassert(v.defined()) << "attempting to print undefined var";
+  simit_iassert(v.defined()) << "attempting to print undefined var";
   std::string name;
   if (util::contains(names, v)) {
     name = names.at(v);
@@ -466,7 +466,7 @@ void PathExpressionPrinter::print(const PathExpression &pe) {
   unsigned numFreeVars = pe.getNumPathEndpoints();
   for (unsigned i=0; i<numFreeVars; ++i) {
     Var ep = pe.getPathEndpoint(i);
-    iassert(util::contains(bindings, ep))
+    simit_iassert(util::contains(bindings, ep))
     << "no binding for " << ep << " (" << ep.ptr << ")";
     print(ep);
     print(bindings.at(ep));
@@ -491,7 +491,7 @@ void PathExpressionPrinter::visit(const Link *pe) {
 
 void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
   auto &qvars = pe->getQuantifiedVars();
-  iassert(qvars.size() == 0 || qvars.size() == 1)
+  simit_iassert(qvars.size() == 0 || qvars.size() == 1)
       << "only one or zero quantified variables currently supported";
 
   if (qvars.size() > 0) {
@@ -499,7 +499,7 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
     unsigned numQuantifiedVars = qvars.size();
     for (unsigned i=0; i<numQuantifiedVars; ++i) {
       auto &qvar = qvars[i];
-      iassert(util::contains(bindings, qvar.getVar()))
+      simit_iassert(util::contains(bindings, qvar.getVar()))
       << "no binding for " << qvar.getVar();
       print(qvar);
       print(bindings.at(qvar.getVar()));

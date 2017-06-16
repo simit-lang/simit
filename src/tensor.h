@@ -83,13 +83,13 @@ public:
   }
 
   ComponentType& operator()(const std::vector<size_t>& indices) {
-    iassert(indices.size() == getOrder())
+    simit_iassert(indices.size() == getOrder())
         << "Incorrect number of indices used to index tensor.";
     return data[util::computeOffset(util::seq<dimensions...>(), indices)];
   }
 
   const ComponentType& operator()(const std::vector<size_t>& indices) const {
-    iassert(indices.size() == getOrder())
+    simit_iassert(indices.size() == getOrder())
         << "Incorrect number of indices used to index tensor.";
     return data[util::computeOffset(util::seq<dimensions...>(), indices)];
   }
@@ -236,7 +236,7 @@ operator<<(std::ostream& os, const Tensor<ComponentType,dimensions...>& t) {
 
   std::ios::fmtflags osflags(os.flags());
   if (type.getOrder() == 0) {
-    iassert(t.getOrder() == 0);
+    simit_iassert(t.getOrder() == 0);
     os << t({});
   }
   else if (type.getOrder() == 1) {

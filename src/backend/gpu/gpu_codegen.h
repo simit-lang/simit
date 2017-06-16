@@ -39,7 +39,7 @@ inline void __checkCudaErrors(CUresult err, const char *file, const int line,
     else {
       debugTips = "No idea.";
     }
-    ierror << "checkCudaErrors() Driver API error = " << errName
+    simit_ierror << "checkCudaErrors() Driver API error = " << errName
            << "(" << err << "):\n"
            << errStr << "\n"
            << "from file <" << file

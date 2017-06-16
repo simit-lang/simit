@@ -80,7 +80,7 @@ private:
     }
 
     std::vector<IndexSet> dimensions = tensor->getOuterDimensions();
-    iassert(order == dimensions.size());
+    simit_iassert(order == dimensions.size());
 
     TensorStorage tensorStorage = isElementTensorType(tensor) ? 
       TensorStorage::Kind::Dense : 
@@ -101,8 +101,8 @@ private:
         break;
       }
       case TensorStorage::Kind::Indexed: {
-        iassert(isa<VarExpr>(tensorExpr));
-        iassert(order == 2);
+        simit_iassert(isa<VarExpr>(tensorExpr));
+        simit_iassert(order == 2);
 
         Var tensorVar = to<VarExpr>(tensorExpr)->var;
 
@@ -120,7 +120,7 @@ private:
         break;
       }
       case TensorStorage::Kind::Diagonal: {
-        iassert(order == dimensions.size());
+        simit_iassert(order == dimensions.size());
 
         // Expand indices of element being read.
         tensorReadIndex = Var(names.getName(), Int);
@@ -131,7 +131,7 @@ private:
         break;
       }
       default:
-        iassert(false);
+        simit_iassert(false);
         break;
     }
     
@@ -221,7 +221,7 @@ private:
         break;
       }
       default:
-        iassert(false);
+        simit_iassert(false);
         break;
     }
 
@@ -238,7 +238,7 @@ private:
         case TensorStorage::Kind::Dense: {
           // Column vector printing should have already been handled as a 
           // separate case.
-          iassert(order != 1 || !tensor->isColumnVector);
+          simit_iassert(order != 1 || !tensor->isColumnVector);
 
           Expr printIndentCond = Eq::make(
             to<VarExpr>(tensorReadIndices[order - 1]), Literal::make(0));
@@ -248,7 +248,7 @@ private:
           printSmallTensor = ForRange::make(
             to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
             Length::make(dimensions[order - 1]), 
-            Block::make({maybePrintIndent, printElementFormatted, printSpace})); 
+            Block::make({maybePrintIndent, printElementFormatted, printSpace}));
           if (order >= 2) {
             printSmallTensor = ForRange::make(
               to<VarExpr>(tensorReadIndices[order - 2])->var, 
@@ -351,7 +351,7 @@ private:
           break;
         }
         default:
-          iassert(false);
+          simit_iassert(false);
           break;
       }
     }

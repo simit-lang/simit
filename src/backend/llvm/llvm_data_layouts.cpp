@@ -14,12 +14,14 @@ namespace simit {
 namespace backend {
 
 llvm::Value* UnstructuredSetLayout::getSize(unsigned i) {
-  iassert(i == 0) << "Only 1 explicit dimension for unstructured sets";
-  return llvmCreateExtractValue(builder, value, {0}, util::toString(set)+".size()");
+  simit_iassert(i == 0) << "Only 1 explicit dimension for unstructured sets";
+  return llvmCreateExtractValue(builder, value, {0},
+                                util::toString(set)+".size()");
 }
 
 llvm::Value* UnstructuredSetLayout::getTotalSize() {
-  return llvmCreateExtractValue(builder, value, {0}, util::toString(set)+".size()");
+  return llvmCreateExtractValue(builder, value, {0},
+                                util::toString(set)+".size()");
 }
 
 int UnstructuredSetLayout::getFieldsOffset() {
@@ -28,8 +30,8 @@ int UnstructuredSetLayout::getFieldsOffset() {
 }
 
 llvm::Value* UnstructuredSetLayout::makeSet(Set *actual, ir::Type type) {
-  iassert(actual->getKind() == Set::Unstructured);
-  iassert(actual->getCardinality() == 0);
+  simit_iassert(actual->getKind() == Set::Unstructured);
+  simit_iassert(actual->getCardinality() == 0);
 
   const ir::UnstructuredSetType *setType = type.toUnstructuredSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
@@ -48,8 +50,8 @@ llvm::Value* UnstructuredSetLayout::makeSet(Set *actual, ir::Type type) {
 
 void UnstructuredSetLayout::writeSet(
     Set *actual, ir::Type type, void *externPtr) {
-  iassert(actual->getKind() == Set::Unstructured);
-  iassert(actual->getCardinality() == 0);
+  simit_iassert(actual->getKind() == Set::Unstructured);
+  simit_iassert(actual->getCardinality() == 0);
 
   const ir::SetType *setType = type.toSet();
 
@@ -65,7 +67,8 @@ void UnstructuredSetLayout::writeSet(
 }
 
 llvm::Value* UnstructuredEdgeSetLayout::getEpsArray() {
-  return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
+  return llvmCreateExtractValue(builder, value, {1},
+                                util::toString(set)+".eps()");
 }
 
 int UnstructuredEdgeSetLayout::getFieldsOffset() {
@@ -74,7 +77,7 @@ int UnstructuredEdgeSetLayout::getFieldsOffset() {
 }
 
 llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
-  iassert(actual->getKind() == Set::Unstructured);
+  simit_iassert(actual->getKind() == Set::Unstructured);
 
   const ir::UnstructuredSetType *setType = type.toUnstructuredSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
@@ -88,7 +91,7 @@ llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
 
   // Fields
   for (auto &field : setType->elementType.toElement()->fields) {
-    iassert(field.type.isTensor());
+    simit_iassert(field.type.isTensor());
     setData.push_back(llvmPtr(*field.type.toTensor(),
                               actual->getFieldData(field.name)));
   }
@@ -97,7 +100,7 @@ llvm::Value* UnstructuredEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
 
 void UnstructuredEdgeSetLayout::writeSet(Set *actual, ir::Type type,
                                          void *externPtr) {
-  iassert(actual->getKind() == Set::Unstructured);
+  simit_iassert(actual->getKind() == Set::Unstructured);
 
   const ir::SetType *setType = type.toSet();
 
@@ -111,14 +114,14 @@ void UnstructuredEdgeSetLayout::writeSet(Set *actual, ir::Type type,
   // Fields
   void **externPtrFieldCast = (void**)(externPtrCast+3);
   for (auto &field : setType->elementType.toElement()->fields) {
-    iassert(field.type.isTensor());
+    simit_iassert(field.type.isTensor());
     *externPtrFieldCast = actual->getFieldData(field.name);
     externPtrFieldCast++;
   }
 }
 
 llvm::Value* GridSetLayout::getSize(unsigned i) {
-  iassert(i < set.type().toGridSet()->dimensions);
+  simit_iassert(i < set.type().toGridSet()->dimensions);
   auto sizes = llvmCreateExtractValue(builder, value, {0},
                                       util::toString(set)+".sizes()");
   std::string name = string(sizes->getName()) + "[" + std::to_string(i) + "]";
@@ -139,9 +142,10 @@ llvm::Value* GridSetLayout::getTotalSize() {
 }
 
 llvm::Value* GridSetLayout::getEpsArray() {
-  iassert(!kIndexlessStencils)
+  simit_iassert(!kIndexlessStencils)
       << "Endpoints array undefined when in indexless mode";
-  return llvmCreateExtractValue(builder, value, {1}, util::toString(set)+".eps()");
+  return llvmCreateExtractValue(builder, value, {1},
+                                util::toString(set)+".eps()");
 }
 
 int GridSetLayout::getFieldsOffset() {
@@ -150,7 +154,7 @@ int GridSetLayout::getFieldsOffset() {
 }
 
 llvm::Value* GridSetLayout::makeSet(Set *actual, ir::Type type) {
-  iassert(actual->getKind() == Set::Grid);
+  simit_iassert(actual->getKind() == Set::Grid);
 
   const ir::GridSetType *setType = type.toGridSet();
   llvm::StructType *llvmSetType = llvmType(*setType);
@@ -159,7 +163,7 @@ llvm::Value* GridSetLayout::makeSet(Set *actual, ir::Type type) {
   // Set sizes
   unsigned ndims = setType->dimensions;
   const vector<int> &dimensions = actual->getDimensions();
-  uassert(dimensions.size() == ndims)
+  simit_uassert(dimensions.size() == ndims)
       << "Grid edge set with wrong number of dimensions: "
       << dimensions.size() << " passed, but " << ndims
       << " required";
@@ -186,7 +190,7 @@ llvm::Value* GridSetLayout::makeSet(Set *actual, ir::Type type) {
 }
 
 void GridSetLayout::writeSet(Set *actual, ir::Type type, void *externPtr) {
-  iassert(actual->getKind() == Set::Grid);
+  simit_iassert(actual->getKind() == Set::Grid);
 
   const ir::SetType *setType = type.toSet();
   int** externPtrCast = (int**)externPtr;
@@ -220,7 +224,7 @@ void GridSetLayout::writeSet(Set *actual, ir::Type type, void *externPtr) {
 
 std::shared_ptr<SetLayout> getSetLayout(
     ir::Expr set, llvm::Value *value, LLVMIRBuilder *builder) {
-  iassert(set.type().isSet());
+  simit_iassert(set.type().isSet());
   if (set.type().isUnstructuredSet()) {
     if (set.type().toUnstructuredSet()->getCardinality() == 0) {
       return std::shared_ptr<SetLayout>(
@@ -236,14 +240,14 @@ std::shared_ptr<SetLayout> getSetLayout(
         new GridSetLayout(set, value, builder));
   }
   else {
-    unreachable;
+    simit_unreachable;
     return nullptr;
   }
 }
 
 /// Build llvm set struct from runtime Set object
 llvm::Value* makeSet(Set *actual, ir::Type type) {
-  iassert(type.isSet());
+  simit_iassert(type.isSet());
   if (type.isUnstructuredSet()) {
     if (type.toUnstructuredSet()->getCardinality() == 0) {
       return UnstructuredSetLayout::makeSet(actual, type);
@@ -256,14 +260,14 @@ llvm::Value* makeSet(Set *actual, ir::Type type) {
     return GridSetLayout::makeSet(actual, type);
   }
   else {
-    unreachable;
+    simit_unreachable;
     return nullptr;
   }
 }
 
 /// Write set pointers to extern pointer structure
 void writeSet(Set *actual, ir::Type type, void *externPtr) {
-  iassert(type.isSet());
+  simit_iassert(type.isSet());
   if (type.isUnstructuredSet()) {
     if (type.toUnstructuredSet()->getCardinality() == 0) {
       return UnstructuredSetLayout::writeSet(actual, type, externPtr);
@@ -276,7 +280,7 @@ void writeSet(Set *actual, ir::Type type, void *externPtr) {
     return GridSetLayout::writeSet(actual, type, externPtr);
   }
   else {
-    unreachable;
+    simit_unreachable;
   }
 }
 

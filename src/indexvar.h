@@ -73,42 +73,42 @@ public:
 
 
   std::string getName() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return ptr->name;
   }
 
   const IndexDomain &getDomain() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return ptr->domain;
   }
 
   Expr* getFixedExpr() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return ptr->fixedExpr;
   }
 
   size_t getNumBlockLevels() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return ptr->domain.getNumIndexSets();
   }
 
   bool isFreeVar() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return  (ptr->kind == Free);
   }
 
   bool isReductionVar() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return (ptr->kind == Reduction);
   }
 
   bool isFixed() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return (ptr->kind == Fixed);
   }
 
   ReductionOperator getOperator() const {
-    iassert(defined()) << "Undefined IndexVar";
+    simit_iassert(defined()) << "Undefined IndexVar";
     return ptr->rop;
   }
 };

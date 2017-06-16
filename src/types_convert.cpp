@@ -8,20 +8,20 @@ namespace ir {
 ScalarType convert(ComponentType componentType) {
   switch (componentType) {
     case ComponentType::Float:
-      iassert(ir::ScalarType::floatBytes == sizeof(float));
+      simit_iassert(ir::ScalarType::floatBytes == sizeof(float));
       return ScalarType::Float;
     case ComponentType::Double:
-      iassert(ir::ScalarType::floatBytes == sizeof(double));
+      simit_iassert(ir::ScalarType::floatBytes == sizeof(double));
       return ScalarType::Float;
     case ComponentType::Int:
       return ScalarType::Int;
     case ComponentType::Boolean:
       return ScalarType::Boolean;
     case ComponentType::FloatComplex:
-      iassert(ir::ScalarType::floatBytes == sizeof(float));
+      simit_iassert(ir::ScalarType::floatBytes == sizeof(float));
       return ScalarType::Complex;
     case ComponentType::DoubleComplex:
-      iassert(ir::ScalarType::floatBytes == sizeof(double));
+      simit_iassert(ir::ScalarType::floatBytes == sizeof(double));
       return ScalarType::Complex;
   }
 }
@@ -57,7 +57,7 @@ ComponentType convert(ScalarType scalarType) {
     case ScalarType::String:
       break;
   }
-  unreachable;
+  simit_unreachable;
   return ComponentType::Int;
 }
 
@@ -85,12 +85,12 @@ static simit::TensorType convert(const TensorType &tensorType) {
   std::vector<int> dimensions;
   dimensions.reserve(outerDimensions.size());
   for (const IndexSet &dim : tensorType.getOuterDimensions()) {
-    iassert(dim.getKind() == IndexSet::Range);
+    simit_iassert(dim.getKind() == IndexSet::Range);
     dimensions.push_back(dim.getSize());
   }
 
   Type blockType = tensorType.getBlockType();
-  iassert(blockType.isTensor());
+  simit_iassert(blockType.isTensor());
   auto blockTensorType = blockType.toTensor();
   if (blockTensorType->order() == 0) {
     return simit::TensorType(convert(blockTensorType->getComponentType()),
@@ -102,7 +102,7 @@ static simit::TensorType convert(const TensorType &tensorType) {
 }
 
 simit::TensorType convert(const Type &type) {
-  iassert(type.isTensor());
+  simit_iassert(type.isTensor());
   const TensorType* tensorType = type.toTensor();
   return convert(*tensorType);
 }

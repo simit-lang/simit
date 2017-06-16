@@ -538,7 +538,7 @@ hilbert_cmp_work(unsigned nDims, unsigned nBytes, unsigned nBits,
 {
   bitmask_t const one = 1;
   bitmask_t const nd1Ones = ones(bitmask_t,nDims) >> 1; /* used in 
-                                                           adjust_rotation macro 
+                                                           adjust_rotation macro
                                                            */
   while (y-- > max)
     {

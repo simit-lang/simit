@@ -338,8 +338,8 @@ fir::StmtBlock::Ptr Parser::parseStmtBlock() {
   }
 }
 
-// stmt: var_decl | const_decl | ivar_decl | if_stmt | while_stmt | do_while_stmt
-//     | for_stmt | print_stmt | apply_stmt | expr_or_assign_stmt
+// stmt: var_decl | const_decl | ivar_decl | if_stmt | while_stmt
+//    | do_while_stmt | for_stmt | print_stmt | apply_stmt | expr_or_assign_stmt
 fir::Stmt::Ptr Parser::parseStmt() {
   switch (peek().type) {
     case Token::Type::VAR:

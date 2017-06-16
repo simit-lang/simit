@@ -92,7 +92,7 @@ public:
   }
 
   const Symbol &getSymbol(const std::string &name) {
-    iassert(hasSymbol(name));
+    simit_iassert(hasSymbol(name));
     return exprSymtable.get(name);
   }
 
@@ -132,7 +132,7 @@ public:
   }
 
   ir::Func getFunction(const std::string &name) {
-    iassert(containsFunction(name)) << "Could not find function " << name;
+    simit_iassert(containsFunction(name)) << "Could not find function " << name;
     return functions[name];
   }
 
@@ -149,7 +149,7 @@ public:
   }
 
   ir::Type getElementType(const std::string &name) {
-    iassert(containsElementType(name));
+    simit_iassert(containsElementType(name));
     return elementTypes[name];
   }
 
@@ -169,7 +169,7 @@ public:
 
 
   void addConstant(ir::Var var, ir::Expr val) {
-    iassert(ir::isa<ir::Literal>(val));
+    simit_iassert(ir::isa<ir::Literal>(val));
     constants[var] = val;
   }
 

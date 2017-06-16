@@ -24,12 +24,12 @@ public:
   void *getData() { return data; }
 
   const int *getRowPtr() {
-    iassert(kind == Sparse);
+    simit_iassert(kind == Sparse);
     return rowPtr;
   }
 
   const int *getColInd() {
-    iassert(kind == Sparse);
+    simit_iassert(kind == Sparse);
     return colInd;
   }
 

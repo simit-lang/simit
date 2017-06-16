@@ -11,12 +11,12 @@ namespace ir {
 /// indices. `indices' should run from innermost (fastest running) to outermost
 /// (slowest running).
 inline Expr getGridPointCoord(vector<Expr> indices, Expr gridSet) {
-  iassert(gridSet.type().isGridSet());
+  simit_iassert(gridSet.type().isGridSet());
 
   const GridSetType *setType = gridSet.type().toGridSet();
   size_t ndims = setType->dimensions;
 
-  iassert(indices.size() == ndims);
+  simit_iassert(indices.size() == ndims);
 
   // index = (... ((indices[d-1]) * sizes[d-2] + indices[d-2]) * sizes[d-3] ...)
   Expr totalInd = indices.back();
@@ -31,13 +31,13 @@ inline Expr getGridPointCoord(vector<Expr> indices, Expr gridSet) {
 /// indices. `indices' should run from innermost (fastest running) to outermost
 /// (slowest running), and include a directional index (mu) innermost.
 inline Expr getGridEdgeCoord(vector<Expr> indices, Expr gridSet) {
-  iassert(gridSet.type().isGridSet());
+  simit_iassert(gridSet.type().isGridSet());
 
   const GridSetType *setType = gridSet.type().toGridSet();
   int ndims = setType->dimensions;
 
   // ndims + 1 indices define a grid edge
-  iassert(static_cast<int>(indices.size()) == ndims + 1);
+  simit_iassert(static_cast<int>(indices.size()) == ndims + 1);
 
   // index = (... ((indices[d]) * sizes[d-1] + indices[d-1]) * sizes[d-2] ...)
   Expr totalInd = indices.back();
@@ -56,7 +56,7 @@ inline Expr getGridEdgeCoord(vector<Expr> indices, Expr gridSet) {
 
 /// Compute the set of grid indices from a linearized grid coordinate
 inline vector<Expr> getGridPointIndices(Expr coord, Expr gridSet) {
-  iassert(gridSet.type().isGridSet());
+  simit_iassert(gridSet.type().isGridSet());
 
   const GridSetType *setType = gridSet.type().toGridSet();
   int ndims = setType->dimensions;
@@ -68,13 +68,13 @@ inline vector<Expr> getGridPointIndices(Expr coord, Expr gridSet) {
     coord = coord / dimSize;
   }
   // Grid point defined by ndims indices
-  iassert(static_cast<int>(indices.size()) == ndims);
+  simit_iassert(static_cast<int>(indices.size()) == ndims);
   return indices;
 }
 
 /// Compute the set of grid indices from a linearized link coordinate
 inline vector<Expr> getGridEdgeIndices(Expr coord, Expr gridSet) {
-  iassert(gridSet.type().isGridSet());
+  simit_iassert(gridSet.type().isGridSet());
 
   const GridSetType *setType = gridSet.type().toGridSet();
   int ndims = setType->dimensions;
@@ -89,19 +89,19 @@ inline vector<Expr> getGridEdgeIndices(Expr coord, Expr gridSet) {
     coord = coord / dimSize;
   }
   // Grid point defined by ndims+1 indices
-  iassert(static_cast<int>(indices.size()) == ndims+1);
+  simit_iassert(static_cast<int>(indices.size()) == ndims+1);
   return indices;
 }
 
 /// Apply grid index offsets with appopriate modulus
 inline vector<Expr> getGridPointOffsetIndices(
     vector<Expr> base, vector<Expr> offset, Expr gridSet) {
-  iassert(base.size() == offset.size());
-  iassert(gridSet.type().isGridSet());
+  simit_iassert(base.size() == offset.size());
+  simit_iassert(gridSet.type().isGridSet());
 
   const GridSetType *setType = gridSet.type().toGridSet();
   int ndims = setType->dimensions;
-  iassert(static_cast<int>(base.size()) == ndims);
+  simit_iassert(static_cast<int>(base.size()) == ndims);
 
   vector<Expr> indices;
   for (int i = 0; i < ndims; ++i) {
@@ -113,19 +113,19 @@ inline vector<Expr> getGridPointOffsetIndices(
   }
 
   // Grid points defined by ndims indices
-  iassert(static_cast<int>(indices.size()) == ndims);
+  simit_iassert(static_cast<int>(indices.size()) == ndims);
   return indices;
 }
 
 /// Apply grid index offsets with appopriate modulus for links
 inline vector<Expr> getGridEdgeOffsetIndices(
     vector<Expr> base, vector<Expr> offset, Expr gridSet) {
-  iassert(base.size() == offset.size());
-  iassert(gridSet.type().isGridSet());
+  simit_iassert(base.size() == offset.size());
+  simit_iassert(gridSet.type().isGridSet());
 
   const GridSetType *setType = gridSet.type().toGridSet();
   int ndims = setType->dimensions;
-  iassert(static_cast<int>(base.size()) == ndims+1);
+  simit_iassert(static_cast<int>(base.size()) == ndims+1);
 
   vector<Expr> indices;
   // Add directional index first
@@ -140,7 +140,7 @@ inline vector<Expr> getGridEdgeOffsetIndices(
   }
 
   // grid edges defined by ndims+1 indices
-  iassert(static_cast<int>(indices.size()) == ndims+1);
+  simit_iassert(static_cast<int>(indices.size()) == ndims+1);
   return indices;
 }
 

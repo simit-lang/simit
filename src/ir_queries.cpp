@@ -232,7 +232,7 @@ std::vector<Func> getCallTree(Func func) {
     }
 
     void visit(const CallStmt *op) {
-      iassert(functionStack.size() > 0);
+      simit_iassert(functionStack.size() > 0);
       addReverseEdge(functionStack.top(), op->callee);
       op->callee.accept(this);
     }
@@ -246,7 +246,7 @@ std::vector<Func> getCallTree(Func func) {
     vector<Func> L;
 
     void visit(Func n) {
-      tassert(temporaryMarked.find(n) == temporaryMarked.end())
+      simit_tassert(temporaryMarked.find(n) == temporaryMarked.end())
           << "Not a call DAG (mutual recursion?)";
       if (unmarked.find(n) != unmarked.end()) {
         temporaryMarked.insert(n);

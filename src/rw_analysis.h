@@ -50,7 +50,7 @@ public:
       for (const IndexDomain& dim : ttype->getDimensions()) {
         for (const IndexSet& is : dim.getIndexSets()) {
           if (is.getKind() == IndexSet::Set) {
-            iassert(isa<VarExpr>(is.getSet()))
+            simit_iassert(isa<VarExpr>(is.getSet()))
                 << "Cannot understand non-Var set dimensions";
             maybeRead(to<VarExpr>(is.getSet())->var);
           }
@@ -94,7 +94,7 @@ public:
     }
     else if (isa<FieldRead>(op->buffer)) {
       const FieldRead* fieldRead = to<FieldRead>(op->buffer);
-      iassert(isa<VarExpr>(fieldRead->elementOrSet));
+      simit_iassert(isa<VarExpr>(fieldRead->elementOrSet));
       maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
     op->value.accept(this);
@@ -106,13 +106,13 @@ public:
     }
     else if (isa<FieldRead>(op->buffer)) {
       const FieldRead* fieldRead = to<FieldRead>(op->buffer);
-      iassert(isa<VarExpr>(fieldRead->elementOrSet));
+      simit_iassert(isa<VarExpr>(fieldRead->elementOrSet));
       maybeRead(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
     op->index.accept(this);
   }
   void visit(const FieldWrite *op) {
-    iassert(isa<VarExpr>(op->elementOrSet));
+    simit_iassert(isa<VarExpr>(op->elementOrSet));
     maybeWrite(to<VarExpr>(op->elementOrSet)->var);
     IRVisitor::visit(op);
   }

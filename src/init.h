@@ -23,13 +23,13 @@ struct Settings {
 
 inline void init(const Settings& settings) {
   // backend
-  uassert(std::find(VALID_BACKENDS.begin(), VALID_BACKENDS.end(),
+  simit_uassert(std::find(VALID_BACKENDS.begin(), VALID_BACKENDS.end(),
                     settings.backend) != VALID_BACKENDS.end())
       << "Invalid backend: " << settings.backend;
   kBackend = settings.backend;
 
   // floatSize
-  uassert(settings.floatSize == 4 ||
+  simit_uassert(settings.floatSize == 4 ||
           settings.floatSize == 8)
       << "Invalid float bytes: " << settings.floatSize;
   ir::ScalarType::floatBytes = settings.floatSize;

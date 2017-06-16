@@ -34,7 +34,7 @@ std::string IndexVarFactory::makeName() {
 
 // class IRBuilder
 Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
-  tassert(e.type().isTensor())
+  simit_tassert(e.type().isTensor())
       << "Only tensors can be operands of index expressions "
       << "(not " << e.type() << " types)";
 
@@ -57,10 +57,10 @@ Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
       val = Neg::make(a);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
-  iassert(val.defined());
+  simit_iassert(val.defined());
  
   return IndexExpr::make(indexVars, val, e.type().toTensor()->isColumnVector);
 }
@@ -97,11 +97,11 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
     b = IndexedTensor::make(r, *rIndexVars);
   }
   else {
-    iassert(l.type() == r.type());
+    simit_iassert(l.type() == r.type());
     a = IndexedTensor::make(l, indexVars);
     b = IndexedTensor::make(r, indexVars);
   }
-  iassert(a.defined() && b.defined());
+  simit_iassert(a.defined() && b.defined());
 
   Expr val;
   switch (op) {
@@ -118,17 +118,17 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
       val = Div::make(a, b);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
-  iassert(val.defined());
+  simit_iassert(val.defined());
 
   const bool isColumnVector = tensor.type().toTensor()->isColumnVector;
   return IndexExpr::make(indexVars, val, isColumnVector);
 }
 
 Expr IRBuilder::innerProduct(Expr l, Expr r) {
-  iassert(l.type() == r.type());
+  simit_iassert(l.type() == r.type());
   const TensorType *type = l.type().toTensor();
   vector<IndexDomain> dimensions = type->getDimensions();
   auto i = factory.createIndexVar(dimensions[0], ReductionOperator::Sum);
@@ -142,7 +142,7 @@ Expr IRBuilder::innerProduct(Expr l, Expr r) {
 }
 
 Expr IRBuilder::outerProduct(Expr l, Expr r) {
-  iassert(l.type() == r.type());
+  simit_iassert(l.type() == r.type());
   const TensorType *type = l.type().toTensor();
   vector<IndexDomain> dimensions = type->getDimensions();
 
@@ -162,8 +162,8 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   vector<IndexDomain> ldimensions = ltype->getDimensions();
   vector<IndexDomain> rdimensions = rtype->getDimensions();
 
-  iassert(ltype->order() == 2 && rtype->order() == 1);
-  iassert(ldimensions[1] == rdimensions[0]);
+  simit_iassert(ltype->order() == 2 && rtype->order() == 1);
+  simit_iassert(ldimensions[1] == rdimensions[0]);
 
   auto i = factory.createIndexVar(ldimensions[0]);
   auto j = factory.createIndexVar(ldimensions[1], ReductionOperator::Sum);
@@ -181,8 +181,8 @@ Expr IRBuilder::gevm(Expr l, Expr r) {
   vector<IndexDomain> ldimensions = ltype->getDimensions();
   vector<IndexDomain> rdimensions = rtype->getDimensions();
 
-  iassert(ltype->order() == 1 && rtype->order() == 2);
-  iassert(ldimensions[0] == rdimensions[0]);
+  simit_iassert(ltype->order() == 1 && rtype->order() == 2);
+  simit_iassert(ldimensions[0] == rdimensions[0]);
 
   auto i = factory.createIndexVar(rdimensions[1]);
   auto j = factory.createIndexVar(rdimensions[0], ReductionOperator::Sum);
@@ -200,8 +200,8 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
   vector<IndexDomain> ldimensions = ltype->getDimensions();
   vector<IndexDomain> rdimensions = rtype->getDimensions();
 
-  iassert(ltype->order() == 2 && rtype->order() == 2);
-  iassert(ldimensions[1] == rdimensions[0]);
+  simit_iassert(ltype->order() == 2 && rtype->order() == 2);
+  simit_iassert(ldimensions[1] == rdimensions[0]);
 
   auto i = factory.createIndexVar(ldimensions[0]);
   auto j = factory.createIndexVar(rdimensions[1]);
@@ -217,7 +217,7 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
 Expr IRBuilder::transposedMatrix(Expr mat) {
   const TensorType *mattype = mat.type().toTensor();
 
-  iassert(mattype->order() == 2);
+  simit_iassert(mattype->order() == 2);
   const std::vector<IndexDomain> &dimensions = mattype->getDimensions();
 
   std::vector<IndexVar> indexVars;
@@ -243,7 +243,7 @@ Expr IRBuilder::unaryTensorElwiseExpr(UnaryOperator op, Expr e) {
       val = Neg::make(e);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
   return val;
@@ -265,7 +265,7 @@ Expr IRBuilder::binaryTensorElwiseExpr(Expr l, BinaryOperator op, Expr r) {
       val = Div::make(l, r);
       break;
     default:
-      unreachable;
+      simit_unreachable;
       break;
   }
   return val;

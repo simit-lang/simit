@@ -50,7 +50,7 @@ GPUBackend::GPUBackend() : LLVMBackend() {
   LLVMInitializeNVPTXTargetMC();
   LLVMInitializeNVPTXAsmPrinter();
   std::string errStr;
-  uassert(llvm::TargetRegistry::lookupTarget(
+  simit_uassert(llvm::TargetRegistry::lookupTarget(
       "nvptx-nvidia-cuda", errStr) != nullptr)
       << "No available target found for nvptx-nvidia-cuda, ensure LLVM is "
       << "built with the NVPTX backend.";
@@ -93,7 +93,7 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
     inKernel = (f.getName() != this->irFunc.getName());
 
     if (f.getKind() != ir::Func::Internal) continue;
-    iassert(f.getBody().defined());
+    simit_iassert(f.getBody().defined());
 
     this->storage.add(f.getStorage());
 
@@ -116,7 +116,7 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
 
     symtable.unscope();
   }
-  iassert(func);
+  simit_iassert(func);
 
   // Function name sanitization pass
   // This is easiest to do at the LLVM level, since the IR structures
@@ -132,7 +132,7 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
     addNVVMAnnotation(&g, "managed", llvmInt(1), module);
   }
 
-  iassert(!llvm::verifyModule(*module))
+  simit_iassert(!llvm::verifyModule(*module))
       << "LLVM module does not pass verification";
 
 #ifndef SIMIT_DEBUG
@@ -186,9 +186,9 @@ void GPUBackend::compile(const ir::Literal& op) {
     llvm::Constant *dataConstant = nullptr;
     switch (ctype.kind) {
       case ir::ScalarType::Int: {
-        iassert(ctype.bytes() == sizeof(uint32_t))
+        simit_iassert(ctype.bytes() == sizeof(uint32_t))
             << "Incorrect native types used for constant data array";
-        iassert(op.size % sizeof(uint32_t) == 0)
+        simit_iassert(op.size % sizeof(uint32_t) == 0)
             << "Literal data size not a multiple of element size";
         dataConstant = llvm::ConstantDataArray::get(
             LLVM_CTX, llvm::ArrayRef<uint32_t>(
@@ -198,7 +198,7 @@ void GPUBackend::compile(const ir::Literal& op) {
       }
       case ir::ScalarType::Float: {
         if (ir::ScalarType::floatBytes == sizeof(float)) {
-          iassert(op.size % sizeof(float) == 0)
+          simit_iassert(op.size % sizeof(float) == 0)
               << "Literal data size not a multiple of element size";
           dataConstant = llvm::ConstantDataArray::get(
               LLVM_CTX, llvm::ArrayRef<float>(
@@ -206,7 +206,7 @@ void GPUBackend::compile(const ir::Literal& op) {
                   op.size/sizeof(float)));
         }
         else if (ir::ScalarType::floatBytes == sizeof(double)) {
-          iassert(op.size % sizeof(double) == 0)
+          simit_iassert(op.size % sizeof(double) == 0)
               << "Literal data size not a multiple of element size";
           dataConstant = llvm::ConstantDataArray::get(
               LLVM_CTX, llvm::ArrayRef<double>(
@@ -214,7 +214,7 @@ void GPUBackend::compile(const ir::Literal& op) {
                   op.size/sizeof(double)));
         }
         else {
-          unreachable;
+          simit_unreachable;
         }
         break;
       }
@@ -222,7 +222,7 @@ void GPUBackend::compile(const ir::Literal& op) {
         std::vector<llvm::Constant*> structVals;
         llvm::ArrayType* arrayType;
         if (ir::ScalarType::floatBytes == sizeof(float)) {
-          iassert(op.size % sizeof(float_complex) == 0)
+          simit_iassert(op.size % sizeof(float_complex) == 0)
               << "Literal data size not a multiple of element size";
           for (int i = 0; i < op.size/sizeof(float_complex); ++i) {
             float_complex &lit = reinterpret_cast<float_complex*>(op.data)[i];
@@ -232,7 +232,7 @@ void GPUBackend::compile(const ir::Literal& op) {
                                            op.size/sizeof(float_complex));
         }
         else if (ir::ScalarType::floatBytes == sizeof(double)) {
-          iassert(op.size % sizeof(double_complex) == 0)
+          simit_iassert(op.size % sizeof(double_complex) == 0)
               << "Literal data size not a multiple of element size";
           for (int i = 0; i < op.size/sizeof(double_complex); ++i) {
             double_complex &lit = reinterpret_cast<double_complex*>(op.data)[i];
@@ -242,7 +242,7 @@ void GPUBackend::compile(const ir::Literal& op) {
                                            op.size/sizeof(double_complex));
         }
         else {
-          unreachable;
+          simit_unreachable;
         }
         dataConstant = llvm::ConstantArray::get(arrayType, structVals);
         break;
@@ -250,9 +250,9 @@ void GPUBackend::compile(const ir::Literal& op) {
       case ir::ScalarType::Boolean: {
         not_supported_yet;
         // This code is untested, but likely correct
-        iassert(op.size % sizeof(bool) == 0)
+        simit_iassert(op.size % sizeof(bool) == 0)
             << "Literal data size not a multiple of element size";
-        iassert(sizeof(bool) == sizeof(uint32_t))
+        simit_iassert(sizeof(bool) == sizeof(uint32_t))
             << "Boolean literal assumes 32-bit data format";
         dataConstant = llvm::ConstantDataArray::get(
             LLVM_CTX, llvm::ArrayRef<uint32_t>(
@@ -260,9 +260,9 @@ void GPUBackend::compile(const ir::Literal& op) {
                 op.size/sizeof(uint32_t)));
         break;
       }
-      default: unreachable;
+      default: simit_unreachable;
     }
-    iassert(dataConstant != nullptr);
+    simit_iassert(dataConstant != nullptr);
 
     llvm::GlobalVariable *globalData =
         new llvm::GlobalVariable(*module, dataConstant->getType(), true,
@@ -273,7 +273,7 @@ void GPUBackend::compile(const ir::Literal& op) {
     llvm::Type *finalType = llvmType(*type, CUDA_GLOBAL_ADDRSPACE);
     val = builder->CreateBitCast(globalData, finalType);
   }
-  iassert(val);
+  simit_iassert(val);
 }
 
 void GPUBackend::compile(const ir::VarExpr& op) {
@@ -297,7 +297,7 @@ void GPUBackend::compile(const ir::IndexRead& op) {
 }
 
 void GPUBackend::compile(const ir::VarDecl& op) {
-  tassert(op.var.getType().isTensor()) << "Only tensor decls supported";
+  simit_tassert(op.var.getType().isTensor()) << "Only tensor decls supported";
 
   if (inKernel) {
     ir::Var var = op.var;
@@ -338,7 +338,7 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
   const ir::TensorType *valType = op.value.type().toTensor();
   if (op.cop != ir::CompoundOperator::None &&
       varType->order() == 0) {
-    iassert(symtable.contains(op.var)) << op.var << " has not been declared";
+    simit_iassert(symtable.contains(op.var)) << op.var << " has not been declared";
     switch (op.cop) {
       case ir::CompoundOperator::Add: {
         llvm::Value *value = compile(op.value);
@@ -348,7 +348,7 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
           varPtr = builder->CreateLoad(varPtr, op.var.getName());
         }
         // Guard against non-pointer
-        iassert(varPtr->getType()->isPointerTy());
+        simit_iassert(varPtr->getType()->isPointerTy());
         // TODO: This check should probably look at things in env instead
         if (buffers.find(op.var) != buffers.end()) {
           // Global or argument which might be accessed in parallel
@@ -360,7 +360,7 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
         }
         break;
       }
-      default: ierror << "Unknown compound operator type: " << op.cop;
+      default: simit_ierror << "Unknown compound operator type: " << op.cop;
     }
   }
   else if (varType->order() > 0 && valType->order() == 0 &&
@@ -412,7 +412,7 @@ void GPUBackend::compile(const ir::CallStmt& op) {
   ir::Func callee = op.callee;
 
   if (callee.getKind() == ir::Func::Intrinsic) {
-    iassert(callee != ir::intrinsics::norm() &&
+    simit_iassert(callee != ir::intrinsics::norm() &&
             callee != ir::intrinsics::dot())
         << "norm and dot should have been lowered";
 
@@ -425,18 +425,18 @@ void GPUBackend::compile(const ir::CallStmt& op) {
       call = builder->CreateCall(fun, args);
     }
     else if (callee == ir::intrinsics::mod()) {
-      iassert(op.actuals.size() == 2) << "mod takes two inputs, got"
+      simit_iassert(op.actuals.size() == 2) << "mod takes two inputs, got"
                                        << op.actuals.size();
       call = builder->CreateSRem(compile(op.actuals[0]),
                                  compile(op.actuals[1]));
     }
     else if (callee == ir::intrinsics::det()) {
-      iassert(args.size() == 1);
+      simit_iassert(args.size() == 1);
       std::string fname = callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args, llvmFloatType());
     }
     else if (callee == ir::intrinsics::inv()) {
-      iassert(args.size() == 1);
+      simit_iassert(args.size() == 1);
 
       ir::Var result = op.results[0];
       llvm::Value *llvmResult = symtable.get(result);
@@ -468,12 +468,12 @@ void GPUBackend::compile(const ir::CallStmt& op) {
       call = llvmCreateComplex(builder.get(), real, imag);
     }
     else {
-      ierror << "intrinsic " << op.callee.getName() << " not found";
+      simit_ierror << "intrinsic " << op.callee.getName() << " not found";
     }
   
-    iassert(call);
+    simit_iassert(call);
     if (!call->getType()->isVoidTy()) {
-      iassert(op.results.size() == 1);
+      simit_iassert(op.results.size() == 1);
       ir::Var var = op.results[0];
       llvm::Value *llvmVar = symtable.get(var);
       builder->CreateStore(call, llvmVar);
@@ -493,7 +493,7 @@ void GPUBackend::compile(const ir::CallStmt& op) {
       call = builder->CreateCall(fun, args);
     }
     else {
-      ierror << "function " << op.callee.getName() << " not found in module";
+      simit_ierror << "function " << op.callee.getName() << " not found in module";
     }
   }
 }
@@ -511,7 +511,7 @@ void GPUBackend::compile(const ir::Store& op) {
         emitAtomicLoadAdd(bufferLoc, value);
         break;
       }
-      default: ierror << "Unknown compound operator type";
+      default: simit_ierror << "Unknown compound operator type";
     }
   }
   else {
@@ -528,7 +528,7 @@ void GPUBackend::compile(const ir::FieldWrite& op) {
       ir::isa<ir::Literal>(op.value) &&
       ir::to<ir::Literal>(op.value)->isAllZeros()) {
     // TODO: Currently do not support int memsets
-    tassert(valueType.toTensor()->getComponentType().kind
+    simit_tassert(valueType.toTensor()->getComponentType().kind
             == ir::ScalarType::Float)
         << "Assigning int/bool tensor to zero unsupported"
         << std::endl << op.elementOrSet << "." << op.fieldName
@@ -604,8 +604,8 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
 
   // Push domain variables into kernel args
   if (kernelSharding.xSharded) {
-    iassert(kernelSharding.xDomain.getKind() == ir::IndexSet::Set);
-    iassert(ir::isa<ir::VarExpr>(kernelSharding.xDomain.getSet()));
+    simit_iassert(kernelSharding.xDomain.getKind() == ir::IndexSet::Set);
+    simit_iassert(ir::isa<ir::VarExpr>(kernelSharding.xDomain.getSet()));
     ir::Var xDomainVar = ir::to<ir::VarExpr>(kernelSharding.xDomain.getSet())->var;
     if (!util::contains(kernelArgs, xDomainVar) &&
         !util::contains(kernelResults, xDomainVar)) {
@@ -614,8 +614,8 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
     }
   }
   if (kernelSharding.ySharded) {
-    iassert(kernelSharding.yDomain.getKind() == ir::IndexSet::Set);
-    iassert(ir::isa<ir::VarExpr>(kernelSharding.yDomain.getSet()));
+    simit_iassert(kernelSharding.yDomain.getKind() == ir::IndexSet::Set);
+    simit_iassert(ir::isa<ir::VarExpr>(kernelSharding.yDomain.getSet()));
     ir::Var yDomainVar = ir::to<ir::VarExpr>(kernelSharding.yDomain.getSet())->var;
     if (!util::contains(kernelArgs, yDomainVar) &&
         !util::contains(kernelResults, yDomainVar)) {
@@ -623,8 +623,8 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
     }
   }
   if (kernelSharding.zSharded) {
-    iassert(kernelSharding.zDomain.getKind() == ir::IndexSet::Set);
-    iassert(ir::isa<ir::VarExpr>(kernelSharding.zDomain.getSet()));
+    simit_iassert(kernelSharding.zDomain.getKind() == ir::IndexSet::Set);
+    simit_iassert(ir::isa<ir::VarExpr>(kernelSharding.zDomain.getSet()));
     ir::Var zDomainVar = ir::to<ir::VarExpr>(kernelSharding.zDomain.getSet())->var;
     if (!util::contains(kernelArgs, zDomainVar) &&
         !util::contains(kernelResults, zDomainVar)) {
@@ -736,7 +736,7 @@ llvm::Value *GPUBackend::emitCheckRoot() {
 }
 
 llvm::Value *GPUBackend::getTid(std::string name) {
-  iassert(name == "x" || name == "y" || name == "z");
+  simit_iassert(name == "x" || name == "y" || name == "z");
   llvm::Function *tidFunc = getBuiltIn(
       "llvm.nvvm.read.ptx.sreg.tid."+name, LLVM_INT, {});
   llvm::Function *bidFunc = getBuiltIn(
@@ -762,9 +762,9 @@ llvm::Value *GPUBackend::getTidZ() {
 }
 
 llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
-  iassert(src->getType()->isPointerTy());
+  simit_iassert(src->getType()->isPointerTy());
   llvm::PointerType *srcPtrTy = llvm::cast<llvm::PointerType>(src->getType());
-  iassert(srcPtrTy->getAddressSpace() ==
+  simit_iassert(srcPtrTy->getAddressSpace() ==
           CUDA_GLOBAL_ADDRSPACE);
   llvm::Value *srcCast = builder->CreateBitCast(src, CUDA_INT8_PTR_GLOBAL);
   llvm::Function *castFunc = getBuiltIn(
@@ -803,7 +803,7 @@ void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
                        llvmComplexGetImag(builder.get(), value));
   }
   else {
-    ierror << "Unknown LLVM value type for atomic load add. " <<
+    simit_ierror << "Unknown LLVM value type for atomic load add. " <<
         (ir::ScalarType::singleFloat() ? "" :
          "Ensure you are executing GPU compilation with "
          "single-precision floats.");
@@ -812,7 +812,7 @@ void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
 
 void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
   llvm::Type *ptrGenTy = ptr->getType();
-  iassert(ptrGenTy->isPointerTy())
+  simit_iassert(ptrGenTy->isPointerTy())
       << "Atomic float load add requires pointer type for ptr";
   llvm::PointerType *ptrTy = reinterpret_cast<llvm::PointerType*>(ptrGenTy);
   unsigned addrspace = ptrTy->getAddressSpace();
@@ -838,7 +838,7 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
       break;
     }
     default:
-      ierror << "Unsupported addrspace for float load/add: " << addrspace;
+      simit_ierror << "Unsupported addrspace for float load/add: " << addrspace;
   }
   llvm::Function *func = getBuiltIn(funcName, LLVM_FLOAT, argTys);
   std::vector<llvm::Value*> args = {ptr,value};
@@ -849,7 +849,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                                   std::vector<llvm::Value*> args,
                                   GPUSharding sharding) {
   // Must have at least one parallelized dimension
-  iassert(sharding.xSharded);
+  simit_iassert(sharding.xSharded);
   llvm::Value *xSize = emitComputeLen(sharding.xDomain);
   llvm::Value *ySize = nullptr;
   llvm::Value *zSize = nullptr;
@@ -872,7 +872,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                                   llvm::Value *xSize,
                                   llvm::Value *ySize,
                                   llvm::Value *zSize) {
-  iassert(xSize) << "x dimension must be non-null";
+  simit_iassert(xSize) << "x dimension must be non-null";
 
   // LLVM types
   // struct dim3
@@ -1032,12 +1032,12 @@ void GPUBackend::emitPrintf(std::string format,
     if (argSize == 8) {
       // 8-byte args should be 8-byte aligned
       if (size % 8 != 0) {
-        iassert(size % 4 == 0);
+        simit_iassert(size % 4 == 0);
         size += 4;
       }
     }
     size += argSize;
-    iassert(size % 4 == 0) << "All arguments must be 4-byte aligned";
+    simit_iassert(size % 4 == 0) << "All arguments must be 4-byte aligned";
   }
 
   llvm::AllocaInst *argBuf =
@@ -1057,8 +1057,8 @@ void GPUBackend::emitPrintf(std::string format,
 
 void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
                             llvm::Value *size, unsigned align) {
-  iassert(dst->getType()->isPointerTy());
-  iassert(src->getType()->isPointerTy());
+  simit_iassert(dst->getType()->isPointerTy());
+  simit_iassert(src->getType()->isPointerTy());
 
 
   unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
@@ -1076,7 +1076,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   else {
     not_supported_yet;
   }
-  iassert(dstCastTy != nullptr);
+  simit_iassert(dstCastTy != nullptr);
 
   unsigned srcAddrspace = llvm::cast<llvm::PointerType>(
       src->getType())->getAddressSpace();
@@ -1093,7 +1093,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   else {
     not_supported_yet;
   }
-  iassert(srcCastTy != nullptr);
+  simit_iassert(srcCastTy != nullptr);
 
   // Emit our own memcpy decl, since the built-in has attributes which
   // are not handled by NVVM
@@ -1113,7 +1113,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
 
 void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
                             llvm::Value *size, unsigned align) {
-  iassert(dst->getType()->isPointerTy());
+  simit_iassert(dst->getType()->isPointerTy());
 
   unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
       dst->getType())->getAddressSpace();
@@ -1130,7 +1130,7 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   else {
     not_supported_yet;
   }
-  iassert(dstCastTy != nullptr);
+  simit_iassert(dstCastTy != nullptr);
 
   // Emit our own memset decl, since the built-in has attributes which
   // are not handled by NVVM
@@ -1149,8 +1149,8 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
 
 void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
                                    llvm::Value *length) {
-  iassert(!inKernel);
-  iassert(targetType.isTensor());
+  simit_iassert(!inKernel);
+  simit_iassert(targetType.isTensor());
 
   // Stash the symtable
   util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
@@ -1197,7 +1197,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   else {
     not_supported_yet;
   }
-  iassert(value != nullptr);
+  simit_iassert(value != nullptr);
 
   llvm::Value *ptr = llvmCreateInBoundsGEP(
       builder.get(), symtable.get(targetArg), getTidX());
@@ -1219,7 +1219,7 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
                                 llvm::Value *vec1, llvm::Value *vec2,
                                 llvm::Value *size, llvm::Value *result) {
   // Clear result first
-  iassert(resType.toTensor()->getComponentType().kind == ir::ScalarType::Float);
+  simit_iassert(resType.toTensor()->getComponentType().kind == ir::ScalarType::Float);
   builder->CreateStore(llvmFP(0), result);
 
   // Stash the symtable
@@ -1263,7 +1263,7 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
   llvm::Value *val2 = builder->CreateLoad(
       llvmCreateInBoundsGEP(builder.get(), symtable.get(vec2Var), getTidX()));
   llvm::Value *mul;
-  iassert(val1->getType()->isFloatTy());
+  simit_iassert(val1->getType()->isFloatTy());
   mul = builder->CreateFMul(val1, val2);
   emitAtomicLoadAdd(symtable.get(resVar), mul);
 
@@ -1282,13 +1282,13 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
                              std::vector<llvm::Value*> vals,
                              unsigned align,
                              bool alignToArgSize) {
-  iassert(align % 4 == 0) << "Align must be a multiple of 4";
+  simit_iassert(align % 4 == 0) << "Align must be a multiple of 4";
   uint64_t bufIndex = 0;
   for (auto &val : vals) {
     unsigned argSize = dataLayout->getTypeAllocSize(val->getType());
     unsigned localAlign = alignToArgSize ? std::max(argSize, align) : align;
     if (bufIndex % localAlign != 0) {
-      iassert(bufIndex % 4 == 0) << "Cannot accept non 4-byte aligned params";
+      simit_iassert(bufIndex % 4 == 0) << "Cannot accept non 4-byte aligned params";
       bufIndex += (localAlign - bufIndex%localAlign);
     }
     llvm::Value *bufPtr = llvmCreateInBoundsGEP(

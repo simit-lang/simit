@@ -201,7 +201,7 @@ inline bool isa(PathExpression pe) {
 
 template <typename T>
 inline const T* to(PathExpression e) {
-  iassert(isa<T>(e)) << "Wrong PathExpression type";
+  simit_iassert(isa<T>(e)) << "Wrong PathExpression type";
   return static_cast<const T*>(e.ptr);
 }
 
@@ -222,12 +222,12 @@ public:
   const Var &getRhs() const {return rhs;}
 
   const Var &getVertexVar(int i=0) const {
-    iassert((type != vv && i < 1) || i < 2);
+    simit_iassert((type != vv && i < 1) || i < 2);
     if (type != vv) return (type==ev) ? rhs : lhs;
     else return (i==0) ? lhs : rhs;
   }
   const Var &getEdgeVar() const {
-    iassert(type != vv);
+    simit_iassert(type != vv);
     return (type==ev) ? lhs : rhs;
   }
 

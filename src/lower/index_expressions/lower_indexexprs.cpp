@@ -31,7 +31,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
 
     /// Specialize 'stmt'.
     Stmt specialize(Stmt stmt) {
-      iassert(isFlattened(stmt))
+      simit_iassert(isFlattened(stmt))
           << "Index expressions must be flattened before specializing";
       return this->rewrite(stmt);
     }
@@ -43,7 +43,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     using IRRewriter::visit;
 
     void visit(const AssignStmt *op) {
-      iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      simit_iassert(isa<IndexExpr>(op->value))
+          << "Can only specialize IndexExpr stmts";
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
       Var var = op->var;
@@ -58,7 +59,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     }
 
     void visit(const FieldWrite *op) {
-      iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      simit_iassert(isa<IndexExpr>(op->value))
+          << "Can only specialize IndexExpr stmts";
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
       Expr elementOrSet = rewrite(op->elementOrSet);
@@ -75,7 +77,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     }
 
     void visit(const TensorWrite *op) {
-      iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      simit_iassert(isa<IndexExpr>(op->value))
+          << "Can only specialize IndexExpr stmts";
 
       Expr tensor = rewrite(op->tensor);
 
@@ -98,7 +101,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
 
     /// Replace indexed tensors with tensor reads
     void visit(const IndexedTensor *op) {
-      iassert(!isa<IndexExpr>(op->tensor))
+      simit_iassert(!isa<IndexExpr>(op->tensor))
           << "index expressions should have been flattened by now";
 
       expr = rewrite(op->tensor);
@@ -239,10 +242,10 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
         case ReductionOperator::Sum:
           return AssignStmt::make(var, value, CompoundOperator::Add);
         case ReductionOperator::Undefined:
-          ierror;
+          simit_ierror;
           return Stmt();
       }
-      unreachable;
+      simit_unreachable;
       return Stmt();
     }
 
@@ -262,7 +265,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
     void visit(const TensorWrite *op) {
       if (op == rstmt) {
-        iassert(op->value.type().isTensor());
+        simit_iassert(op->value.type().isTensor());
         ScalarType ctype = op->value.type().toTensor()->getComponentType();
         if (!reductionVar.defined()) {
           string reductionVarName = getReductionTmpName(op);
@@ -287,7 +290,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
     void visit(const FieldWrite *op) {
       if (op == rstmt) {
-        iassert(op->value.type().isTensor());
+        simit_iassert(op->value.type().isTensor());
         ScalarType ctype = op->value.type().toTensor()->getComponentType();
         string reductionVarName = getReductionTmpName(op);
         reductionVar = Var(reductionVarName, TensorType::make(ctype));
@@ -308,7 +311,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
   // Insert a temporary scalar to reduce into
   Var rvar = reduceRewriter.getReductionVar();
-  iassert(rvar.defined());
+  simit_iassert(rvar.defined());
 
   Type rvarType = rvar.getType();
   Stmt rvarDecl = VarDecl::make(rvar);
@@ -376,15 +379,15 @@ TensorIndex getTensorIndexOfStatement(Stmt stmt, const Storage& storage,
       const Var& var = op->var;
       const Type& type = op->type;
       if (type.isTensor() && type.toTensor()->order() == 2) {
-        iassert(storage.hasStorage(var));
+        simit_iassert(storage.hasStorage(var));
         const TensorStorage& tensorStorage = storage.getStorage(var);
         if (tensorStorage.getKind() == TensorStorage::Kind::Indexed) {
-          iassert(tensorStorage.hasTensorIndex());
+          simit_iassert(tensorStorage.hasTensorIndex());
           tensorIndex = tensorStorage.getTensorIndex();
         }
         else if (tensorStorage.getKind() == TensorStorage::Kind::Stencil) {
-          iassert(tensorStorage.hasTensorIndex());
-          iassert(tensorStorage.getTensorIndex().getKind() ==
+          simit_iassert(tensorStorage.hasTensorIndex());
+          simit_iassert(tensorStorage.getTensorIndex().getKind() ==
                   TensorIndex::Sten);
           tensorIndex = tensorStorage.getTensorIndex();
         }
@@ -437,7 +440,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       // If tensor is not a VarExpr, that means we have a hierarchical TensorRead
       if (!isa<VarExpr>(tensor)) {
-        tassert(isa<TensorRead>(otherExpr))
+        simit_tassert(isa<TensorRead>(otherExpr))
             << "we only support one level of blocking" << otherExpr;
 
         auto otherTensor = to<TensorRead>(otherExpr)->tensor;
@@ -477,7 +480,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
           // we also need to change the write such that the new write indices go
           // outermost
-          iassert(isa<TensorRead>(newWriteTensor));
+          simit_iassert(isa<TensorRead>(newWriteTensor));
 
           while (!isa<VarExpr>(newWriteTensor)) {
             newWriteTensor = to<TensorRead>(newWriteTensor)->tensor;
@@ -531,7 +534,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         else if (isa<Sub>(op)) {
           rhs = Sub::make(lhsRead, otherExpr);
         }
-        iassert(rhs.defined());
+        simit_iassert(rhs.defined());
         return rhs;
       }
       else {
@@ -634,7 +637,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
                                                           environment);
       if (tensorIndex.getKind() == TensorIndex::PExpr) {
-        iassert(tensorIndex.getColidxArray().defined())
+        simit_iassert(tensorIndex.getColidxArray().defined())
             << "Empty tensor index returned from: " << stmt;
 
         Expr jRead = Load::make(tensorIndex.getColidxArray(), ij);
@@ -665,7 +668,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       }
       else if (tensorIndex.getKind() == TensorIndex::Sten) {
         const StencilLayout &stencil = tensorIndex.getStencilLayout();
-        iassert(stencil.defined())
+        simit_iassert(stencil.defined())
             << "Empty stencil tensor index returned from: " << stmt;
 
         // Flip stencil layout map
@@ -676,13 +679,13 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
         // Use canonical memory ordering to infer j from stencil offsets
         Expr gridSet = stencil.getGridSet();
-        iassert(gridSet.type().isGridSet());
+        simit_iassert(gridSet.type().isGridSet());
         unsigned dims = gridSet.type().toGridSet()->dimensions;
 
         // Fetch the full LoopVar corresponding to the i grid loop
-        iassert(gridLoopVars.count(i));
+        simit_iassert(gridLoopVars.count(i));
         const LoopVar *gridLoopVar = gridLoopVars[i];
-        iassert(gridLoopVar->getDomain().gridVars.size() == dims);
+        simit_iassert(gridLoopVar->getDomain().gridVars.size() == dims);
         const vector<Var> &gridVars = gridLoopVar->getDomain().gridVars;
 
         // Use fixed stencil size to do an unrolled DIA-style loop for ij, j
@@ -707,7 +710,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         loopNest = Block::make(ijLoop);
       }
       else {
-        unreachable;
+        simit_unreachable;
       }
     }
     else if (loopVar->getDomain().kind == ForDomain::Diagonal) {
@@ -791,7 +794,7 @@ Func lowerIndexExprs(Func func) {
     }
 
     void visit(const IndexExpr *op) {
-      iassert_scalar(Expr(op));
+      simit_iassert_scalar(Expr(op));
       expr = rewrite(op->value);
     }
 

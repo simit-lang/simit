@@ -14,12 +14,12 @@ namespace simit {
 namespace backend {
 
 llvm::Constant* llvmPtr(const Literal& literal) {
-  iassert(literal.type.isTensor());
+  simit_iassert(literal.type.isTensor());
   return llvmPtr(*literal.type.toTensor(), literal.data);
 }
 
 llvm::Constant* llvmVal(const Literal& literal) {
-  iassert(literal.type.isTensor());
+  simit_iassert(literal.type.isTensor());
   return llvmVal(*literal.type.toTensor(), literal.data);
 }
 
@@ -35,10 +35,12 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
       return llvmInt(static_cast<const int*>(data)[0]);
     case ScalarType::Float:
       if (ir::ScalarType::singleFloat()) {
-        return llvmFP(static_cast<const float*>(data)[0], componentType.bytes());
+        return llvmFP(static_cast<const float*>(data)[0],
+                      componentType.bytes());
       }
       else {
-        return llvmFP(static_cast<const double*>(data)[0], componentType.bytes());
+        return llvmFP(static_cast<const double*>(data)[0],
+                      componentType.bytes());
       }
     case ScalarType::Boolean:
       return llvmBool(static_cast<const bool*>(data)[0]);
@@ -54,7 +56,7 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
     case ScalarType::String:
       break;
   }
-  ierror;
+  simit_ierror;
   return nullptr;
 }
 
@@ -104,7 +106,7 @@ llvm::Constant* defaultInitializer(llvm::Type* type) {
     return llvm::ConstantAggregateZero::get(structType);
   }
   else {
-    ierror << "creating an initializer not supported for this type";
+    simit_ierror << "creating an initializer not supported for this type";
   }
   return initializer;
 }

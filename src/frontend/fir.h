@@ -26,7 +26,7 @@ inline bool isa(std::shared_ptr<FIRNode> ptr) {
 template <typename T>
 inline const std::shared_ptr<T> to(std::shared_ptr<FIRNode> ptr) {
   std::shared_ptr<T> ret = std::dynamic_pointer_cast<T>(ptr);
-  iassert((bool)ret);
+  simit_iassert((bool)ret);
   return ret;
 }
 

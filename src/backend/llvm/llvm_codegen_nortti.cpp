@@ -61,8 +61,8 @@ Constant *llvmPtr(PointerType* type, const void* data) {
   return ConstantExpr::getIntToPtr(c, type);
 }
 
-Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, Value *buffer, Value *index,
-                             const Twine &name) {
+Value *llvmCreateInBoundsGEP(LLVMIRBuilder *builder, Value *buffer,
+                             Value *index, const Twine &name) {
   return builder->CreateInBoundsGEP(buffer, index, name);
 }
 

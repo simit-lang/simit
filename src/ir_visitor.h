@@ -235,11 +235,11 @@ private:
 std::function<void(const Rule*)> Rule##Func;                                   \
 std::function<void(const Rule*, Matcher*)> Rule##CtxFunc;                      \
 void unpack(std::function<void(const Rule*)> pattern) {                        \
-  iassert(!Rule##CtxFunc && !Rule##Func);                                      \
+  simit_iassert(!Rule##CtxFunc && !Rule##Func);                                \
   Rule##Func = pattern;                                                        \
 }                                                                              \
 void unpack(std::function<void(const Rule*, Matcher*)> pattern) {              \
-  iassert(!Rule##CtxFunc && !Rule##Func);                                      \
+  simit_iassert(!Rule##CtxFunc && !Rule##Func);                                \
   Rule##CtxFunc = pattern;                                                     \
 }                                                                              \
 void visit(const Rule* op) {                                                   \

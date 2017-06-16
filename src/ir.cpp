@@ -111,7 +111,7 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
 
 // Type compute functions
 Type getFieldType(Expr elementOrSet, std::string fieldName) {
-  iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
+  simit_iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
 
   Type fieldType;
   if (elementOrSet.type().isElement()) {
@@ -152,13 +152,13 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
 }
 
 Type getBlockType(Expr tensor) {
-  iassert(tensor.type().isTensor());
+  simit_iassert(tensor.type().isTensor());
   return tensor.type().toTensor()->getBlockType();
 }
 
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr, 
                       bool isColumnVector) {
-  iassert(isScalar(expr.type()));
+  simit_iassert(isScalar(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());
@@ -188,15 +188,15 @@ std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
 
 // struct Literal
 void Literal::cast(Type type) {
-  iassert(type.isTensor());
-  iassert(type.toTensor()->getComponentType() ==
+  simit_iassert(type.isTensor());
+  simit_iassert(type.toTensor()->getComponentType() ==
           this->type.toTensor()->getComponentType());
-  iassert(type.toTensor()->size() == this->type.toTensor()->size());
+  simit_iassert(type.toTensor()->size() == this->type.toTensor()->size());
   this->type = type;
 }
 
 int Literal::getIntVal(int index) const {
-  iassert(type.toTensor()->getComponentType().isInt())
+  simit_iassert(type.toTensor()->getComponentType().isInt())
       << "getIntVal only valid for literals with int components";
   return ((int*)data)[index];
 }
@@ -275,7 +275,8 @@ Expr Literal::make(double_complex val) {
 }
 
 Expr Literal::make(Type type, void* values, size_t bufSize) {
-  iassert(type.isTensor()) << "only tensor literals are supported for now";
+  simit_iassert(type.isTensor())
+      << "only tensor literals are supported for now";
   const TensorType *ttype = type.toTensor();
 
   size_t size = 0;
@@ -292,10 +293,11 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
     case Type::NamedTuple:
     case Type::Array:
     case Type::Opaque:
-      iassert(false) << "only tensor and scalar literals currently supported";
+      simit_iassert(false)
+          << "only tensor and scalar literals currently supported";
       break;
     case Type::Undefined:
-      ierror << "attempting to create literal of undefined type";
+      simit_ierror << "attempting to create literal of undefined type";
       break;
   }
 
@@ -304,7 +306,7 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
   node->size = sizeInBytes;
   node->data = malloc(node->size);
   if (values != nullptr) {
-    iassert(node->size <= bufSize)
+    simit_iassert(node->size <= bufSize)
         << "bufSize too small for desired type: " << type
         << ", needed " << sizeInBytes << ", got " << bufSize;
     memcpy(node->data, values, node->size);
@@ -320,37 +322,37 @@ Expr Literal::make(Type type, void* values, size_t bufSize) {
         break;
       case ir::ScalarType::Float:
         if (ir::ScalarType::singleFloat()) {
-          iassert(ir::ScalarType::floatBytes == sizeof(float));
+          simit_iassert(ir::ScalarType::floatBytes == sizeof(float));
           util::zero<float>(node->data, size);
         }
         else {
-          iassert(ir::ScalarType::floatBytes == sizeof(double));
+          simit_iassert(ir::ScalarType::floatBytes == sizeof(double));
           util::zero<double>(node->data, size);
         }
         break;
       case ir::ScalarType::Complex:
         if (ir::ScalarType::singleFloat()) {
-          iassert(ir::ScalarType::floatBytes == sizeof(float));
+          simit_iassert(ir::ScalarType::floatBytes == sizeof(float));
           util::zero<float>(node->data, size);
         }
         else {
-          iassert(ir::ScalarType::floatBytes == sizeof(double));
+          simit_iassert(ir::ScalarType::floatBytes == sizeof(double));
           util::zero<double>(node->data, size);
         }
         break;
       case ir::ScalarType::String:
-        unreachable;
+        simit_unreachable;
     }
   }
   return node;
 }
 
 Expr Literal::make(Type type, std::vector<double> values) {
-  iassert(isScalar(type) || type.toTensor()->getComponentType().isFloat() && 
-          type.toTensor()->size() == values.size() || 
-          type.toTensor()->getComponentType().isComplex() && 
-          2 * type.toTensor()->size() == values.size());
-  iassert(type.toTensor()->getComponentType().isFloat() || 
+  simit_iassert(isScalar(type) || type.toTensor()->getComponentType().isFloat()
+                && type.toTensor()->size() == values.size()
+                || type.toTensor()->getComponentType().isComplex()
+                && 2 * type.toTensor()->size() == values.size());
+  simit_iassert(type.toTensor()->getComponentType().isFloat() || 
           type.toTensor()->getComponentType().isComplex())
       << "Float array constructor must use float or complex component type";
   if (ScalarType::singleFloat()) {
@@ -369,10 +371,10 @@ Expr Literal::make(Type type, std::vector<double> values) {
 }
 
 Expr Literal::make(Type type, std::vector<double_complex> values) {
-  iassert(isScalar(type) || 
+  simit_iassert(isScalar(type) || 
           type.toTensor()->getComponentType().isComplex() && 
           2 * type.toTensor()->size() == values.size());
-  iassert(type.toTensor()->getComponentType().isComplex())
+  simit_iassert(type.toTensor()->getComponentType().isComplex())
       << "Complex array constructor must use complex component type";
   if (ScalarType::singleFloat()) {
     // Convert double vector to float vector
@@ -398,13 +400,13 @@ inline size_t getTensorByteSize(const TensorType *tensorType) {
 }
 
 bool operator==(const Literal& l, const Literal& r) {
-  iassert(l.type.isTensor() && r.type.isTensor());
+  simit_iassert(l.type.isTensor() && r.type.isTensor());
 
   if (l.type != r.type) {
     return false;
   }
 
-  iassert(getTensorByteSize(l.type.toTensor()) ==
+  simit_iassert(getTensorByteSize(l.type.toTensor()) ==
           getTensorByteSize(r.type.toTensor()));
 
   size_t size = l.type.toTensor()->size();
@@ -456,7 +458,7 @@ Expr VarExpr::make(Var var) {
 
 // struct Load
 Expr Load::make(Expr buffer, Expr index) {
-  iassert(isScalar(index.type()));
+  simit_iassert(isScalar(index.type()));
 
   Load  *node = new Load;
 
@@ -473,7 +475,7 @@ Expr Load::make(Expr buffer, Expr index) {
 
 // struct FieldRead
 Expr FieldRead::make(Expr elementOrSet, std::string fieldName) {
-  iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
+  simit_iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
   FieldRead *node = new FieldRead;
   node->type = getFieldType(elementOrSet, fieldName);
   node->elementOrSet = elementOrSet;
@@ -491,7 +493,7 @@ Expr Length::make(IndexSet indexSet) {
 
 // struct IndexRead
 Expr IndexRead::make(Expr edgeSet, Kind kind) {
-  iassert(edgeSet.type().isSet());
+  simit_iassert(edgeSet.type().isSet());
 
   IndexRead *node = new IndexRead;
   node->type = TensorType::make(ScalarType(ScalarType::Int),
@@ -502,8 +504,8 @@ Expr IndexRead::make(Expr edgeSet, Kind kind) {
 }
 
 Expr IndexRead::make(Expr edgeSet, Kind kind, int index) {
-  iassert(edgeSet.type().isGridSet());
-  iassert(kind == GridDim);
+  simit_iassert(edgeSet.type().isGridSet());
+  simit_iassert(kind == GridDim);
 
   IndexRead *node = new IndexRead;
   node->type = TensorType::make(ScalarType(ScalarType::Int));
@@ -516,7 +518,7 @@ Expr IndexRead::make(Expr edgeSet, Kind kind, int index) {
 
 // struct Neg
 Expr Neg::make(Expr a) {
-  iassert_scalar(a);
+  simit_iassert_scalar(a);
 
   Neg *node = new Neg;
   node->type = a.type();
@@ -526,8 +528,8 @@ Expr Neg::make(Expr a) {
 
 // struct Add
 Expr Add::make(Expr a, Expr b) {
-  iassert_scalar(a);
-  iassert_types_equal(a,b);
+  simit_iassert_scalar(a);
+  simit_iassert_types_equal(a,b);
 
   Add *node = new Add;
   node->type = a.type();
@@ -538,8 +540,8 @@ Expr Add::make(Expr a, Expr b) {
 
 // struct Sub
 Expr Sub::make(Expr a, Expr b) {
-  iassert_scalar(a);
-  iassert_types_equal(a,b);
+  simit_iassert_scalar(a);
+  simit_iassert_types_equal(a,b);
 
   Sub *node = new Sub;
   node->type = a.type();
@@ -550,8 +552,8 @@ Expr Sub::make(Expr a, Expr b) {
 
 // struct Mul
 Expr Mul::make(Expr a, Expr b) {
-  iassert_scalar(a);
-  iassert_types_equal(a,b);
+  simit_iassert_scalar(a);
+  simit_iassert_types_equal(a,b);
 
   Mul *node = new Mul;
   node->type = a.type();
@@ -562,8 +564,8 @@ Expr Mul::make(Expr a, Expr b) {
 
 // struct Div
 Expr Div::make(Expr a, Expr b) {
-  iassert_scalar(a);
-  iassert_types_equal(a,b);
+  simit_iassert_scalar(a);
+  simit_iassert_types_equal(a,b);
 
   Div *node = new Div;
   node->type = a.type();
@@ -574,8 +576,8 @@ Expr Div::make(Expr a, Expr b) {
 
 // struct Rem
 Expr Rem::make(Expr a, Expr b) {
-  iassert_int_scalar(a);
-  iassert_types_equal(a,b);
+  simit_iassert_int_scalar(a);
+  simit_iassert_types_equal(a,b);
 
   Rem *node = new Rem;
   node->type = a.type();
@@ -586,7 +588,7 @@ Expr Rem::make(Expr a, Expr b) {
 
 // struct Not
 Expr Not::make(Expr a) {
-  iassert_boolean_scalar(a);
+  simit_iassert_boolean_scalar(a);
 
   Not *node = new Not;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -596,7 +598,7 @@ Expr Not::make(Expr a) {
 
 // struct Eq
 Expr Eq::make(Expr a, Expr b) {
-  iassert_types_equal(a,b);
+  simit_iassert_types_equal(a,b);
 
   Eq *node = new Eq;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -607,7 +609,7 @@ Expr Eq::make(Expr a, Expr b) {
 
 // struct Ne
 Expr Ne::make(Expr a, Expr b) {
-  iassert_types_equal(a,b);
+  simit_iassert_types_equal(a,b);
 
   Ne *node = new Ne;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -618,7 +620,7 @@ Expr Ne::make(Expr a, Expr b) {
 
 // struct Gt
 Expr Gt::make(Expr a, Expr b) {
-  iassert_types_equal(a,b);
+  simit_iassert_types_equal(a,b);
 
   Gt *node = new Gt;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -629,7 +631,7 @@ Expr Gt::make(Expr a, Expr b) {
 
 // struct Lt
 Expr Lt::make(Expr a, Expr b) {
-  iassert_types_equal(a,b);
+  simit_iassert_types_equal(a,b);
 
   Lt *node = new Lt;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -640,7 +642,7 @@ Expr Lt::make(Expr a, Expr b) {
 
 // struct Ge
 Expr Ge::make(Expr a, Expr b) {
-  iassert_types_equal(a,b);
+  simit_iassert_types_equal(a,b);
 
   Ge *node = new Ge;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -651,7 +653,7 @@ Expr Ge::make(Expr a, Expr b) {
 
 // struct Le
 Expr Le::make(Expr a, Expr b) {
-  iassert_types_equal(a,b);
+  simit_iassert_types_equal(a,b);
 
   Le *node = new Le;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -662,8 +664,8 @@ Expr Le::make(Expr a, Expr b) {
 
 // struct And
 Expr And::make(Expr a, Expr b) {
-  iassert_boolean_scalar(a);
-  iassert_boolean_scalar(b);
+  simit_iassert_boolean_scalar(a);
+  simit_iassert_boolean_scalar(b);
 
   And *node = new And;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -674,8 +676,8 @@ Expr And::make(Expr a, Expr b) {
 
 // struct Or
 Expr Or::make(Expr a, Expr b) {
-  iassert_boolean_scalar(a);
-  iassert_boolean_scalar(b);
+  simit_iassert_boolean_scalar(a);
+  simit_iassert_boolean_scalar(b);
 
   Or *node = new Or;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -686,8 +688,8 @@ Expr Or::make(Expr a, Expr b) {
 
 // struct Xor
 Expr Xor::make(Expr a, Expr b) {
-  iassert_boolean_scalar(a);
-  iassert_boolean_scalar(b);
+  simit_iassert_boolean_scalar(a);
+  simit_iassert_boolean_scalar(b);
 
   Xor *node = new Xor;
   node->type = TensorType::make(ScalarType::Boolean);
@@ -718,17 +720,17 @@ Stmt AssignStmt::make(Var var, Expr value, CompoundOperator cop) {
 
 // struct Store
 Stmt Store::make(Expr buf, Expr index, Expr value, CompoundOperator cop) {
-  iassert(isScalar(value.type()));
+  simit_iassert(isScalar(value.type()));
   // TODO: Change to only allow stores to arrays, not tensors
 //  iassert(buffer.type().isArray()) << "Can only store to arrays";
 //  iassert(value.type()==TensorType::make(buff().toArray()->elementType))
 //            << "Stored value type " << util::quote(value.type())
 //            << " does not match the element type of array "
 //            << util::quote(buff().toArray()->elementType);
-  iassert(buf.type().isArray() || buf.type().isTensor())
+  simit_iassert(buf.type().isArray() || buf.type().isTensor())
       << "Can only store to arrays and tensors";
-  iassert(!buf.type().isTensor() ||
-          TensorType::make(buf.type().toTensor()->getComponentType())==value.type())
+  simit_iassert(!buf.type().isTensor() ||
+      TensorType::make(buf.type().toTensor()->getComponentType())==value.type())
       << "Stored value type " << util::quote(value.type())
       << " does not match the component type of tensor "
       << util::quote(buf.type().toTensor()->getBlockType()) ;
@@ -763,7 +765,7 @@ Stmt CallStmt::make(std::vector<Var> results,
 
 // struct Scope
 Stmt Scope::make(Stmt scopedStmt) {
-  iassert(scopedStmt.defined());
+  simit_iassert(scopedStmt.defined());
   Scope *node = new Scope;
   node->scopedStmt = scopedStmt;
   return node;
@@ -788,10 +790,10 @@ Stmt IfThenElse::make(Expr condition, Stmt thenBody, Stmt elseBody) {
 
 // struct ForRange
 Stmt ForRange::make(Var var, Expr start, Expr end, Stmt body) {
-  iassert(var.defined());
-  iassert(body.defined());
-  iassert(start.defined());
-  iassert(end.defined());
+  simit_iassert(var.defined());
+  simit_iassert(body.defined());
+  simit_iassert(start.defined());
+  simit_iassert(end.defined());
 
   ForRange *node = new ForRange;
   node->var = var;
@@ -829,7 +831,7 @@ Stmt Kernel::make(Var var, IndexDomain domain, Stmt body) {
 
 // struct Block
 Stmt Block::make(Stmt first, Stmt rest) {
-  iassert(first.defined() || rest.defined()) << "Empty block";
+  simit_iassert(first.defined() || rest.defined()) << "Empty block";
 
   // Handle case where first is undefined, to ease codegen in loops
   if (!first.defined()) {
@@ -843,7 +845,7 @@ Stmt Block::make(Stmt first, Stmt rest) {
 }
 
 Stmt Block::make(std::vector<Stmt> stmts) {
-  iassert(stmts.size() > 0) << "Empty block";
+  simit_iassert(stmts.size() > 0) << "Empty block";
   Stmt node;
   for (size_t i=stmts.size(); i>0; --i) {
     node = Block::make(stmts[i-1], node);
@@ -882,7 +884,7 @@ Stmt Pass::make() {
 
 // struct UnnamedTupleRead
 Expr UnnamedTupleRead::make(Expr tuple, Expr index) {
-  iassert(tuple.type().isUnnamedTuple());
+  simit_iassert(tuple.type().isUnnamedTuple());
   UnnamedTupleRead *node = new UnnamedTupleRead;
   node->type = tuple.type().toUnnamedTuple()->elementType;
   node->tuple = tuple;
@@ -892,7 +894,7 @@ Expr UnnamedTupleRead::make(Expr tuple, Expr index) {
 
 // struct NamedTupleRead
 Expr NamedTupleRead::make(Expr tuple, std::string elementName) {
-  iassert(tuple.type().isNamedTuple());
+  simit_iassert(tuple.type().isNamedTuple());
   NamedTupleRead *node = new NamedTupleRead;
   node->type = tuple.type().toNamedTuple()->element(elementName).type;
   node->tuple = tuple;
@@ -903,9 +905,9 @@ Expr NamedTupleRead::make(Expr tuple, std::string elementName) {
 // struct SetRead
 Expr SetRead::make(Expr set, std::vector<Expr> indices) {
 #ifdef SIMIT_ASSERTS
-  iassert(set.type().isSet());
+  simit_iassert(set.type().isSet());
   for (const Expr &index : indices) {
-    iassert(isScalar(index.type()));
+    simit_iassert(isScalar(index.type()));
   }
 #endif
 
@@ -918,7 +920,7 @@ Expr SetRead::make(Expr set, std::vector<Expr> indices) {
   else if (set.type().isGridSet()) {
     // Indices should index both the source offset and sink offset
     // giving 2*dims indices.
-    iassert(indices.size() == set.type().toGridSet()->dimensions*2);
+    simit_iassert(indices.size() == set.type().toGridSet()->dimensions*2);
   }
   else {
     not_supported_yet;
@@ -933,13 +935,13 @@ Expr SetRead::make(Expr set, std::vector<Expr> indices) {
 
 // struct TensorRead
 Expr TensorRead::make(Expr tensor, std::vector<Expr> indices) {
-  iassert(tensor.type().isTensor());
+  simit_iassert(tensor.type().isTensor());
 #ifdef SIMIT_ASSERTS
   for (auto &index : indices) {
-    iassert(isScalar(index.type()) || index.type().isElement());
+    simit_iassert(isScalar(index.type()) || index.type().isElement());
   }
 #endif
-  iassert(indices.size() == 1 ||
+  simit_iassert(indices.size() == 1 ||
           indices.size() == tensor.type().toTensor()->order());
 
   TensorRead *node = new TensorRead;
@@ -963,12 +965,12 @@ Stmt TensorWrite::make(Expr tensor, std::vector<Expr> indices, Expr value,
 // struct IndexedTensor
 Expr IndexedTensor::make(Expr tensor, std::vector<IndexVar> indexVars) {
 #ifdef SIMIT_ASSERTS
-  iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
-  iassert(indexVars.size() == tensor.type().toTensor()->order());
+  simit_iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
+  simit_iassert(indexVars.size() == tensor.type().toTensor()->order());
   std::vector<IndexDomain> dimensions =
   tensor.type().toTensor()->getDimensions();
   for (size_t i=0; i < indexVars.size(); ++i) {
-    iassert(indexVars[i].getDomain() == dimensions[i])
+    simit_iassert(indexVars[i].getDomain() == dimensions[i])
         << "IndexVar domain does not match tensor dimension "
         << "for var " << indexVars[i] << ": "
         << indexVars[i].getDomain() << " != " << dimensions[i];
@@ -1019,10 +1021,10 @@ std::vector<IndexVar> IndexExpr::domain() const {
 
 Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
                      bool isColumnVector) {
-  iassert(isScalar(value.type())) << value << " : " << value.type();
+  simit_iassert(isScalar(value.type())) << value << " : " << value.type();
 #ifdef SIMIT_ASSERTS
   for (auto &idxVar : resultVars) {  // No reduction variables on lhs
-    iassert(idxVar.isFreeVar());
+    simit_iassert(idxVar.isFreeVar());
   }
 #endif
 
@@ -1038,9 +1040,9 @@ Stmt Map::make(std::vector<Var> vars,
                Func function, std::vector<Expr> partial_actuals,
                Expr target, std::vector<Expr> neighbors, Expr through,
                ReductionOperator reduction) {
-  iassert(target.type().isSet());
+  simit_iassert(target.type().isSet());
   for (auto neighbor : neighbors) {
-    iassert(neighbor.type().isSet());
+    simit_iassert(neighbor.type().isSet());
   }
   //iassert(vars.size() == function.getResults().size());
   Map *node = new Map;

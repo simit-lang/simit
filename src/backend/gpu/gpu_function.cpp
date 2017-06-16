@@ -39,7 +39,7 @@ static CUdeviceptr getGlobalDevPtr(CUmodule& cudaModule, std::string name,
                                          cudaModule, name.data()),
                        "Locating global: " + name + ", expected size: "
                        + to_string(expectedSize));
-  iassert(globalPtrSize == expectedSize)
+  simit_iassert(globalPtrSize == expectedSize)
       << "Global pointer for " << name << " is wrong size. Got "
       << globalPtrSize << ", but expected " << expectedSize;
 
@@ -47,7 +47,7 @@ static CUdeviceptr getGlobalDevPtr(CUmodule& cudaModule, std::string name,
   unsigned int attrVal;
   checkCudaErrors(cuPointerGetAttribute(
       &attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
-  iassert(attrVal == 1) << "Non-managed memory for global: " << name;
+  simit_iassert(attrVal == 1) << "Non-managed memory for global: " << name;
 
   return globalPtr;
 }
@@ -72,12 +72,12 @@ GPUFunction::GPUFunction(
       *extPtr = nullptr;
       extPtrs.push_back(extPtr);
     }
-    iassert(!util::contains(this->externPtrs, bindable.getName()));
+    simit_iassert(!util::contains(this->externPtrs, bindable.getName()));
     this->externPtrs.insert({bindable.getName(), extPtrs});
   }
   // Initialize temporary pointers
   for (const ir::Var& tmp : env.getTemporaries()) {
-    iassert(tmp.getType().isTensor())
+    simit_iassert(tmp.getType().isTensor())
         << "Cannot handle non-tensor temporary: " << tmp;
     // Allocate space for a pointer host-side
     // TODO: CLEANUP!
@@ -125,7 +125,7 @@ GPUFunction::GPUFunction(
   std::cout << "Device Compute Capability: "
             << cuDevMajor << "." << cuDevMinor << std::endl;
 #endif
-  iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
+  simit_iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
 
 #ifdef SIMIT_DEBUG
   size_t bytes;
@@ -140,7 +140,7 @@ GPUFunction::GPUFunction(
   // Check managed memory, required for pushing globals
   int attrVal;
   checkCudaErrors(cuDeviceGetAttribute(&attrVal, CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, device));
-  iassert(attrVal == 1);
+  simit_iassert(attrVal == 1);
 }
 
 GPUFunction::~GPUFunction() {
@@ -225,7 +225,7 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
   else if (setType->isa<ir::LatticeLinkSetType>()) {
     CUdeviceptr *setSizesBuffer = new CUdeviceptr;
     unsigned dims = setType->to<ir::LatticeLinkSetType>()->dimensions;
-    uassert(dims == set->getDimensions().size())
+    simit_uassert(dims == set->getDimensions().size())
         << "Set bound to type with wrong number of dimensions: "
         << set->getDimensions().size() << " vs "
         << setType->to<ir::LatticeLinkSetType>()->dimensions;
@@ -245,7 +245,7 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
   // Short-circuit on a size-zero set, because the CUDA API doesn't like
   // size-zero allocations and copies
   if (set->getSize() == 0) {
-    uwarning << "Binding a size-zero set: " << set->getName() << std::endl;
+    simit_uwarning << "Binding a size-zero set: " << set->getName() << std::endl;
     CUdeviceptr *nullDevPtr = new CUdeviceptr;
     DeviceDataHandle *nullHandle = new DeviceDataHandle(
         (const void*)nullptr, nullDevPtr, 0);
@@ -257,7 +257,7 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
   // Edge indices
   if (setType->isa<ir::UnstructuredSetType>() &&
       setType->to<ir::UnstructuredSetType>()->endpointSets.size() > 0) {
-    uassert(set->getKind() == Set::Unstructured)
+    simit_uassert(set->getKind() == Set::Unstructured)
         << "Cannot bind non-unstructured set " << set->getName()
         << " to unstructured type.";
 
@@ -265,7 +265,7 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
     int *endpoints = set->getEndpointsData();
     CUdeviceptr *endpointBuffer = new CUdeviceptr();
     size_t size = set->getSize() * set->getCardinality() * sizeof(int);
-    iassert(size != 0)
+    simit_iassert(size != 0)
         << "Cannot allocate edge set with size-zero endpoints: "
         << set->getName();
     checkCudaErrors(cuMemAlloc(endpointBuffer, size));
@@ -287,16 +287,16 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
 
   // Fields
   ir::Type etype = setType->elementType;
-  iassert(etype.isElement()) << "Set element type must be ElementType.";
+  simit_iassert(etype.isElement()) << "Set element type must be ElementType.";
 
   for (auto field : etype.toElement()->fields) {
     CUdeviceptr *devBuffer = new CUdeviceptr();
     ir::Type ftype = field.type;
-    iassert(ftype.isTensor()) << "Element field must be tensor type";
+    simit_iassert(ftype.isTensor()) << "Element field must be tensor type";
     const ir::TensorType *ttype = ftype.toTensor();
     void *fieldData = set->getFieldData(field.name);
     size_t size = set->getSize() * ttype->size() * ttype->getComponentType().bytes();
-    iassert(size != 0)
+    simit_iassert(size != 0)
         << "Cannot allocate set field of size 0: " << field.name;
     checkCudaErrors(cuMemAlloc(devBuffer, size));
     checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
@@ -349,24 +349,24 @@ GPUFunction::pushGlobalTensor(
           if (env.hasTensorIndex(bufVar)) {
             const pe::PathExpression& pexpr =
                 env.getTensorIndex(bufVar).getPathExpression();
-            iassert(util::contains(pathIndices, pexpr));
+            simit_iassert(util::contains(pathIndices, pexpr));
             bufSize *= pathIndices.at(pexpr).numNeighbors();
           }
           // In the LLVM backend, we choose to initialize non tensor-index
           // tensors dynamically at runtime. The GPU does allocation here,
           // so we need to "statically" compute the right size.
           else {
-	    iassert(ts.hasTensorIndex());
+	    simit_iassert(ts.hasTensorIndex());
             const pe::PathExpression& pexpr =
 	      ts.getTensorIndex().getPathExpression();
-            iassert (util::contains(pathIndices, pexpr));
+            simit_iassert (util::contains(pathIndices, pexpr));
             bufSize *= pathIndices.at(pexpr).numNeighbors();
           }
           break;
         }
         case ir::TensorStorage::Stencil: {
           if (env.hasTensorIndex(bufVar)) {
-            iassert(env.getTensorIndex(bufVar).getKind()
+            simit_iassert(env.getTensorIndex(bufVar).getKind()
                     == ir::TensorIndex::Sten);
             const ir::StencilLayout& stencil =
                 env.getTensorIndex(bufVar).getStencilLayout();
@@ -375,8 +375,8 @@ GPUFunction::pushGlobalTensor(
             bufSize *= size(ttype->getOuterDimensions()[0]);
           }
           else {
-            iassert(ts.hasTensorIndex());
-            iassert(ts.getTensorIndex().getKind() == ir::TensorIndex::Sten);
+            simit_iassert(ts.hasTensorIndex());
+            simit_iassert(ts.getTensorIndex().getKind() == ir::TensorIndex::Sten);
             const ir::StencilLayout& stencil =
                 ts.getTensorIndex().getStencilLayout();
             // Size of stencil-base matrix is stencil size * dim[0]
@@ -386,26 +386,26 @@ GPUFunction::pushGlobalTensor(
           break;
         }
         default: {
-          ierror << "Can't compute matrix size for unknown TensorStorage: "
+          simit_ierror << "Can't compute matrix size for unknown TensorStorage: "
                  << bufVar;
         }
       }
     }
     else {
-      tassert(!isSystemTensorType(ttype))
+      simit_tassert(!isSystemTensorType(ttype))
           << "Higher-order system tensor allocation not supported: " << bufVar;
       bufSize = ttype->size();
     }
   }
   CUdeviceptr *devBuffer = new CUdeviceptr();
-  iassert(bufSize > 0)
+  simit_iassert(bufSize > 0)
       << "Cannot allocate size 0 global buffer for var: " << bufVar;
   checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
 
   // Find the host-side data, if it exists
   DeviceDataHandle* handle;
   if (hasGlobal(bufVar.getName())) {
-    iassert(util::contains(externPtrs, bufVar.getName()) &&
+    simit_iassert(util::contains(externPtrs, bufVar.getName()) &&
             externPtrs.at(bufVar.getName()).size() == 1);
     void *hostPtr = *externPtrs.at(bufVar.getName())[0];
     handle = new DeviceDataHandle(hostPtr, devBuffer, bufSize);
@@ -421,7 +421,7 @@ GPUFunction::SparseTensorData
 GPUFunction::pushExternSparseTensor(const ir::Environment& env,
                                     const ir::Var& bufVar,
                                     const ir::TensorType* ttype) {
-  iassert(tensorData.count(bufVar.getName()));
+  simit_iassert(tensorData.count(bufVar.getName()));
   TensorData* data = tensorData[bufVar.getName()];
   CUdeviceptr *dataBuffer = new CUdeviceptr();
   CUdeviceptr *rowPtrBuffer = new CUdeviceptr();
@@ -469,18 +469,18 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
         case ir::ScalarType::Int:
           return llvmInt(*(int*)tActual->getData());
         case ir::ScalarType::Float:
-          tassert(ir::ScalarType::floatBytes == sizeof(float))
+          simit_tassert(ir::ScalarType::floatBytes == sizeof(float))
               << "GPUFunction requires single precision floats";
           return llvmFP(*(float*)tActual->getData());
         case ir::ScalarType::Boolean:
           return llvmBool(*(bool*)tActual->getData());
         case ir::ScalarType::Complex:
-          tassert(ir::ScalarType::floatBytes == sizeof(float))
+          simit_tassert(ir::ScalarType::floatBytes == sizeof(float))
               << "GPUFunction requires single precision floats";
           return llvmComplex(((float*)tActual->getData())[0],
                              ((float*)tActual->getData())[1]);
         default:
-          ierror << "Unknown ScalarType: " << ttype->getComponentType().kind;
+          simit_ierror << "Unknown ScalarType: " << ttype->getComponentType().kind;
       }
     }
     else {
@@ -511,7 +511,7 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
           *(pushedData.setSizes->devBuffer))));
     }
     else {
-      unreachable;
+      simit_unreachable;
     }
     // Edge set
     if (pushedData.endpoints != nullptr) {
@@ -520,12 +520,12 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
     }
     // Fields
     ir::Type ety = setType->elementType;
-    iassert(ety.isElement()) << "Set element type must be ElementType.";
+    simit_iassert(ety.isElement()) << "Set element type must be ElementType.";
     const ir::ElementType* etype = ety.toElement();
     std::vector<DeviceDataHandle*> fieldHandles;
     for (int i = 0; i < etype->fields.size(); ++i) {
       ir::Type fty = etype->fields[i].type;
-      iassert(fty.isTensor()) << "Field type must be tensor";
+      simit_iassert(fty.isTensor()) << "Field type must be tensor";
       const ir::TensorType* ttype = fty.toTensor();
       setData.push_back(llvmPtr(*ttype, reinterpret_cast<void*>(
           *(pushedData.fields[i]->devBuffer))));
@@ -536,7 +536,7 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
     return llvm::ConstantStruct::get(llvmSetType, setData);
   }
 
-  ierror << "Unhandle actual: " << actual;
+  simit_ierror << "Unhandle actual: " << actual;
   return NULL;
 }
 
@@ -547,7 +547,7 @@ void GPUFunction::pullArg(DeviceDataHandle* handle) {
   // Short-circuit on size-zero buffer, because the CUDA API
   // doesn't like size-zero copies
   if (handle->size == 0) return;
-  iassert(handle->hostBuffer)
+  simit_iassert(handle->hostBuffer)
       << "Must define mutable hostBuffer to allow pulling arg";
   checkCudaErrors(cuMemcpyDtoH(
       handle->hostBuffer, *handle->devBuffer, handle->size));
@@ -655,7 +655,7 @@ GPUFunction::init() {
 
   // Validate LLVM module
   bool failed = llvm::verifyModule(*module);
-  iassert(!failed)
+  simit_iassert(!failed)
       << "LLVM module does not pass verification";
   logModule(module, "simit.ll");
 
@@ -750,7 +750,7 @@ GPUFunction::init() {
       // differently
       if (env.hasExtern(bufVar.getName()) &&
           externPtrs.at(bufVar.getName()).size() > 1) {
-        iassert(externPtrs.at(bufVar.getName()).size() == 3)
+        simit_iassert(externPtrs.at(bufVar.getName()).size() == 3)
             << "Extern sparse tensors should have three extern "
             << "pointers for: data, rowPtr, colInd";
         GPUFunction::SparseTensorData pushedData =
@@ -762,7 +762,7 @@ GPUFunction::init() {
         argBufMap.emplace(bufVar.getName(), handleVec);
 
         const ir::VarMapping& mapping = env.getExtern(bufVar.getName());
-        iassert(mapping.getMappings().size() == 3)
+        simit_iassert(mapping.getMappings().size() == 3)
             << "Extern sparse tensor should be mapped to three vars, for "
             << "rowPtr, colInd, and data.";
         const ir::Var& dataVar = mapping.getMappings()[0];
@@ -798,7 +798,7 @@ GPUFunction::init() {
     else if (bufVar.getType().isSet()) {
       // Set globals must correspond to host-side data, because we don't know
       // how big the allocation must be in general.
-      iassert(hasGlobal(bufVar.getName()))
+      simit_iassert(hasGlobal(bufVar.getName()))
           << "Cannot allocate unbound set extern: " << bufVar.getName();
       const ir::SetType* setType = bufVar.getType().toSet();
       Set* set = to<SetActual>(globals[bufVar.getName()].get())->getSet();
@@ -819,7 +819,7 @@ GPUFunction::init() {
         memcpy(setData.data()+idx, (uint8_t*)(&pushedData.setSizes), sizeof(void*));
       }
       else {
-        unreachable;
+        simit_unreachable;
       }
       // Padding to 8-byte alignment (only needed if something comes afterwards)
       if ((setType->isa<ir::UnstructuredSetType>() &&
@@ -828,7 +828,7 @@ GPUFunction::init() {
           pushedData.fields.size() > 0) {
         if (setData.size() % 8 != 0) {
           setData.resize(setData.size() + (8-setData.size()%8));
-          iassert(setData.size() % 8 == 0); // double check this math
+          simit_iassert(setData.size() % 8 == 0); // double check this math
         }
       }
       // Neighbors structures
@@ -839,7 +839,7 @@ GPUFunction::init() {
         setData.resize(setData.size() + 3*sizeof(void*));
         memcpy(setData.data()+idx, (void*)(pushedData.endpoints->devBuffer), sizeof(void*));
         idx += sizeof(void*);
-        iassert(idx == setData.size());
+        simit_iassert(idx == setData.size());
         handleVec.push_back(pushedData.endpoints);
       }
       // Fields

@@ -58,7 +58,8 @@ void printTimes() {
   }
 
   printf("Total Time: %f (seconds), %f\n",
-         simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0,percentageSum);
+         simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0,
+         percentageSum);
 }
 
 // Singleton
