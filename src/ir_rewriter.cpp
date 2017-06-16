@@ -285,7 +285,7 @@ void IRRewriter::visit(const ForRange *op) {
   Expr end = rewrite(op->end);
   Stmt spilledBounds = getSpilledStmts();
   Stmt body = rewrite(op->body);
-  
+
   if (body == op->body && start == op->start && end == op->end) {
     stmt = op;
   }
@@ -311,7 +311,7 @@ void IRRewriter::visit(const While *op) {
   Expr condition = rewrite(op->condition);
   Stmt spilledCond = getSpilledStmts();
   Stmt body = rewrite(op->body);
-  
+
   if (condition == op->condition && body == op->body) {
     stmt = op;
   }
@@ -337,22 +337,20 @@ void IRRewriter::visit(const Kernel *op) {
 }
 
 void IRRewriter::visit(const Block *op) {
-  Stmt first = rewrite(op->first);
-  Stmt rest = rewrite(op->rest);
-  if (first == op->first && rest == op->rest) {
-    stmt = op;
+  vector<Stmt> newStmts;
+
+  for (Stmt stmt : op->stmts) {
+    newStmts.push_back(rewrite(stmt));
   }
-  else {
-    if (first.defined() && rest.defined()) {
-      stmt = Block::make(first, rest);
-    }
-    else if (first.defined() && !rest.defined()) {
-      stmt = first;
-    }
-    else if (!first.defined() && rest.defined()) {
-      stmt = rest;
-    }
-    else {
+
+  if (newStmts == op->stmts) {
+    stmt = op;
+  } else {
+    newStmts.resize(std::remove_if(newStmts.begin(), newStmts.end(),
+                        [](Stmt s){return !s.defined();}) - newStmts.begin());
+    if (newStmts.size()) {
+      stmt = Block::make(newStmts);
+    } else {
       stmt = Stmt();
     }
   }
@@ -499,7 +497,7 @@ void IRRewriter::visit(const Map *op) {
   if (op->through.defined()) {
     through = rewrite(op->through);
   }
-  
+
   std::vector<Expr> partial_actuals(op->partial_actuals.size());
   bool actualsSame = true;
   for (size_t i=0; i < op->partial_actuals.size(); ++i) {
@@ -509,7 +507,7 @@ void IRRewriter::visit(const Map *op) {
     }
   }
 
-  if (target == op->target && through == op->through && 
+  if (target == op->target && through == op->through &&
       neighborsSame && actualsSame) {
     stmt = op;
   }

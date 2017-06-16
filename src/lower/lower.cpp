@@ -22,6 +22,7 @@
 #include "ir_transforms.h"
 #include "ir_printer.h"
 #include "path_expressions.h"
+#include "program_analysis/program_analysis.h"
 
 #ifdef GPU
 #include "backend/gpu/gpu_backend.h"
@@ -100,6 +101,10 @@ Func lower(Func func, std::ostream* os, bool time) {
     printCallGraph("Rewrite System Assigns (GPU)", func, os);
   }
 #endif
+
+  // Program analysis
+  func = rewriteCallGraph(func, program_analysis::program_analysis);
+  printCallGraph("Program analysis", func, os);
 
   // Inline function calls
   func = rewriteCallGraph(func, inlineCalls);

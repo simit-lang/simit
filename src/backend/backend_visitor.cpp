@@ -34,9 +34,8 @@ void BackendVisitorBase::compile(const ir::GPUKernel& kernel) {
 #endif
 
 void BackendVisitorBase::compile(const ir::Block& op) {
-  op.first.accept(this);
-  if (op.rest.defined()) {
-    op.rest.accept(this);
+  for (Stmt stmt : op.stmts) {
+    stmt.accept(this);
   }
 }
 

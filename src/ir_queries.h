@@ -112,26 +112,24 @@ inline std::vector<Stmt> splitOnPredicate(
     }
 
     void visit(const Block* op) {
-      Stmt first, rest;
+      vector<Stmt> newStmts;
       if (visitFirst) {
         // Visit in first-to-last order
-        if (!visitDone) {
-          first = rewrite(op->first);
-        }
-        if (!visitDone) {
-          rest = rewrite(op->rest);
+        for (size_t i = 0; i < op->stmts.size(); i++) {
+          if (!visitDone) {
+            newStmts.push_back(rewrite(op->stmts[i]));
+          }
         }
       }
       else {
         // Visit in last-to-first order
-        if (!visitDone) {
-          rest = rewrite(op->rest);
-        }
-        if (!visitDone) {
-          first = rewrite(op->first);
+        for (size_t i = op->stmts.size(); i > 0; i--) {
+          if (!visitDone) {
+            newStmts.push_back(rewrite(op->stmts[i - 1]));
+          }
         }
       }
-      stmt = Block::make(first, rest);
+      stmt = Block::make(newStmts);
     }
 
     void visit(const IfThenElse *op) {

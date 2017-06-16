@@ -837,17 +837,28 @@ Stmt Block::make(Stmt first, Stmt rest) {
   }
 
   Block *node = new Block;
-  node->first = first;
-  node->rest = rest;
+  if (isa<Block>(first)) {
+    const Block* block = to<Block>(first);
+    node->stmts = block->stmts;
+  } else {
+    node->stmts = {first};
+  }
+
+  if (rest.defined()) {
+    if (isa<Block>(rest)) {
+      const Block* block = to<Block>(rest);
+      node->stmts.insert(node->stmts.end(), block->stmts.begin(), block->stmts.end());
+    } else {
+      node->stmts.push_back(rest);
+    }
+  }
   return node;
 }
 
 Stmt Block::make(std::vector<Stmt> stmts) {
   iassert(stmts.size() > 0) << "Empty block";
-  Stmt node;
-  for (size_t i=stmts.size(); i>0; --i) {
-    node = Block::make(stmts[i-1], node);
-  }
+  Block *node = new Block;
+  node->stmts = stmts;
   return node;
 }
 

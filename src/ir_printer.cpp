@@ -468,10 +468,10 @@ void IRPrinter::visit(const Kernel *op) {
 }
 
 void IRPrinter::visit(const Block *op) {
-  print(op->first);
-  if (op->rest.defined()) {
+  print(op->stmts.front());
+  for (size_t i = 1; i < op->stmts.size(); i++) {
     os << endl;
-    print(op->rest);
+    print(op->stmts[i]);
   }
 }
 
