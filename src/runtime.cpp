@@ -79,6 +79,24 @@ float min_f32(float a, float b) {
   return (float)min(d_a,d_b);
 }
 
+double cbrt_f64(double x) {
+  return cbrt(x);
+}
+
+float cbrt_f32(float x) {
+  double d_x = x;
+  return (float)cbrt(d_x);
+}
+
+double abs_f64(double x) {
+  return fabs(x);
+}
+
+float abs_f32(float x) {
+  double d_x = x;
+  return (float)fabs(d_x);
+}
+
 double det3_f64(double * a){
   return a[0] * (a[4]*a[8]-a[5]*a[7])
        - a[1] * (a[3]*a[8]-a[5]*a[6])
@@ -315,7 +333,7 @@ int spmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
   A = B*C;
   eigen2csr(A, An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
 #else
-  ierror << "extern spmm requires Eigen";
+  simit_ierror << "extern spmm requires Eigen";
 #endif
   return 0;
 }
@@ -344,7 +362,7 @@ extern "C" int dspmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
 // Solvers
 #define SOLVER_ERROR                                            \
 do {                                                            \
-  ierror << "Solvers require that Simit was built with Eigen."; \
+  simit_ierror << "Solvers require that Simit was built with Eigen."; \
 } while (false)
 
 template <typename Float>
