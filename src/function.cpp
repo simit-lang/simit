@@ -47,7 +47,7 @@ void Function::bind(const std::string& name, simit::Set *set) {
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
         break;
       case ComponentType::Double:
-        iassert(ir::ScalarType::floatBytes == sizeof(double));
+        simit_iassert(ir::ScalarType::floatBytes == sizeof(double));
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
         break;
       case ComponentType::Int:

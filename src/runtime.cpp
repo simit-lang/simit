@@ -315,7 +315,7 @@ int spmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
   A = B*C;
   eigen2csr(A, An, Am, Arowptr, Acolidx, Ann, Amm, Avals);
 #else
-  ierror << "extern spmm requires Eigen";
+  simit_ierror << "extern spmm requires Eigen";
 #endif
   return 0;
 }
@@ -344,7 +344,7 @@ extern "C" int dspmm(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
 // Solvers
 #define SOLVER_ERROR                                            \
 do {                                                            \
-  ierror << "Solvers require that Simit was built with Eigen."; \
+  simit_ierror << "Solvers require that Simit was built with Eigen."; \
 } while (false)
 
 template <typename Float>
