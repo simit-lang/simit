@@ -25,7 +25,17 @@ then point Simit to it:
 
     export LLVM_CONFIG=<path to llvm>/build/bin/llvm-config
 
-To perform an out-of-tree build of Simit do:
+The Simit compiler uses [taco](http://tensor-compiler.org) to generate code that 
+can evaluate linear algebra expressions within Simit programs. To perform an 
+out-of-tree build of Simit, you must first initialize the taco git submodule:
+
+    cd <simit-directory>
+    git submodule init
+    git submodule update
+    cd external/taco
+
+then follow the instructions in README.md to build taco. You can then build 
+Simit:
 
     cd <simit-directory>
     mkdir build
