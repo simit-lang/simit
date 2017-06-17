@@ -70,7 +70,6 @@ set(SIMIT_TOOLS_DIR    ${CMAKE_CURRENT_LIST_DIR}/tools)
 set(SIMIT_APPS_DIR     ${CMAKE_CURRENT_LIST_DIR}/apps)
 
 set(TACO_DIR         ${CMAKE_CURRENT_LIST_DIR}/external/taco)
-set(TACO_SRC_DIR     ${TACO_DIR}/src)
 set(TACO_INCLUDE_DIR ${TACO_DIR}/include)
 set(TACO_LIBRARY_DIR ${TACO_DIR}/build/lib)
 if (NOT EXISTS ${TACO_INCLUDE_DIR})
