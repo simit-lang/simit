@@ -1269,7 +1269,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     return;
   }
 
-  // Catch invalid nested indexexpr, for example A(i, B(j, k))
+  // Catch invalid nested indexexpr of the form A(i, B(j, k))
   bool previousAllowIndexExpr = allowIndexExpr;
   allowIndexExpr = false;
   for (auto& idx : expr->indices) {
@@ -1278,6 +1278,38 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     }
   }
   allowIndexExpr = previousAllowIndexExpr;
+
+  // Catch invalid nested indexexpr of the form A(i,j)(k,l)
+  /// Note: this is a limitation, if A is type tensor[2,2](tensor[2,2](int)),
+  /// A(i,j)(k,l) should be expressible, but the IndexDomain system does not
+  /// support this.
+  struct CheckTensorContainsIndexExpr : public FIRVisitor {
+    TypeChecker& typechecker;
+    bool hasIndexExpr = false;
+
+    CheckTensorContainsIndexExpr(TypeChecker& typechecker) :
+      typechecker(typechecker) {}
+
+    virtual void visit(TensorReadExpr::Ptr expr) {
+      auto checkIndexExpr = [&](const ReadParam::Ptr& idx) {
+        if (isa<ExprParam>(idx)) {
+          const Expr::Ptr indexExpr = to<ExprParam>(idx)->expr;
+          const ExprType indexType = typechecker.inferType(indexExpr);
+          if (indexType.defined && indexType.isIndexVar()) {
+            return true;
+          }
+        }
+        return false;
+      };
+      hasIndexExpr = hasIndexExpr ||
+      std::any_of(expr->indices.begin(), expr->indices.end(), checkIndexExpr);
+      expr->tensor->accept(this);
+    }
+  } checkTensorContainsIndexExpr(*this);
+  expr->tensor->accept(&checkTensorContainsIndexExpr);
+  if (hasIndexExpr && checkTensorContainsIndexExpr.hasIndexExpr) {
+    reportError("Cannot have index expression of another index expression", expr);
+  }
 
   TensorDimensions retDimensions;
 
