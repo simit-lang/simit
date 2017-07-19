@@ -63,7 +63,6 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
 
   Storage* storage;
   unordered_map<string, Var> tensorNameMap; // map taco var to simit var by name
-  unordered_map<string, map<size_t, Expr>> fixedIndicesMap;
   unordered_map<Var, Expr, Hash<Var>> readTemporaries;
   unordered_map<Var, Expr, Hash<Var>> writeTemporaries;
   taco::TensorBase tacoAssignDest;
@@ -146,7 +145,6 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
         });
 
     taco::TensorBase tacoTensor = getTacoVar(tensor);
-    fixedIndicesMap[tacoTensor.getName()] = fixedExprs;
     return make_pair(tacoTensor, tacoIndices);
   }
 
@@ -163,8 +161,7 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
         readTemporaries[var] = e;
       }
       taco::TensorBase tacoTensor = getTacoVar(var);
-      taco::IndexVar tacoIndex = taco::IndexVar(nameGenerator.getName("h"));
-      tacoAccess = Ptr(new taco::Access(tacoTensor(tacoIndex)));
+      tacoAccess = Ptr(new taco::Access(tacoTensor({})));
     }
     return move(tacoAccess);
   }
@@ -266,7 +263,6 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
   vector<Stmt> spilledStmts;
 
   map<taco::ir::Expr, Var> tacoLocalVars; // taco ExprVar -> simit Var
-  Expr fixedLoopVar; // index is fixed, need to remove this loop
   unordered_map<Var, Expr, Hash<Var>> loopIndexReplacement; // fixed IndexVar
 
   void spill(Stmt s) {
@@ -327,13 +323,15 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
     } else {
       simit_iassert(!tacoOp->is_ptr && !tacoOp->is_tensor);
 
+      string name = tacoOp->name;
       if (tacoOp->type.isBool()) {
-        var = Var(tacoOp->name, Boolean);
+        var = Var(name, Boolean);
       } else if (tacoOp->type.isInt() || tacoOp->type.isUInt()) {
-        var = Var(tacoOp->name, Int);
+        name = name.substr(0, name.rfind("_pos"));
+        var = Var(name, Int);
       } else {
         simit_iassert(tacoOp->type.isFloat());
-        var = Var(tacoOp->name, Float);
+        var = Var(name, Float);
       }
       tacoLocalVars[tacoOp] = var;
     }
@@ -608,14 +606,9 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
     Var loopVar(taco::ir::to<taco::ir::Var>(tacoOp->var)->name, Int);
     tacoLocalVars[taco::ir::to<taco::ir::Var>(tacoOp->var)] = loopVar;
     Expr start = compile(tacoOp->start);
-    fixedLoopVar = Expr();
     Expr end = compile(tacoOp->end);
 
-    if (fixedLoopVar.defined()) { // Fixed expression, loop is nullified
-      loopIndexReplacement[loopVar] = fixedLoopVar;
-      stmt = compile(tacoOp->contents);
-      loopIndexReplacement.erase(loopVar);
-    } else if (isa<Length>(end)) { // iterate over a Set
+    if (isa<Length>(end)) { // iterate over a Set
       Stmt body = compile(tacoOp->contents);
       stmt = For::make(loopVar, to<Length>(end)->indexSet, body);
     } else { // iterate over a constant-sized range
@@ -762,12 +755,6 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
     } break;
     case taco::ir::TensorProperty::Dimensions: {      
       simit_iassert(tacoOp->index == 0);
-      const auto& checkFixed =
-          fixedIndicesMap[taco::ir::to<taco::ir::Var>(tacoOp->tensor)->name];
-      auto it = checkFixed.find(tacoOp->dimension);
-      if (it != checkFixed.end()) {
-        fixedLoopVar = it->second;
-      }
       vector<IndexSet> indexSets;
       vector<IndexDomain> domains = expr.type().toTensor()->getDimensions();
       flattenIndices(domains,
@@ -1022,10 +1009,64 @@ static bool storageKindUnsupported(Stmt stmt, const Storage& storage) {
         }
       }
     }
+
+    virtual void visit(const AssignStmt* op) {
+      if (storage.hasStorage(op->var)) {
+        TensorStorage::Kind kind = storage.getStorage(op->var).getKind();
+        if (kind != TensorStorage::Dense && kind != TensorStorage::Indexed) {
+          value = true;
+        }
+      }
+      IRVisitor::visit(op);
+    }
   } visitor(storage);
   stmt.accept(&visitor);
   return visitor.value;
 }
+
+// Tensor has fixed indexVar
+static bool hasFixedIndexVar(Stmt stmt) {
+  struct : public IRVisitor {
+    bool value = false;
+
+    virtual void visit(const IndexExpr* op) {
+      for (const IndexVar& index : op->resultVars) {
+        if (index.isFixed()) {
+          value = true;
+        }
+      }
+      IRVisitor::visit(op);
+    }
+
+    virtual void visit(const IndexedTensor* op) {
+      for (const IndexVar& index : op->indexVars) {
+        if (index.isFixed()) {
+          value = true;
+        }
+      }
+    }
+  } visitor;
+  stmt.accept(&visitor);
+  return visitor.value;
+}
+
+// Division
+static bool hasDivision(Stmt stmt) {
+  struct : public IRVisitor {
+    bool value = false;
+
+    virtual void visit(const Div* op) {
+      value = true;
+    }
+
+    virtual void visit(const Rem* op) {
+      value = true;
+    }
+  } visitor;
+  stmt.accept(&visitor);
+  return visitor.value;
+}
+
 
 Func simit::ir::lowerIndexExprTaco(Func func) {
   class : public IRRewriter {
@@ -1114,6 +1155,8 @@ Func simit::ir::lowerIndexExprTaco(Func func) {
             "sparse dimension followed by dense dimension");
       CHECK(storageKindUnsupported(stmt, storage),
             "diagonal or stencil storage");
+      CHECK(hasFixedIndexVar(stmt), "fixed index expression");
+      CHECK(hasDivision(stmt), "division");
       return false;
     }
   } rewriter;
