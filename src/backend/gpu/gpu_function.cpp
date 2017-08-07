@@ -222,13 +222,13 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
   if (setType->isa<ir::UnstructuredSetType>()) {
     data.setSize = set->getSize();
   }
-  else if (setType->isa<ir::LatticeLinkSetType>()) {
+  else if (setType->isa<ir::GridSetType>()) {
     CUdeviceptr *setSizesBuffer = new CUdeviceptr;
-    unsigned dims = setType->to<ir::LatticeLinkSetType>()->dimensions;
+    unsigned dims = setType->to<ir::GridSetType>()->dimensions;
     simit_uassert(dims == set->getDimensions().size())
         << "Set bound to type with wrong number of dimensions: "
         << set->getDimensions().size() << " vs "
-        << setType->to<ir::LatticeLinkSetType>()->dimensions;
+        << setType->to<ir::GridSetType>()->dimensions;
     size_t size = dims*sizeof(int);
     checkCudaErrors(cuMemAlloc(setSizesBuffer, size));
     checkCudaErrors(cuMemcpyHtoD(
@@ -275,7 +275,7 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
     pushedBufs.push_back(endpointsHandle);
     data.endpoints = endpointsHandle;
   }
-  else if (setType->isa<ir::LatticeLinkSetType>()) {
+  else if (setType->isa<ir::GridSetType>()) {
     // Lattice link set type format leaves room for eps, nbrs_start and nbrs
     // pointers in the struct.
     CUdeviceptr *nullDevPtr = new CUdeviceptr;
@@ -506,7 +506,7 @@ llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* a
     if (setType->isa<ir::UnstructuredSetType>()) {
       setData.push_back(llvmInt(pushedData.setSize));
     }
-    else if (setType->isa<ir::LatticeLinkSetType>()) {
+    else if (setType->isa<ir::GridSetType>()) {
       setData.push_back(llvmPtr(LLVM_INT_PTR, reinterpret_cast<void*>(
           *(pushedData.setSizes->devBuffer))));
     }
@@ -812,7 +812,7 @@ GPUFunction::init() {
         setData.resize(setData.size() + sizeof(int));
         memcpy(setData.data()+idx, (uint8_t*)(&pushedData.setSize), sizeof(int));
       }
-      else if (setType->isa<ir::LatticeLinkSetType>()) {
+      else if (setType->isa<ir::GridSetType>()) {
         // setSizes
         int idx = setData.size();
         setData.resize(setData.size() + sizeof(void*));
@@ -824,7 +824,7 @@ GPUFunction::init() {
       // Padding to 8-byte alignment (only needed if something comes afterwards)
       if ((setType->isa<ir::UnstructuredSetType>() &&
            setType->to<ir::UnstructuredSetType>()->getCardinality() > 0) ||
-          setType->isa<ir::LatticeLinkSetType>() ||
+          setType->isa<ir::GridSetType>() ||
           pushedData.fields.size() > 0) {
         if (setData.size() % 8 != 0) {
           setData.resize(setData.size() + (8-setData.size()%8));
@@ -834,7 +834,7 @@ GPUFunction::init() {
       // Neighbors structures
       if ((setType->isa<ir::UnstructuredSetType>() &&
            setType->to<ir::UnstructuredSetType>()->getCardinality() > 0) ||
-          setType->isa<ir::LatticeLinkSetType>()) {
+          setType->isa<ir::GridSetType>()) {
         int idx = setData.size();
         setData.resize(setData.size() + 3*sizeof(void*));
         memcpy(setData.data()+idx, (void*)(pushedData.endpoints->devBuffer), sizeof(void*));

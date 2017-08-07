@@ -37,7 +37,7 @@ namespace {
 /// checkNVVMCall - Verifies that NVVM result code is success, or terminate
 /// otherwise.
 void checkNVVMCall(nvvmResult res) {
-  iassert(res == NVVM_SUCCESS) << "libnvvm call failed";
+  simit_iassert(res == NVVM_SUCCESS) << "libnvvm call failed";
 }
 
 std::string utostr(uint num) {
@@ -95,7 +95,7 @@ std::string generatePtx(llvm::Module *module, int devMajor, int devMinor) {
   std::string errStr;
   const llvm::Target* target = nullptr;
   target = llvm::TargetRegistry::lookupTarget(triple.str(), errStr);
-  iassert(target) << errStr;
+  simit_iassert(target) << errStr;
 
   llvm::TargetOptions targetOptions;
 
@@ -123,7 +123,7 @@ std::string generatePtx(llvm::Module *module, int devMajor, int devMinor) {
   outStream.SetUnbuffered();
   bool failed = targetMachine->addPassesToEmitFile(
       pm, outStream, targetMachine->CGFT_AssemblyFile, false);
-  iassert(!failed);
+  simit_iassert(!failed);
 
   pm.run(*module);
   outStream.flush();
@@ -177,7 +177,7 @@ std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
       llvm::StringRef(libdevice, libdevice_length), "libdevice");
   std::unique_ptr<llvm::Module> libdeviceModule =
       llvm::parseIR(libdeviceBuf, errReport, LLVM_CTX);
-  iassert((bool)libdeviceModule)
+  simit_iassert((bool)libdeviceModule)
       << "Failed to load libdevice: " << printToString(errReport);
   setNVVMModuleProps(libdeviceModule.get());
   logModule(libdeviceModule.get(), "simit-libdevice.ll");
@@ -190,7 +190,7 @@ std::vector<std::string> generateLibraryPtx(int devMajor, int devMinor) {
       llvm::StringRef(intrinsics, intrinsics_length), "intrinsics");
   std::unique_ptr<llvm::Module> intrinsicsModule =
       llvm::parseIR(intrinsicsBuf, errReport, LLVM_CTX);
-  iassert((bool)intrinsicsModule)
+  simit_iassert((bool)intrinsicsModule)
       << "Failed to load intrinsics: " << printToString(errReport);
   setNVVMModuleProps(intrinsicsModule.get());
   logModule(intrinsicsModule.get(), "simit-intrinsics.ll");

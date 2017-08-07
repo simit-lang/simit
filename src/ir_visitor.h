@@ -132,7 +132,7 @@ public:
   // because they are backend-specific. This should be removed when
   // switching to a more general parallel IR representation.
   virtual void visit(const GPUKernel* op) {
-    ierror << "GPUKernel visitor must be implemented.";
+    simit_ierror << "GPUKernel visitor must be implemented.";
   }
 #endif
 };

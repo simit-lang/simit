@@ -111,7 +111,7 @@ public:
     // iteration
 #ifdef SIMIT_ASSERTS
     if (unsafe.size() == 0) {
-      uwarning << "Variables both non-atomically read and written in kernel: "
+      simit_uwarning << "Variables both non-atomically read and written in kernel: "
                << stmt << "\n";
     }
 #endif

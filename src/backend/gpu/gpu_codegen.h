@@ -8,6 +8,7 @@
 #include "llvm/IR/Module.h"
 #include "backend/llvm/llvm_defines.h"
 #include "backend/llvm/llvm_types.h"
+#include "backend/llvm/llvm_context.h"
 
 // This will output the proper CUDA error strings in the event that a CUDA
 // host call returns an error
