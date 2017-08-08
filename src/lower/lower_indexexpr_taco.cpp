@@ -185,31 +185,31 @@ class TacoLower : public IRVisitor, public taco::ir::IRVisitorStrict {
 
   virtual void visit(const Neg* op) {
     Ptr a = compile(op->a);
-    tacoAccess = Ptr(new taco::IndexExpr(-*a));
+    tacoAccess = Ptr(new taco::IndexExpr(-(*a)));
   }
 
   virtual void visit(const Add* op) {
     Ptr a = compile(op->a);
     Ptr b = compile(op->b);
-    tacoAccess = Ptr(new taco::IndexExpr(*a + *b));
+    tacoAccess = Ptr(new taco::IndexExpr((*a) + (*b)));
   }
 
   virtual void visit(const Sub* op) {
     Ptr a = compile(op->a);
     Ptr b = compile(op->b);
-    tacoAccess = Ptr(new taco::IndexExpr(*a - *b));
+    tacoAccess = Ptr(new taco::IndexExpr((*a) - (*b)));
   }
 
   virtual void visit(const Mul* op) {
     Ptr a = compile(op->a);
     Ptr b = compile(op->b);
-    tacoAccess = Ptr(new taco::IndexExpr(*a * *b));
+    tacoAccess = Ptr(new taco::IndexExpr((*a) * (*b)));
   }
 
   virtual void visit(const Div* op) {
     Ptr a = compile(op->a);
     Ptr b = compile(op->b);
-    tacoAccess = Ptr(new taco::IndexExpr(*a / *b));;
+    tacoAccess = Ptr(new taco::IndexExpr((*a) / (*b)));;
   }
 
   virtual void visit(const AssignStmt* op) {
