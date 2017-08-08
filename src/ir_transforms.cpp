@@ -229,11 +229,11 @@ Func insertInitializations(Func func) {
       op->condition.accept(this);
       auto copyVars = vars;
       op->thenBody.accept(this);
+      swap(vars, copyVars);
       if (op->elseBody.defined()) {
-        swap(vars, copyVars);
         op->elseBody.accept(this);
-        merge(copyVars);
       }
+      merge(copyVars);
     }
 
     virtual void visit(const For* op) {
