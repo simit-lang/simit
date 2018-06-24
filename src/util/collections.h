@@ -1,6 +1,7 @@
 #ifndef SIMIT_UTIL_COLLECTIONS_H
 #define SIMIT_UTIL_COLLECTIONS_H
 
+#include <functional>
 #include <map>
 #include <set>
 #include <unordered_set>

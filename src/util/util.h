@@ -1,6 +1,7 @@
 #ifndef SIMIT_UTIL_H
 #define SIMIT_UTIL_H
 
+#include <functional>
 #include <string>
 #include <sstream>
 #include <memory>
