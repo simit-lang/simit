@@ -5,6 +5,7 @@
 
 #include "lower_maps.h"
 #include "index_expressions/lower_index_expressions.h"
+#include "lower_indexexpr_taco.h"
 
 #include "lower_accesses.h"
 #include "lower_prints.h"
@@ -155,7 +156,7 @@ Func lower(Func func, std::ostream* os, bool time) {
 #endif
 
   // Lower Index Expressions
-  func = rewriteCallGraph(func, lowerIndexExpressions);
+  func = rewriteCallGraph(func, lowerIndexExprTaco);
   printCallGraph("Lower Index Expressions", func, os);
 
   // Lower Tensor Reads and Writes

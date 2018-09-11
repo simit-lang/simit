@@ -27,5 +27,10 @@ Stmt moveVarDeclsToFront(Stmt stmt);
 /// The global variables are added to the resulting Funcs environment.
 Func makeSystemTensorsGlobal(Func func);
 
+/// Goes through the use-def graph of func, and insert a statement (can be a
+/// loop) to zero initialize each numeric type variable if it is used without
+/// being defined first. The initialization statement is inserted after VarDecl.
+Func insertInitializations(Func func);
+
 }}
 #endif

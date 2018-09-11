@@ -33,6 +33,10 @@ bool isBlocked(Stmt stmt);
 /// (transitively) called from `func`.
 std::vector<Func> getCallTree(Func func);
 
+/// Returns the left most tensor variable of a nested read statement, or
+/// Var() if the tensor is not a variable
+Var getMainTensor(Expr e);
+
 /// Returns three pieces of a block of code: a node matching the given
 /// predicate, the head prior to it, and the tail following it. The predicate
 /// must be specific to a type of node.

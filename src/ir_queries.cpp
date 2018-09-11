@@ -288,4 +288,56 @@ std::vector<Func> getCallTree(Func func) {
   return GetCallTree().get(func);
 }
 
+Var getMainTensor(Expr e) {
+  struct GetMainTensor : public IRVisitor {
+    Var var;
+
+    virtual void visit(const VarExpr* op) {
+      var = op->var;
+    }
+
+    virtual void visit(const Load* op) {
+      op->buffer.accept(this);
+    }
+
+    virtual void visit(const Store* op) {
+      op->buffer.accept(this);
+    }
+
+    virtual void visit(const FieldRead* op) {
+      op->elementOrSet.accept(this);
+    }
+
+    virtual void visit(const FieldWrite *op) {
+      op->elementOrSet.accept(this);
+    }
+
+    virtual void visit(const TensorRead* op) {
+      op->tensor.accept(this);
+    }
+
+    virtual void visit(const TensorWrite *op) {
+      op->tensor.accept(this);
+    }
+
+    virtual void visit(const IndexRead* op) {
+      op->edgeSet.accept(this);
+    }
+
+    virtual void visit(const UnnamedTupleRead *op) {
+      op->tuple.accept(this);
+    }
+
+    virtual void visit(const NamedTupleRead *op) {
+      op->tuple.accept(this);
+    }
+
+    virtual void visit(const SetRead *op) {
+      op->set.accept(this);
+    }
+  } visitor;
+  e.accept(&visitor);
+  return visitor.var;
+}
+
 }}
